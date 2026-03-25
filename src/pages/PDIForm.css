@@ -1,0 +1,859 @@
+.pdi-form-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: calc(100vh - 100px);
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.form-header h1 {
+  color: #2c3e50;
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.btn-back {
+  background: #f0f0f0;
+  color: #666;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: #e0e0e0;
+}
+
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3rem;
+  position: relative;
+}
+
+.step-indicator::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e0e0e0;
+  z-index: 0;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  border: 3px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.step-item.active .step-number {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transform: scale(1.1);
+}
+
+.step-item.completed .step-number {
+  background: #27ae60;
+  color: white;
+}
+
+.step-label {
+  font-size: 0.85rem;
+  color: #999;
+  font-weight: 500;
+  text-align: center;
+}
+
+.step-item.active .step-label {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.step-item.completed .step-label {
+  color: #27ae60;
+}
+
+/* Form Content */
+.form-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  min-height: 400px;
+}
+
+.form-step h2 {
+  color: #2c3e50;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  color: #555;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.field-help {
+  display: block;
+  margin-top: 0.45rem;
+  color: #6b7280;
+  font-size: 0.82rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group input:disabled,
+.form-group textarea:disabled {
+  background: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Multi-tag Input */
+.multi-tag-container {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: white;
+}
+
+.tags-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  min-height: 30px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.tag-remove {
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.tag-remove:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.tag-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tag-input-group input {
+  flex: 1;
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.btn-add-tag {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-add-tag:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
+/* Subject Row (Matriz de linha com 3 campos) */
+.subject-row {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.subject-row:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px dashed #e0e0e0;
+}
+
+.row-number {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 0.95rem;
+  background: #e3f2fd;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+}
+
+.btn-remove-row {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-remove-row:hover {
+  background: #c0392b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
+}
+
+.add-row-section {
+  text-align: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px dashed #e0e0e0;
+}
+
+.btn-add-row {
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(39, 174, 96, 0.3);
+}
+
+.btn-add-row:hover {
+  background: linear-gradient(135deg, #229954 0%, #186a3b 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+}
+
+/* Trimester Step */
+.trimester-step {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 1rem;
+}
+
+.subject-section {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-left: 4px solid #667eea;
+}
+
+.subject-section h3 {
+  color: #667eea;
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+}
+
+.report-section {
+  background: #fff3cd;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  border-left: 4px solid #f39c12;
+}
+
+.report-section h3 {
+  color: #e67e22;
+  margin-bottom: 0.5rem;
+}
+
+.report-info {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.teacher-report {
+  margin-bottom: 1.5rem;
+}
+
+.teacher-report:last-child {
+  margin-bottom: 0;
+}
+
+.teacher-report label {
+  display: block;
+  color: #e67e22;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.large-textarea {
+  min-height: 400px !important;
+  height: 400px;
+  width: 100%;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.no-teachers-warning {
+  background: #ffebee;
+  color: #c62828;
+  padding: 1rem;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Review Step */
+.review-step .review-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+.review-step h3 {
+  color: #667eea;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.review-item {
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+}
+
+.review-item strong {
+  color: #555;
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.trimester-summary {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  border-left: 4px solid #667eea;
+}
+
+.trimester-summary h4 {
+  color: #667eea;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.trimester-summary .empty-trimester {
+  color: #e74c3c;
+  margin: 0;
+  font-style: italic;
+}
+
+.trimester-summary .filled-count {
+  color: #27ae60;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.subject-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.subject-list li {
+  background: #f8f9fa;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.3rem;
+  border-radius: 4px;
+  border-left: 3px solid #667eea;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.review-actions {
+  background: #e3f2fd;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.review-actions p {
+  color: #1976d2;
+  margin: 0.5rem 0;
+  font-weight: 500;
+}
+
+/* Navigation */
+.form-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 0;
+}
+
+.nav-spacer {
+  flex: 1;
+}
+
+.btn-nav {
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-previous {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.btn-previous:hover {
+  background: #e0e0e0;
+  transform: translateX(-3px);
+}
+
+.btn-next {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-next:hover {
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-submit {
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  color: white;
+}
+
+.btn-submit:hover {
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-save-partial {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  color: white;
+  margin-left: 1rem;
+}
+
+.btn-save-partial:hover {
+  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-nav:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .pdi-form-container {
+    padding: 1rem;
+  }
+
+  .form-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .form-header h1 {
+    font-size: 1.4rem;
+    text-align: center;
+  }
+
+  .step-indicator {
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+
+  .step-label {
+    font-size: 0.75rem;
+  }
+
+  .step-number {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+
+  .form-content {
+    padding: 1.5rem;
+  }
+
+  .form-step h2 {
+    font-size: 1.3rem;
+  }
+
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-navigation {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .btn-nav {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .nav-spacer {
+    display: none;
+  }
+
+  .subject-row {
+    padding: 1rem;
+  }
+
+  .row-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .btn-remove-row {
+    width: 100%;
+    padding: 0.6rem;
+  }
+
+  .btn-add-row {
+    width: 100%;
+    padding: 0.8rem;
+  }
+}
+
+/* Scrollbar personalizado para trimestre step */
+.trimester-step::-webkit-scrollbar {
+  width: 8px;
+}
+
+.trimester-step::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.trimester-step::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 10px;
+}
+
+.trimester-step::-webkit-scrollbar-thumb:hover {
+  background: #5568d3;
+}
+
+/* Review Section Styles */
+.review-step {
+  padding: 1.5rem 0;
+}
+
+.review-intro {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-left: 4px solid #667eea;
+  margin-bottom: 2rem;
+  border-radius: 4px;
+  color: #555;
+}
+
+.review-section {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.review-header h4 {
+  color: #2c3e50;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.review-header h5 {
+  color: #34495e;
+  font-size: 1rem;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.btn-edit-section {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-edit-section:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+.review-content {
+  color: #555;
+}
+
+.review-content p {
+  margin: 0.75rem 0;
+  line-height: 1.6;
+}
+
+.review-content strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.review-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.review-warning p {
+  color: #856404;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Questionnaire Category Styles */
+.questionnaire-category {
+  background: #f8f9fa;
+  border-left: 4px solid #667eea;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 4px;
+}
+
+.questionnaire-category h4 {
+  color: #667eea;
+  font-size: 1.3rem;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.section-intro {
+  background: #e8eaf6;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  color: #555;
+  font-style: italic;
+}
+
+.radio-group {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.radio-label:hover {
+  border-color: #667eea;
+  background: #f8f9fa;
+}
+
+.radio-label input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"]:checked + span,
+.radio-label:has(input[type="radio"]:checked) {
+  border-color: #667eea;
+  background: #e8eaf6;
+  font-weight: 600;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkbox-label:hover {
+  border-color: #667eea;
+  background: #f8f9fa;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.checkbox-label:has(input[type="checkbox"]:checked) {
+  border-color: #667eea;
+  background: #e8eaf6;
+  font-weight: 500;
+}

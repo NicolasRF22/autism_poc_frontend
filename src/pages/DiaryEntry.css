@@ -1,0 +1,353 @@
+.diary-entry-page {
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.entry-header h1 {
+  font-size: 2rem;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.back-link {
+  background: #ecf0f1;
+  color: #2c3e50;
+  text-decoration: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-link:hover {
+  background: #bdc3c7;
+}
+
+/* Form Sections */
+.diary-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-section h2 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin: 0 0 1.5rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #667eea;
+}
+
+/* Form Groups */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"] {
+  width: 100%;
+  padding: 0.8rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.disabled-input {
+  background: #f8f9fa !important;
+  color: #6c757d !important;
+  cursor: not-allowed;
+}
+
+/* Teachers Container */
+.teachers-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.teachers-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.teacher-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #667eea;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.remove-tag {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.remove-tag:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.add-teacher {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-teacher input {
+  flex: 1;
+  padding: 0.8rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.add-teacher input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.add-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+}
+
+.add-button:hover {
+  background: #5568d3;
+}
+
+/* Questions */
+.question-group {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.question-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.question-label {
+  display: block;
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 0.8rem;
+  font-size: 1rem;
+}
+
+.answer-options {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.option-button {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.8rem 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #555;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.option-button:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.option-button.selected {
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.option-button.selected.sim {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+}
+
+.option-button.selected.parcialmente {
+  background: linear-gradient(135deg, #f39c12, #f1c40f);
+}
+
+.option-button.selected.não {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+/* Observations */
+.observations-textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+  line-height: 1.5;
+  transition: border-color 0.2s ease;
+}
+
+.observations-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.cancel-button,
+.submit-button {
+  padding: 0.9rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-button {
+  background: #ecf0f1;
+  color: #2c3e50;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background: #bdc3c7;
+}
+
+.submit-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.cancel-button:disabled,
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Error Message */
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #f5c6cb;
+  margin-top: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .diary-entry-page {
+    padding: 1rem;
+  }
+
+  .entry-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .form-section {
+    padding: 1.5rem;
+  }
+
+  .answer-options {
+    flex-direction: column;
+  }
+
+  .option-button {
+    min-width: 100%;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .cancel-button,
+  .submit-button {
+    width: 100%;
+  }
+}
