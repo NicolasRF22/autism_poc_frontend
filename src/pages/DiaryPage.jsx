@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { diaryAPI } from '../services/api';
+import { diaryAPI, studentAPI } from '../services/api';
 import './DiaryPage.css';
 
 // Mapeamento das perguntas (versão resumida para visualização)
@@ -15,14 +15,53 @@ const QUESTIONS_MAP = {
 };
 
 const QUESTION_KEYS = Object.keys(QUESTIONS_MAP);
-const ANSWER_OPTIONS = ['Sim', 'Parcialmente', 'Não'];
+const ANSWER_OPTIONS = ['Sim', 'Não', 'Parcialmente'];
+
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+const parseLocalDate = (value) => {
+  if (!value) return null;
+
+  const raw = String(value).trim();
+  if (DATE_ONLY_REGEX.test(raw)) {
+    const [year, month, day] = raw.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatLocalCalendarDate = (value) => {
+  if (!value) return '—';
+
+  const raw = String(value).trim();
+  if (DATE_ONLY_REGEX.test(raw)) {
+    const [year, month, day] = raw.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  const parsed = parseLocalDate(raw);
+  if (!parsed) return '—';
+  return parsed.toLocaleDateString('pt-BR');
+};
+
+const normalizeName = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
 
 const DiaryPage = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showNewDiaryModal, setShowNewDiaryModal] = useState(false);
-  const [newStudentName, setNewStudentName] = useState('');
+  const [availableStudents, setAvailableStudents] = useState([]);
+  const [availableStudentsError, setAvailableStudentsError] = useState('');
+  const [newStudentId, setNewStudentId] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentEntries, setStudentEntries] = useState([]);
   const [filteredEntries, setFilteredEntries] = useState([]);
@@ -36,6 +75,12 @@ const DiaryPage = () => {
   const [previewMetadata, setPreviewMetadata] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   const [commitLoading, setCommitLoading] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editDiaryDate, setEditDiaryDate] = useState('');
+  const [editTeachers, setEditTeachers] = useState('');
+  const [editAnswers, setEditAnswers] = useState({});
+  const [editOpenObs, setEditOpenObs] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,7 +105,8 @@ const DiaryPage = () => {
     switch (dateFilter) {
       case 'today':
         filtered = studentEntries.filter(entry => {
-          const entryDate = new Date(entry.diary_date);
+          const entryDate = parseLocalDate(entry.diary_date);
+          if (!entryDate) return false;
           return entryDate >= today;
         });
         break;
@@ -69,7 +115,8 @@ const DiaryPage = () => {
         const weekAgo = new Date(today);
         weekAgo.setDate(weekAgo.getDate() - 7);
         filtered = studentEntries.filter(entry => {
-          const entryDate = new Date(entry.diary_date);
+          const entryDate = parseLocalDate(entry.diary_date);
+          if (!entryDate) return false;
           return entryDate >= weekAgo;
         });
         break;
@@ -78,7 +125,8 @@ const DiaryPage = () => {
         const monthAgo = new Date(today);
         monthAgo.setMonth(monthAgo.getMonth() - 1);
         filtered = studentEntries.filter(entry => {
-          const entryDate = new Date(entry.diary_date);
+          const entryDate = parseLocalDate(entry.diary_date);
+          if (!entryDate) return false;
           return entryDate >= monthAgo;
         });
         break;
@@ -113,21 +161,68 @@ const DiaryPage = () => {
     }
   };
 
-  const handleNewDiary = () => {
+  const loadAvailableStudents = async () => {
+    setAvailableStudentsError('');
+
+    try {
+      const data = await diaryAPI.getAvailableStudents();
+      setAvailableStudents(data || []);
+    } catch (err) {
+      try {
+        // Fallback para backend antigo sem /diary/available-students
+        const [allStudents, diarySummaries] = await Promise.all([
+          studentAPI.getAllStudents(),
+          diaryAPI.getStudents(),
+        ]);
+
+        const usedIds = new Set(
+          (diarySummaries || [])
+            .map((summary) => String(summary?.student_id || '').trim())
+            .filter(Boolean)
+        );
+        const usedNames = new Set(
+          (diarySummaries || [])
+            .map((summary) => normalizeName(summary?.student_name))
+            .filter(Boolean)
+        );
+
+        const eligible = (allStudents || []).filter((student) => {
+          const studentId = String(student?.id || '').trim();
+          const studentName = normalizeName(student?.name || student?.studentName);
+          if (studentId && usedIds.has(studentId)) return false;
+          if (studentName && usedNames.has(studentName)) return false;
+          return true;
+        });
+
+        setAvailableStudents(eligible);
+      } catch (fallbackErr) {
+        console.error('Erro ao carregar alunos elegíveis:', fallbackErr);
+        setAvailableStudents([]);
+        setAvailableStudentsError('Não foi possível carregar os alunos elegíveis. Atualize o backend e tente novamente.');
+      }
+    }
+  };
+
+  const handleNewDiary = async () => {
+    await loadAvailableStudents();
+    setNewStudentId('');
     setShowNewDiaryModal(true);
   };
 
   const handleCreateNewDiary = () => {
-    if (newStudentName.trim()) {
-      navigate(`/diario/${encodeURIComponent(newStudentName.trim())}/novo`);
-    }
+    const selected = availableStudents.find((student) => student.id === newStudentId);
+    if (!selected) return;
+
+    navigate(
+      `/diario/${encodeURIComponent(selected.name)}/novo?studentId=${encodeURIComponent(selected.id)}`
+    );
   };
 
-  const handleStudentClick = async (studentName) => {
+  const handleStudentClick = async (student) => {
     try {
-      const data = await diaryAPI.getStudentEntries(studentName);
+      const data = await diaryAPI.getStudentEntries(student.student_name);
       setStudentEntries(data);
-      setSelectedStudent(studentName);
+      setSelectedStudent(student);
     } catch (err) {
       console.error(err);
       alert('Erro ao carregar entradas do aluno');
@@ -143,7 +238,12 @@ const DiaryPage = () => {
   };
 
   const handleNewEntry = () => {
-    navigate(`/diario/${encodeURIComponent(selectedStudent)}/novo`);
+    if (!selectedStudent) return;
+
+    const query = selectedStudent.student_id
+      ? `?studentId=${encodeURIComponent(selectedStudent.student_id)}`
+      : '';
+    navigate(`/diario/${encodeURIComponent(selectedStudent.student_name)}/novo${query}`);
   };
 
   const handleFilterChange = (filter) => {
@@ -165,7 +265,7 @@ const DiaryPage = () => {
       await diaryAPI.deleteEntry(entryId);
       
       // Recarregar entradas
-      const data = await diaryAPI.getStudentEntries(selectedStudent);
+      const data = await diaryAPI.getStudentEntries(selectedStudent.student_name);
       setStudentEntries(data);
       
       // Se não há mais entradas, voltar para lista
@@ -179,9 +279,133 @@ const DiaryPage = () => {
     }
   };
 
-  const formatDate = (dateString) => {
+  const handleDeleteDiary = async (student) => {
+    if (!student) return;
+
+    const confirmDelete = window.confirm(
+      `Tem certeza que deseja apagar todo o diário de ${student.student_name}? Esta ação remove todas as entradas e não pode ser desfeita.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      let removedEntries = 0;
+      let result = null;
+
+      try {
+        result = await diaryAPI.deleteStudentDiary(
+          student.student_name,
+          student.student_id || null
+        );
+        removedEntries = result?.removed_entries || 0;
+      } catch (bulkDeleteError) {
+        console.warn('DELETE /diary/students indisponível no backend atual. Aplicando fallback por entradas.', bulkDeleteError);
+
+        const entries = await diaryAPI.getStudentEntries(student.student_name);
+        for (const entry of entries) {
+          await diaryAPI.deleteEntry(entry.id);
+          removedEntries += 1;
+        }
+
+        result = {
+          message: removedEntries > 0
+            ? 'Diário removido com sucesso.'
+            : 'Nenhuma entrada encontrada para remover.',
+          removed_entries: removedEntries,
+        };
+      }
+
+      if (selectedStudent && selectedStudent.student_name === student.student_name) {
+        handleBackToList();
+      }
+
+      await loadStudents();
+      alert(result?.message || `Diário removido com sucesso (${removedEntries} entradas).`);
+    } catch (err) {
+      console.error(err);
+      const backendMessage = err?.response?.data?.error;
+      alert(backendMessage || 'Erro ao apagar diário.');
+    }
+  };
+
+  const handleEditEntry = (entry) => {
+    setEditingEntry(entry);
+    setEditDiaryDate(entry.diary_date || '');
+    setEditTeachers((entry.teachers || []).join(', '));
+    setEditAnswers(entry.answers || {});
+    setEditOpenObs(entry.open_obs || '');
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingEntry(null);
+    setEditDiaryDate('');
+    setEditTeachers('');
+    setEditAnswers({});
+    setEditOpenObs('');
+    setEditLoading(false);
+  };
+
+  const handleEditAnswerChange = (questionId, value) => {
+    setEditAnswers((prev) => ({
+      ...prev,
+      [questionId]: value,
+    }));
+  };
+
+  const handleSaveEditedEntry = async () => {
+    if (!editingEntry) return;
+
+    const teachersList = editTeachers
+      .split(',')
+      .map((teacher) => teacher.trim())
+      .filter(Boolean);
+
+    if (!editDiaryDate) {
+      alert('Selecione a data do registro.');
+      return;
+    }
+
+    if (teachersList.length === 0) {
+      alert('Adicione pelo menos um professor.');
+      return;
+    }
+
+    const unanswered = QUESTION_KEYS.filter((questionId) => !editAnswers[questionId]);
+    if (unanswered.length > 0) {
+      alert('Responda todas as perguntas antes de salvar.');
+      return;
+    }
+
+    try {
+      setEditLoading(true);
+      await diaryAPI.updateEntry(editingEntry.id, {
+        diary_date: editDiaryDate,
+        teachers: teachersList,
+        answers: editAnswers,
+        open_obs: editOpenObs,
+      });
+
+      const data = await diaryAPI.getStudentEntries(selectedStudent.student_name);
+      setStudentEntries(data);
+      handleCloseEditModal();
+      alert('Entrada atualizada com sucesso!');
+    } catch (err) {
+      console.error(err);
+      const backendMessage = err?.response?.data?.error;
+      alert(backendMessage || 'Erro ao atualizar entrada.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const formatDate = (dateString, { dateOnly = false } = {}) => {
     if (!dateString) return '—';
-    const date = new Date(dateString);
+
+    if (dateOnly) {
+      return formatLocalCalendarDate(dateString);
+    }
+
+    const date = parseLocalDate(dateString);
+    if (!date) return '—';
     return date.toLocaleDateString('pt-BR');
   };
 
@@ -275,7 +499,7 @@ const DiaryPage = () => {
       loadStudents();
 
       if (selectedStudent) {
-        const data = await diaryAPI.getStudentEntries(selectedStudent);
+        const data = await diaryAPI.getStudentEntries(selectedStudent.student_name);
         setStudentEntries(data);
       }
     } catch (err) {
@@ -310,10 +534,18 @@ const DiaryPage = () => {
       <div className="diary-page">
         <div className="diary-header">
           <button onClick={handleBackToList} className="back-button">← Voltar</button>
-          <h1>Diário de {selectedStudent}</h1>
-          <button onClick={handleNewEntry} className="new-entry-button">
-            + Nova Entrada
-          </button>
+          <h1>Diário de {selectedStudent.student_name}</h1>
+          <div className="student-history-actions">
+            <button onClick={handleNewEntry} className="new-entry-button">
+              + Nova Entrada
+            </button>
+            <button
+              onClick={() => handleDeleteDiary(selectedStudent)}
+              className="danger-diary-button"
+            >
+              🗑️ Apagar Diário
+            </button>
+          </div>
         </div>
 
         {/* Filtros de Data */}
@@ -375,14 +607,23 @@ const DiaryPage = () => {
             filteredEntries.map((entry) => (
               <div key={entry.id} className="entry-card">
                 <div className="entry-header">
-                  <h3>📅 {formatDate(entry.diary_date)}</h3>
-                  <button 
-                    onClick={() => handleDeleteEntry(entry.id)}
-                    className="delete-button"
-                    title="Excluir entrada"
-                  >
-                    🗑️
-                  </button>
+                  <h3>📅 {formatDate(entry.diary_date, { dateOnly: true })}</h3>
+                  <div className="entry-actions">
+                    <button
+                      onClick={() => handleEditEntry(entry)}
+                      className="edit-button"
+                      title="Editar entrada"
+                    >
+                      ✏️
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteEntry(entry.id)}
+                      className="delete-button"
+                      title="Excluir entrada"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
                 <div className="entry-info">
                   <p><strong>Professor(es):</strong> {entry.teachers.join(', ')}</p>
@@ -413,6 +654,69 @@ const DiaryPage = () => {
             ))
           )}
         </div>
+
+        {editingEntry && (
+          <div className="modal-overlay" onClick={handleCloseEditModal}>
+            <div className="modal-content import-modal" onClick={(e) => e.stopPropagation()}>
+              <h2>Editar Entrada do Diário</h2>
+
+              <div className="preview-grid">
+                <div className="form-group">
+                  <label>Data</label>
+                  <input
+                    type="date"
+                    value={editDiaryDate}
+                    onChange={(e) => setEditDiaryDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Professores (separar por vírgula)</label>
+                  <input
+                    type="text"
+                    value={editTeachers}
+                    onChange={(e) => setEditTeachers(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="preview-answers">
+                {QUESTION_KEYS.map((questionKey) => (
+                  <div className="preview-answer-item" key={`edit-${questionKey}`}>
+                    <label>{QUESTIONS_MAP[questionKey]}</label>
+                    <select
+                      value={editAnswers?.[questionKey] || ''}
+                      onChange={(e) => handleEditAnswerChange(questionKey, e.target.value)}
+                    >
+                      <option value="">Não definido</option>
+                      {ANSWER_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="form-group">
+                <label>Observações</label>
+                <textarea
+                  rows="4"
+                  value={editOpenObs}
+                  onChange={(e) => setEditOpenObs(e.target.value)}
+                />
+              </div>
+
+              <div className="modal-buttons">
+                <button onClick={handleCloseEditModal} className="cancel-button" disabled={editLoading}>
+                  Cancelar
+                </button>
+                <button onClick={handleSaveEditedEntry} className="confirm-button" disabled={editLoading}>
+                  {editLoading ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -444,15 +748,24 @@ const DiaryPage = () => {
             <div
               key={student.student_name}
               className="student-card"
-              onClick={() => handleStudentClick(student.student_name)}
+              onClick={() => handleStudentClick(student)}
             >
               <div className="student-icon">👤</div>
               <h3>{student.student_name}</h3>
               <div className="student-info">
-                <p><strong>Última entrada:</strong> {formatDate(student.last_date)}</p>
+                <p><strong>Última entrada:</strong> {formatDate(student.last_date, { dateOnly: true })}</p>
                 <p><strong>Professor(es):</strong> {student.last_teachers.join(', ')}</p>
                 <p><strong>Total de registros:</strong> {student.total_entries}</p>
               </div>
+              <button
+                className="danger-diary-button card-delete-diary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteDiary(student);
+                }}
+              >
+                🗑️ Apagar Diário
+              </button>
               <button className="view-button">Ver Histórico →</button>
             </div>
           ))}
@@ -464,15 +777,23 @@ const DiaryPage = () => {
         <div className="modal-overlay" onClick={() => setShowNewDiaryModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Criar Novo Diário</h2>
-            <p>Digite o nome do aluno:</p>
-            <input
-              type="text"
-              value={newStudentName}
-              onChange={(e) => setNewStudentName(e.target.value)}
-              placeholder="Nome completo do aluno"
+            <p>Selecione um aluno cadastrado sem diário:</p>
+            <select
+              value={newStudentId}
+              onChange={(e) => setNewStudentId(e.target.value)}
               autoFocus
-              onKeyPress={(e) => e.key === 'Enter' && handleCreateNewDiary()}
-            />
+            >
+              <option value="">Selecione um aluno</option>
+              {availableStudents.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+            {!availableStudentsError && availableStudents.length === 0 && (
+              <p>Todos os alunos cadastrados já possuem diário.</p>
+            )}
+            {availableStudentsError && <p>{availableStudentsError}</p>}
             <div className="modal-buttons">
               <button onClick={() => setShowNewDiaryModal(false)} className="cancel-button">
                 Cancelar
@@ -480,7 +801,7 @@ const DiaryPage = () => {
               <button 
                 onClick={handleCreateNewDiary} 
                 className="confirm-button"
-                disabled={!newStudentName.trim()}
+                disabled={!newStudentId}
               >
                 Continuar
               </button>

@@ -1,6 +1,11 @@
 import React, { useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './Sidebar.css';
+import logoAutismIa from '../assets/logo-autism-ia.jpeg';
+import logoFapemig from '../assets/logo-fapemig.png';
+import logoIncit from '../assets/logo-incit.png';
+import logoPiranguinho from '../assets/logo-piranguinho.png';
+import logoUnifei from '../assets/logo-unifei.png';
 
 const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   const location = useLocation();
@@ -35,6 +40,7 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   };
 
   const menuItems = [
+    { path: '/inicio', label: 'Início', icon: '🏠' },
     { path: '/formularios', label: 'Formulários', icon: '📋' },
     { path: '/diario', label: 'Diário Individual', icon: '📖' },
     { path: '/pdi', label: 'PDI Individual', icon: '📑' },
@@ -51,8 +57,7 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     <>
       <div className={`sidebar ${isOpen ? '' : 'sidebar-hidden'}`} style={{ width: `${width}px` }}>
         <div className="sidebar-header">
-          <h2>Autism.IA</h2>
-          <p className="sidebar-subtitle">Sistema de Avaliação</p>
+          <img className="sidebar-logo" src={logoAutismIa} alt="Autism.iA" />
         </div>
 
         <nav className="sidebar-nav">
@@ -66,6 +71,15 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
               <span className="sidebar-label">{item.label}</span>
             </Link>
           ))}
+
+          {user?.role === 'admin' && (
+            <div className="sidebar-partners">
+              <img className="sidebar-partner-logo" src={logoFapemig} alt="FAPEMIG" />
+              <img className="sidebar-partner-logo" src={logoIncit} alt="INCIT" />
+              <img className="sidebar-partner-logo" src={logoPiranguinho} alt="Prefeitura de Piranguinho" />
+              <img className="sidebar-partner-logo" src={logoUnifei} alt="UNIFEI" />
+            </div>
+          )}
         </nav>
 
         <div className="sidebar-footer">

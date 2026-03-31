@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import Home from './pages/Home';
 import FormsPage from './pages/FormsPage';
 import FormDetail from './pages/FormDetail';
 import DiaryPage from './pages/DiaryPage';
@@ -138,8 +139,9 @@ function App() {
             style={{ marginLeft: sidebarOpen ? `${sidebarWidth}px` : '0px' }}
           >
             <Routes>
-              <Route path="/" element={<Navigate to="/formularios" replace />} />
-              <Route path="/login" element={<Navigate to="/formularios" replace />} />
+              <Route path="/" element={<Navigate to="/inicio" replace />} />
+              <Route path="/login" element={<Navigate to="/inicio" replace />} />
+              <Route path="/inicio" element={<Home />} />
               <Route path="/formularios" element={<FormsPage />} />
               <Route path="/formularios/:formId" element={<FormDetail />} />
               <Route path="/diario" element={<DiaryPage />} />
@@ -192,7 +194,7 @@ function App() {
                 path="/admin/gastos"
                 element={user?.role === 'admin' ? <AdminUsagePage /> : <Navigate to="/formularios" replace />}
               />
-              <Route path="*" element={<Navigate to="/formularios" replace />} />
+              <Route path="*" element={<Navigate to="/inicio" replace />} />
             </Routes>
           </main>
         </div>

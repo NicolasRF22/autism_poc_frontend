@@ -1,66 +1,66 @@
 import React from 'react';
 import './Home.css';
+import logoAutismIa from '../assets/logo-autism-ia.jpeg';
+import logoFapemig from '../assets/logo-fapemig.png';
+import logoIncit from '../assets/logo-incit.png';
+import logoPiranguinho from '../assets/logo-piranguinho.png';
+import logoUnifei from '../assets/logo-unifei.png';
 
 const Home = () => {
   return (
     <div className="home">
-      <div className="home-hero">
-        <h1 className="home-title">Bem-vindo ao Autism.IA</h1>
-        <p className="home-description">
-          Sistema integrado para avaliação e gerenciamento de formulários relacionados 
-          ao Transtorno do Espectro Autista (TEA)
-        </p>
-      </div>
+      <h1 className="home-page-title">Início</h1>
 
-      <div className="home-features">
-        <div className="feature-card">
-          <div className="feature-icon">📋</div>
-          <h3>Formulários Especializados</h3>
-          <p>
-            Acesse formulários validados como M-CHAT, CARS e ADOS-2 para 
-            avaliação estruturada
+      <div className="home-shell">
+        <section className="home-hero">
+          <p className="home-kicker">Projeto SmartPEI</p>
+          <p className="home-info-line">Fapemig - Edital Cientista Empreendedor</p>
+          <p className="home-info-line">Coordenador: Prof. Dr. Guilherme Sousa Bastos</p>
+        </section>
+
+        <section className="home-summary" aria-label="Resumo da aplicação">
+          <p className="home-summary-text">
+            A plataforma SmartPEI centraliza o cadastro de escolas e alunos, facilita o preenchimento dos
+            formulários pedagógicos e apoia a construção de planos e registros educacionais em um fluxo
+            simples, organizado e acessível para a equipe escolar.
           </p>
-        </div>
-
-        <div className="feature-card">
-          <div className="feature-icon">📊</div>
-          <h3>Análise de Respostas</h3>
-          <p>
-            Visualize e analise todas as submissões de formulários em um 
-            único lugar
+          <p className="home-summary-text">
+            Em um único ambiente, a aplicação reúne informações institucionais, histórico do estudante e
+            documentos de acompanhamento para agilizar o trabalho diário, melhorar a consistência dos dados
+            e apoiar decisões pedagógicas com mais clareza.
           </p>
-        </div>
+        </section>
 
-        <div className="feature-card">
-          <div className="feature-icon">💾</div>
-          <h3>Export JSON</h3>
-          <p>
-            Baixe os dados em formato JSON para análise externa ou 
-            backup
-          </p>
-        </div>
-      </div>
+        <section className="home-brand-section" aria-label="Instituições parceiras">
+          <h2 className="home-brand-title">Instituições Parceiras</h2>
 
-      <div className="home-info">
-        <div className="info-section">
-          <h2>Como Usar</h2>
-          <ol>
-            <li>Navegue até a seção <strong>Formulários</strong> no menu lateral</li>
-            <li>Escolha o formulário adequado para sua avaliação</li>
-            <li>Preencha todas as questões cuidadosamente</li>
-            <li>Submeta o formulário e visualize na seção <strong>Respostas</strong></li>
-            <li>Baixe os dados em JSON quando necessário</li>
-          </ol>
-        </div>
+          <div className="home-logos-grid">
+            <div className="home-logos-row home-logos-row-top">
+              <div className="home-logo-card home-logo-card-autism">
+                <img src={logoAutismIa} alt="Autism.iA" className="home-logo home-logo-autism" />
+              </div>
+              <div className="home-logo-card">
+                <img src={logoFapemig} alt="FAPEMIG" className="home-logo home-logo-fapemig" />
+              </div>
+              <div className="home-logo-card">
+                <img src={logoIncit} alt="INCIT" className="home-logo home-logo-incit" />
+              </div>
+            </div>
 
-        <div className="info-section">
-          <h2>Formulários Disponíveis</h2>
-          <ul>
-            <li><strong>M-CHAT</strong> - Modified Checklist for Autism in Toddlers (16-30 meses)</li>
-            <li><strong>CARS</strong> - Childhood Autism Rating Scale</li>
-            <li><strong>ADOS-2</strong> - Autism Diagnostic Observation Schedule</li>
-          </ul>
-        </div>
+            <div className="home-logos-row home-logos-row-bottom">
+              <div className="home-logo-card">
+                <img
+                  src={logoPiranguinho}
+                  alt="Prefeitura de Piranguinho"
+                  className="home-logo home-logo-piranguinho"
+                />
+              </div>
+              <div className="home-logo-card">
+                <img src={logoUnifei} alt="UNIFEI" className="home-logo home-logo-unifei" />
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

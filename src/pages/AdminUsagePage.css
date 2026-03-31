@@ -67,6 +67,17 @@
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
 }
 
+.admin-usage-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-usage-subtitle {
+  font-weight: 700;
+  color: #1f2937;
+}
+
 .admin-usage-table {
   width: 100%;
   border-collapse: collapse;
@@ -142,6 +153,49 @@
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 700;
+}
+
+.admin-usage-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.admin-usage-progress-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.admin-usage-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 220ms ease;
+}
+
+.admin-usage-progress-fill.tone-ok {
+  background: #22c55e;
+}
+
+.admin-usage-progress-fill.tone-warning {
+  background: #f59e0b;
+}
+
+.admin-usage-progress-fill.tone-critical {
+  background: #ef4444;
+}
+
+.admin-usage-progress-fill.tone-neutral {
+  background: #9ca3af;
+}
+
+.admin-usage-progress-label {
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .status-ok {

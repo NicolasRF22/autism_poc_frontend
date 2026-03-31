@@ -38,6 +38,28 @@
   align-self: flex-end;
 }
 
+.student-history-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-self: flex-end;
+}
+
+.danger-diary-button {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.danger-diary-button:hover {
+  background: #c0392b;
+}
+
 .import-diary-button {
   background: #2c3e50;
   color: white;
@@ -237,6 +259,11 @@
   transition: background 0.2s ease;
 }
 
+.card-delete-diary {
+  width: 100%;
+  margin-bottom: 0.6rem;
+}
+
 .view-button:hover {
   background: #5568d3;
 }
@@ -270,6 +297,27 @@
   font-size: 1.2rem;
   color: #2c3e50;
   margin: 0;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-button {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.65rem;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-button:hover {
+  background: #2c80b9;
+  transform: scale(1.1);
 }
 
 .delete-button {

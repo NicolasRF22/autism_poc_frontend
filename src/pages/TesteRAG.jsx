@@ -19,7 +19,6 @@ const TesteRAG = () => {
   const [registeredStudents, setRegisteredStudents] = useState([]);
   const [registeredSchools, setRegisteredSchools] = useState([]);
   const [selectedRegisteredStudentId, setSelectedRegisteredStudentId] = useState('');
-  const [selectedRegisteredSchoolId, setSelectedRegisteredSchoolId] = useState('');
 
   // --- Chat ---
   const [chatHistories, setChatHistories] = useState({});
@@ -46,17 +45,75 @@ const TesteRAG = () => {
   // --- PEI ---
   const [studentName, setStudentName] = useState('');
   const [school, setSchool] = useState('');
-  const [additionalInfo, setAdditionalInfo] = useState('');
+  const [peiSelectedStudentId, setPeiSelectedStudentId] = useState('');
   const [peiLoading, setPeiLoading] = useState(false);
   const [peiResult, setPeiResult] = useState(null);
   const [peiProgress, setPeiProgress] = useState({ stage: 0, label: '' });
   const [peiList, setPeiList] = useState([]);
   const [viewingPeiUrl, setViewingPeiUrl] = useState(null);
+  const [peiViewerLoading, setPeiViewerLoading] = useState(false);
+  const [peiSourcesPreview, setPeiSourcesPreview] = useState(null);
+  const [peiSourcesLoading, setPeiSourcesLoading] = useState(false);
+  const [peiPrompt, setPeiPrompt] = useState('');
+  const [initialPeiPrompt, setInitialPeiPrompt] = useState('');
+  const [peiPromptLoading, setPeiPromptLoading] = useState(true);
+  const [peiPromptSaving, setPeiPromptSaving] = useState(false);
+  const [peiPromptResetting, setPeiPromptResetting] = useState(false);
+  const [peiPromptUpdatedAt, setPeiPromptUpdatedAt] = useState(null);
+  const [peiPromptIsCustom, setPeiPromptIsCustom] = useState(false);
+  const [peiPromptModalOpen, setPeiPromptModalOpen] = useState(false);
+  const [peiPromptDraft, setPeiPromptDraft] = useState('');
+  const [lastPeiClientDurationMs, setLastPeiClientDurationMs] = useState(null);
+  const [chatPrompt, setChatPrompt] = useState('');
+  const [initialChatPrompt, setInitialChatPrompt] = useState('');
+  const [chatPromptLoading, setChatPromptLoading] = useState(true);
+  const [chatPromptSaving, setChatPromptSaving] = useState(false);
+  const [chatPromptResetting, setChatPromptResetting] = useState(false);
+  const [chatPromptUpdatedAt, setChatPromptUpdatedAt] = useState(null);
+  const [chatPromptIsCustom, setChatPromptIsCustom] = useState(false);
+  const [chatPromptModalOpen, setChatPromptModalOpen] = useState(false);
+  const [chatPromptDraft, setChatPromptDraft] = useState('');
 
   useEffect(() => {
     loadStudents();
     loadRegisteredCatalogs();
+    loadPeiPrompt();
+    loadChatPrompt();
   }, []);
+
+  const loadPeiPrompt = async () => {
+    setPeiPromptLoading(true);
+    try {
+      const data = await ragAPI.getPEIPrompt();
+      const promptText = data?.prompt || '';
+      setPeiPrompt(promptText);
+      setInitialPeiPrompt(promptText);
+      setPeiPromptDraft(promptText);
+      setPeiPromptUpdatedAt(data?.updated_at || null);
+      setPeiPromptIsCustom(Boolean(data?.is_custom));
+    } catch (err) {
+      alert('Erro ao carregar prompt do PEI: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setPeiPromptLoading(false);
+    }
+  };
+
+  const loadChatPrompt = async () => {
+    setChatPromptLoading(true);
+    try {
+      const data = await ragAPI.getChatPrompt();
+      const promptText = data?.prompt || '';
+      setChatPrompt(promptText);
+      setInitialChatPrompt(promptText);
+      setChatPromptDraft(promptText);
+      setChatPromptUpdatedAt(data?.updated_at || null);
+      setChatPromptIsCustom(Boolean(data?.is_custom));
+    } catch (err) {
+      alert('Erro ao carregar prompt do Chat: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setChatPromptLoading(false);
+    }
+  };
 
   const loadRegisteredCatalogs = async () => {
     try {
@@ -87,6 +144,42 @@ const TesteRAG = () => {
     }
   }, [selectedStudent]);
 
+  useEffect(() => () => {
+    setViewingPeiUrl((prev) => {
+      if (prev && prev.startsWith('blob:')) {
+        URL.revokeObjectURL(prev);
+      }
+      return null;
+    });
+  }, []);
+
+  const clearViewingPei = () => {
+    setViewingPeiUrl((prev) => {
+      if (prev && prev.startsWith('blob:')) {
+        URL.revokeObjectURL(prev);
+      }
+      return null;
+    });
+  };
+
+  const handleViewPEI = async (peiId) => {
+    try {
+      setPeiViewerLoading(true);
+      const blob = await ragAPI.downloadPEIPdf(peiId);
+      const blobUrl = URL.createObjectURL(blob);
+      setViewingPeiUrl((prev) => {
+        if (prev && prev.startsWith('blob:')) {
+          URL.revokeObjectURL(prev);
+        }
+        return blobUrl;
+      });
+    } catch (err) {
+      alert('Erro ao visualizar PDF: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setPeiViewerLoading(false);
+    }
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistories, studentKey]);
@@ -96,9 +189,15 @@ const TesteRAG = () => {
     if (selectedStudent) {
       setStudentName(selectedStudent.student_name);
       setSchool(selectedStudent.school);
+      const matchedStudent = registeredStudents.find((studentItem) =>
+        String(studentItem.name || '').trim().toLowerCase() === String(selectedStudent.student_name || '').trim().toLowerCase(),
+      );
+      if (matchedStudent?.id) {
+        setPeiSelectedStudentId(matchedStudent.id);
+      }
       setPeiResult(null);
     }
-  }, [selectedStudent]);
+  }, [selectedStudent, registeredStudents]);
 
   const loadStudents = async () => {
     setStudentsLoading(true);
@@ -140,21 +239,14 @@ const TesteRAG = () => {
 
     if (!student) {
       setSelectedRegisteredStudentId('');
-      setSelectedRegisteredSchoolId('');
       return;
     }
-
-    const matchedSchool = registeredSchools.find(
-      (schoolItem) =>
-        String(schoolItem.name || '').trim().toLowerCase() === String(student.school || '').trim().toLowerCase(),
-    );
 
     const matchedStudent = registeredStudents.find((studentItem) =>
       String(studentItem.name || '').trim().toLowerCase() === String(student.student_name || '').trim().toLowerCase(),
     );
 
     setSelectedRegisteredStudentId(matchedStudent?.id || '');
-    setSelectedRegisteredSchoolId(matchedStudent?.school_id || matchedSchool?.id || '');
   };
 
   const handleRegisteredStudentChange = (event) => {
@@ -163,6 +255,7 @@ const TesteRAG = () => {
 
     if (!studentId) {
       setUploadStudentName('');
+      setUploadSchool('');
       return;
     }
 
@@ -171,32 +264,70 @@ const TesteRAG = () => {
 
     setUploadStudentName(studentItem.name || '');
 
-    if (studentItem.school_id) {
-      setSelectedRegisteredSchoolId(studentItem.school_id);
-      const schoolItem = registeredSchools.find((item) => item.id === studentItem.school_id);
-      setUploadSchool(schoolItem?.name || studentItem.school_name || '');
-      return;
-    }
-
-    const schoolByName = registeredSchools.find(
-      (item) =>
-        String(item.name || '').trim().toLowerCase() === String(studentItem.school_name || '').trim().toLowerCase(),
-    );
-    setSelectedRegisteredSchoolId(schoolByName?.id || '');
-    setUploadSchool(schoolByName?.name || studentItem.school_name || '');
+    const schoolItem = studentItem.school_id
+      ? registeredSchools.find((item) => item.id === studentItem.school_id)
+      : null;
+    setUploadSchool(schoolItem?.name || studentItem.school_name || '');
   };
 
-  const handleRegisteredSchoolChange = (event) => {
-    const schoolId = event.target.value;
-    setSelectedRegisteredSchoolId(schoolId);
+  const handlePeiStudentChange = (event) => {
+    const studentId = event.target.value;
+    setPeiSelectedStudentId(studentId);
 
-    if (!schoolId) {
-      setUploadSchool('');
+    if (!studentId) {
+      setStudentName('');
+      setSchool('');
+      setPeiList([]);
+      setPeiSourcesPreview(null);
       return;
     }
 
-    const schoolItem = registeredSchools.find((item) => item.id === schoolId);
-    setUploadSchool(schoolItem?.name || '');
+    const studentItem = registeredStudents.find((item) => item.id === studentId);
+    if (!studentItem) {
+      setStudentName('');
+      setSchool('');
+      setPeiList([]);
+      setPeiSourcesPreview(null);
+      return;
+    }
+
+    const schoolItem = studentItem.school_id
+      ? registeredSchools.find((item) => item.id === studentItem.school_id)
+      : null;
+    const schoolName = schoolItem?.name || studentItem.school_name || '';
+
+    setStudentName(studentItem.name || '');
+    setSchool(schoolName);
+
+    loadPeiList(studentItem.name || '', schoolName);
+
+    loadPeiSourcesPreview({
+      studentId,
+      studentName: studentItem.name || '',
+      school: schoolName,
+    });
+  };
+
+  const loadPeiSourcesPreview = async ({ studentId, studentName: selectedStudentName, school: selectedSchool }) => {
+    if (!studentId || !selectedStudentName) {
+      setPeiSourcesPreview(null);
+      return;
+    }
+
+    setPeiSourcesLoading(true);
+    try {
+      const data = await ragAPI.getPEISourcesPreview({
+        studentId,
+        studentName: selectedStudentName,
+        school: selectedSchool,
+      });
+      setPeiSourcesPreview(data?.sources || null);
+    } catch (err) {
+      console.error('Erro ao carregar prévia de fontes do PEI:', err);
+      setPeiSourcesPreview(null);
+    } finally {
+      setPeiSourcesLoading(false);
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -233,7 +364,6 @@ const TesteRAG = () => {
       setUploadStudentName('');
       setUploadSchool('');
       setSelectedRegisteredStudentId('');
-      setSelectedRegisteredSchoolId('');
     } else {
       alert(`Erros ao enviar:\n${errors.join('\n')}`);
     }
@@ -246,6 +376,22 @@ const TesteRAG = () => {
       await loadStudents();
     } catch (err) {
       alert('Erro ao remover: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDownloadDocument = async (docId, fileName) => {
+    try {
+      const blob = await ragAPI.downloadDocument(docId);
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName || `documento_${docId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert('Erro ao baixar documento: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -293,9 +439,20 @@ const TesteRAG = () => {
 
   const handleGeneratePEI = async (e) => {
     e.preventDefault();
+    if (!peiSelectedStudentId) {
+      alert('Selecione um aluno cadastrado para gerar o PEI.');
+      return;
+    }
+    if (!studentName.trim() || !school.trim()) {
+      alert('O aluno selecionado precisa estar vinculado a uma escola no cadastro.');
+      return;
+    }
+
     setPeiLoading(true);
     setPeiResult(null);
-    setViewingPeiUrl(null);
+    clearViewingPei();
+    setLastPeiClientDurationMs(null);
+    const startedAt = performance.now();
 
     // Animate progress stages
     let stageIdx = 0;
@@ -307,13 +464,15 @@ const TesteRAG = () => {
 
     try {
       const data = await ragAPI.generatePEI({
+        student_id: peiSelectedStudentId,
         student_name: studentName.trim(),
         school: school.trim(),
-        additional_info: additionalInfo.trim(),
       });
+      const clientDurationMs = Math.max(0, Math.round(performance.now() - startedAt));
       clearInterval(timer);
       setPeiProgress({ pct: 100, label: 'PEI gerado com sucesso!' });
-      setPeiResult(data);
+      setLastPeiClientDurationMs(clientDurationMs);
+      setPeiResult({ ...data, client_generation_time_ms: clientDurationMs });
       // Refresh PEI list
       await loadPeiList(studentName.trim(), school.trim());
       setTimeout(() => setPeiProgress({ stage: 0, label: '' }), 1200);
@@ -330,7 +489,7 @@ const TesteRAG = () => {
     if (!window.confirm('Remover este PEI?')) return;
     try {
       await ragAPI.deletePEI(peiId);
-      if (viewingPeiUrl && viewingPeiUrl.includes(peiId)) setViewingPeiUrl(null);
+      clearViewingPei();
       await loadPeiList(studentName.trim(), school.trim());
     } catch (err) {
       alert('Erro ao remover: ' + (err.response?.data?.error || err.message));
@@ -339,10 +498,7 @@ const TesteRAG = () => {
 
   const handleDownloadPEI = async (peiId, sName) => {
     try {
-      const url = ragAPI.getPEIPdfUrl(peiId);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Erro ao baixar arquivo');
-      const blob = await response.blob();
+      const blob = await ragAPI.downloadPEIPdf(peiId);
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
@@ -355,6 +511,117 @@ const TesteRAG = () => {
       alert('Erro ao baixar PDF: ' + err.message);
     }
   };
+
+  const handleSavePeiPrompt = async () => {
+    const promptTrimmed = peiPromptDraft.trim();
+    if (!promptTrimmed) {
+      alert('O prompt não pode ficar vazio.');
+      return;
+    }
+
+    setPeiPromptSaving(true);
+    try {
+      const data = await ragAPI.updatePEIPrompt(promptTrimmed);
+      setPeiPrompt(data.prompt || promptTrimmed);
+      setInitialPeiPrompt(data.prompt || promptTrimmed);
+      setPeiPromptDraft(data.prompt || promptTrimmed);
+      setPeiPromptUpdatedAt(data.updated_at || null);
+      setPeiPromptIsCustom(Boolean(data.is_custom));
+      alert('Prompt do PEI salvo com sucesso.');
+      setPeiPromptModalOpen(false);
+    } catch (err) {
+      alert('Erro ao salvar prompt do PEI: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setPeiPromptSaving(false);
+    }
+  };
+
+  const handleOpenPeiPromptModal = () => {
+    setPeiPromptDraft(peiPrompt);
+    setPeiPromptModalOpen(true);
+  };
+
+  const handleClosePeiPromptModal = () => {
+    setPeiPromptDraft(peiPrompt);
+    setPeiPromptModalOpen(false);
+  };
+
+  const handleResetPeiPrompt = async () => {
+    if (!window.confirm('Restaurar o prompt atual para o prompt base salvo?')) return;
+
+    setPeiPromptResetting(true);
+    try {
+      const data = await ragAPI.resetPEIPrompt();
+      const promptText = data?.prompt || '';
+      setPeiPrompt(promptText);
+      setInitialPeiPrompt(promptText);
+      setPeiPromptDraft(promptText);
+      setPeiPromptUpdatedAt(data?.updated_at || null);
+      setPeiPromptIsCustom(Boolean(data?.is_custom));
+      alert('Prompt restaurado para a versão base.');
+    } catch (err) {
+      alert('Erro ao restaurar prompt: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setPeiPromptResetting(false);
+    }
+  };
+
+  const handleSaveChatPrompt = async () => {
+    const promptTrimmed = chatPromptDraft.trim();
+    if (!promptTrimmed) {
+      alert('O prompt não pode ficar vazio.');
+      return;
+    }
+
+    setChatPromptSaving(true);
+    try {
+      const data = await ragAPI.updateChatPrompt(promptTrimmed);
+      setChatPrompt(data.prompt || promptTrimmed);
+      setInitialChatPrompt(data.prompt || promptTrimmed);
+      setChatPromptDraft(data.prompt || promptTrimmed);
+      setChatPromptUpdatedAt(data.updated_at || null);
+      setChatPromptIsCustom(Boolean(data.is_custom));
+      alert('Prompt do Chat salvo com sucesso.');
+      setChatPromptModalOpen(false);
+    } catch (err) {
+      alert('Erro ao salvar prompt do Chat: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setChatPromptSaving(false);
+    }
+  };
+
+  const handleOpenChatPromptModal = () => {
+    setChatPromptDraft(chatPrompt);
+    setChatPromptModalOpen(true);
+  };
+
+  const handleCloseChatPromptModal = () => {
+    setChatPromptDraft(chatPrompt);
+    setChatPromptModalOpen(false);
+  };
+
+  const handleResetChatPrompt = async () => {
+    if (!window.confirm('Restaurar o prompt atual do Chat para o prompt base salvo?')) return;
+
+    setChatPromptResetting(true);
+    try {
+      const data = await ragAPI.resetChatPrompt();
+      const promptText = data?.prompt || '';
+      setChatPrompt(promptText);
+      setInitialChatPrompt(promptText);
+      setChatPromptDraft(promptText);
+      setChatPromptUpdatedAt(data?.updated_at || null);
+      setChatPromptIsCustom(Boolean(data?.is_custom));
+      alert('Prompt do Chat restaurado para a versão base.');
+    } catch (err) {
+      alert('Erro ao restaurar prompt do Chat: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setChatPromptResetting(false);
+    }
+  };
+
+  const peiPromptDirty = peiPromptDraft.trim() !== initialPeiPrompt.trim();
+  const chatPromptDirty = chatPromptDraft.trim() !== initialChatPrompt.trim();
 
   return (
     <div className="rag-page">
@@ -390,19 +657,6 @@ const TesteRAG = () => {
                 {registeredStudents.map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.name}{student.school_name ? ` — ${student.school_name}` : ''}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedRegisteredSchoolId}
-                onChange={handleRegisteredSchoolChange}
-                className="upload-input"
-                disabled={uploadLoading}
-              >
-                <option value="">Selecionar escola cadastrada</option>
-                {registeredSchools.map((schoolItem) => (
-                  <option key={schoolItem.id} value={schoolItem.id}>
-                    {schoolItem.name}
                   </option>
                 ))}
               </select>
@@ -480,16 +734,28 @@ const TesteRAG = () => {
                                   : ''}
                               </span>
                             </div>
-                            <button
-                              className="doc-delete"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteDocument(doc.doc_id);
-                              }}
-                              title="Remover documento"
-                            >
-                              🗑️
-                            </button>
+                            <div className="doc-actions">
+                              <button
+                                className="doc-download"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadDocument(doc.doc_id, doc.file_name);
+                                }}
+                                title="Baixar documento"
+                              >
+                                ⬇️
+                              </button>
+                              <button
+                                className="doc-delete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDocument(doc.doc_id);
+                                }}
+                                title="Remover documento"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -583,133 +849,319 @@ const TesteRAG = () => {
         </div>
 
         {/* ========================= COLUNA 3: Gerador PEI ========================= */}
-        <div className="rag-panel pei-panel">
-          <h2>📋 Gerar PEI</h2>
+        <div className="pei-column">
+          <div className="rag-panel pei-panel">
+            <h2>📋 Gerar PEI</h2>
 
-          <form className="pei-form" onSubmit={handleGeneratePEI}>
-            <div className="field">
-              <label>Nome do Estudante *</label>
-              <input
-                type="text"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                placeholder="Nome completo"
-                required
-              />
-            </div>
-            <div className="field">
-              <label>Escola *</label>
-              <input
-                type="text"
-                value={school}
-                onChange={(e) => setSchool(e.target.value)}
-                placeholder="Nome da escola"
-                required
-              />
-            </div>
-            <div className="field">
-              <label>Informações Adicionais</label>
-              <textarea
-                value={additionalInfo}
-                onChange={(e) => setAdditionalInfo(e.target.value)}
-                placeholder="Ex: TEA nível 2, 8 anos, 3º ano do ensino fundamental..."
-                rows={3}
-              />
-            </div>
-            <button
-              type="submit"
-              className="generate-btn"
-              disabled={peiLoading}
-            >
-              {peiLoading ? 'Gerando...' : 'Gerar PEI Completo'}
-            </button>
-          </form>
+            <form className="pei-form" onSubmit={handleGeneratePEI}>
+              <div className="field">
+                <label>Aluno cadastrado *</label>
+                <select
+                  value={peiSelectedStudentId}
+                  onChange={handlePeiStudentChange}
+                  required
+                >
+                  <option value="">Selecionar aluno</option>
+                  {registeredStudents.map((student) => (
+                    <option key={student.id} value={student.id}>
+                      {student.name}{student.school_name ? ` — ${student.school_name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="generate-btn"
+                disabled={peiLoading}
+              >
+                {peiLoading ? 'Gerando...' : 'Gerar PEI Completo'}
+              </button>
+            </form>
 
-          {/* Progress bar */}
-          {peiLoading && peiProgress.label && (
-            <div className="pei-progress">
-              <div className="pei-progress-bar">
-                <div
-                  className="pei-progress-fill"
-                  style={{ width: `${peiProgress.pct}%` }}
+            {peiSelectedStudentId && (
+              <div className="pei-sources-preview">
+                <h3 className="pei-sources-title">📎 Fontes usadas na geração</h3>
+                {peiSourcesLoading ? (
+                  <p className="pei-sources-loading">Carregando fontes...</p>
+                ) : (
+                  <>
+                    <ul className="pei-sources-list">
+                      <li>
+                        Documentos do RAG: <strong>{peiSourcesPreview?.vector_documents?.document_count || 0}</strong>
+                      </li>
+                      <li>
+                        Diário: <strong>{peiSourcesPreview?.diary?.included ? `${peiSourcesPreview.diary.entries_count} entrada(s)` : 'não encontrado'}</strong>
+                      </li>
+                      <li>
+                        PDI: <strong>{peiSourcesPreview?.pdi?.included ? 'incluído' : 'não encontrado'}</strong>
+                      </li>
+                      <li>
+                        Cadastro do aluno: <strong>incluído</strong>
+                      </li>
+                    </ul>
+                    {Array.isArray(peiSourcesPreview?.vector_documents?.documents)
+                      && peiSourcesPreview.vector_documents.documents.length > 0 && (
+                        <p className="pei-sources-files">
+                          Arquivos: {peiSourcesPreview.vector_documents.documents
+                            .slice(0, 3)
+                            .map((doc) => doc.file_name)
+                            .filter(Boolean)
+                            .join(', ')}
+                          {peiSourcesPreview.vector_documents.documents.length > 3 ? '...' : ''}
+                        </p>
+                      )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Progress bar */}
+            {peiLoading && peiProgress.label && (
+              <div className="pei-progress">
+                <div className="pei-progress-bar">
+                  <div
+                    className="pei-progress-fill"
+                    style={{ width: `${peiProgress.pct}%` }}
+                  />
+                </div>
+                <p className="pei-progress-label">{peiProgress.label}</p>
+              </div>
+            )}
+
+            {/* Sucesso inline */}
+            {!peiLoading && peiResult && (
+              <div className="pei-new-badge">
+                ✅ PEI gerado e salvo!{' '}
+                {lastPeiClientDurationMs !== null && (
+                  <span className="pei-duration-inline">
+                    Tempo total: {(lastPeiClientDurationMs / 1000).toFixed(2)}s
+                  </span>
+                )}
+                <button
+                  className="pei-view-inline-btn"
+                  onClick={() => handleViewPEI(peiResult.pei_id)}
+                >
+                  Visualizar
+                </button>
+              </div>
+            )}
+
+            {peiViewerLoading && (
+              <div className="pei-progress">
+                <p className="pei-progress-label">Carregando visualização do PDF...</p>
+              </div>
+            )}
+
+            {/* Visualizador PDF */}
+            {viewingPeiUrl && (
+              <div className="pdf-viewer">
+                <div className="pdf-viewer-header">
+                  <span>📄 Visualizando PEI</span>
+                  <button className="pdf-close-btn" onClick={clearViewingPei}>✕</button>
+                </div>
+                <iframe
+                  src={viewingPeiUrl}
+                  title="PEI PDF"
+                  className="pdf-iframe"
                 />
               </div>
-              <p className="pei-progress-label">{peiProgress.label}</p>
-            </div>
-          )}
+            )}
 
-          {/* Sucesso inline */}
-          {!peiLoading && peiResult && (
-            <div className="pei-new-badge">
-              ✅ PEI gerado e salvo!{' '}
-              <button
-                className="pei-view-inline-btn"
-                onClick={() => setViewingPeiUrl(ragAPI.getPEIPdfUrl(peiResult.pei_id))}
-              >
-                Visualizar
-              </button>
-            </div>
-          )}
-
-          {/* Visualizador PDF */}
-          {viewingPeiUrl && (
-            <div className="pdf-viewer">
-              <div className="pdf-viewer-header">
-                <span>📄 Visualizando PEI</span>
-                <button className="pdf-close-btn" onClick={() => setViewingPeiUrl(null)}>✕</button>
+            {/* Lista de PEIs salvos */}
+            {peiList.length > 0 && (
+              <div className="pei-list">
+                <h3 className="pei-list-title">📁 PEIs salvos</h3>
+                {peiList.map((p) => (
+                  <div key={p.id} className="pei-list-item">
+                    <div className="pei-list-info">
+                      <span className="pei-list-name">{p.student_name}</span>
+                      <span className="pei-list-date">
+                        {new Date(p.created_at).toLocaleString('pt-BR', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    <div className="pei-list-actions">
+                      <button
+                        className="pei-action-btn view"
+                        title="Visualizar"
+                        onClick={() => handleViewPEI(p.id)}
+                      >
+                        👁️
+                      </button>
+                      <button
+                        className="pei-action-btn download"
+                        title="Baixar PDF"
+                        onClick={() => handleDownloadPEI(p.id, p.student_name)}
+                      >
+                        ⬇️
+                      </button>
+                      <button
+                        className="pei-action-btn delete"
+                        title="Remover"
+                        onClick={() => handleDeletePEI(p.id)}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <iframe
-                src={viewingPeiUrl}
-                title="PEI PDF"
-                className="pdf-iframe"
-              />
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Lista de PEIs salvos */}
-          {peiList.length > 0 && (
-            <div className="pei-list">
-              <h3 className="pei-list-title">📁 PEIs salvos</h3>
-              {peiList.map((p) => (
-                <div key={p.id} className="pei-list-item">
-                  <div className="pei-list-info">
-                    <span className="pei-list-name">{p.student_name}</span>
-                    <span className="pei-list-date">
-                      {new Date(p.created_at).toLocaleString('pt-BR', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit',
-                      })}
-                    </span>
-                  </div>
-                  <div className="pei-list-actions">
-                    <button
-                      className="pei-action-btn view"
-                      title="Visualizar"
-                      onClick={() => setViewingPeiUrl(ragAPI.getPEIPdfUrl(p.id))}
-                    >
-                      👁️
-                    </button>
-                    <button
-                      className="pei-action-btn download"
-                      title="Baixar PDF"
-                      onClick={() => handleDownloadPEI(p.id, p.student_name)}
-                    >
-                      ⬇️
-                    </button>
-                    <button
-                      className="pei-action-btn delete"
-                      title="Remover"
-                      onClick={() => handleDeletePEI(p.id)}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="rag-panel pei-prompt-panel">
+            <h2>🧠 Prompt do PEI</h2>
+            {peiPromptLoading ? (
+              <p className="pei-prompt-loading">Carregando prompt...</p>
+            ) : (
+              <>
+                <p className="pei-prompt-meta">
+                  {peiPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
+                  {peiPromptUpdatedAt
+                    ? ` · Atualizado em ${new Date(peiPromptUpdatedAt).toLocaleString('pt-BR')}`
+                    : ''}
+                </p>
+                <button
+                  type="button"
+                  className="save-prompt-btn"
+                  onClick={handleOpenPeiPromptModal}
+                >
+                  Visualizar / Editar Prompt
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="rag-panel pei-prompt-panel">
+            <h2>💬 Prompt do Chat</h2>
+            {chatPromptLoading ? (
+              <p className="pei-prompt-loading">Carregando prompt...</p>
+            ) : (
+              <>
+                <p className="pei-prompt-meta">
+                  {chatPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
+                  {chatPromptUpdatedAt
+                    ? ` · Atualizado em ${new Date(chatPromptUpdatedAt).toLocaleString('pt-BR')}`
+                    : ''}
+                </p>
+                <button
+                  type="button"
+                  className="save-prompt-btn"
+                  onClick={handleOpenChatPromptModal}
+                >
+                  Visualizar / Editar Prompt
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
+
+      {peiPromptModalOpen && (
+        <div className="pei-prompt-modal-overlay" onClick={handleClosePeiPromptModal}>
+          <div className="pei-prompt-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pei-prompt-modal-header">
+              <h3>🧠 Prompt de Geração do PEI</h3>
+              <button className="pei-prompt-modal-close" onClick={handleClosePeiPromptModal}>✕</button>
+            </div>
+
+            <p className="pei-prompt-meta">
+              {peiPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
+              {peiPromptUpdatedAt
+                ? ` · Atualizado em ${new Date(peiPromptUpdatedAt).toLocaleString('pt-BR')}`
+                : ''}
+            </p>
+
+            <textarea
+              className="pei-prompt-modal-textarea"
+              value={peiPromptDraft}
+              onChange={(e) => setPeiPromptDraft(e.target.value)}
+              rows={22}
+            />
+
+            <div className="pei-prompt-modal-actions">
+              <button
+                type="button"
+                className="pei-prompt-btn secondary"
+                onClick={handleResetPeiPrompt}
+                disabled={peiPromptResetting || peiPromptSaving}
+              >
+                {peiPromptResetting ? 'Restaurando...' : 'Restaurar base'}
+              </button>
+              <button
+                type="button"
+                className="pei-prompt-btn ghost"
+                onClick={handleClosePeiPromptModal}
+                disabled={peiPromptSaving || peiPromptResetting}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="pei-prompt-btn primary"
+                onClick={handleSavePeiPrompt}
+                disabled={peiPromptSaving || peiPromptResetting || !peiPromptDraft.trim() || !peiPromptDirty}
+              >
+                {peiPromptSaving ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {chatPromptModalOpen && (
+        <div className="pei-prompt-modal-overlay" onClick={handleCloseChatPromptModal}>
+          <div className="pei-prompt-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pei-prompt-modal-header">
+              <h3>💬 Prompt do Chat RAG</h3>
+              <button className="pei-prompt-modal-close" onClick={handleCloseChatPromptModal}>✕</button>
+            </div>
+
+            <p className="pei-prompt-meta">
+              {chatPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
+              {chatPromptUpdatedAt
+                ? ` · Atualizado em ${new Date(chatPromptUpdatedAt).toLocaleString('pt-BR')}`
+                : ''}
+            </p>
+
+            <textarea
+              className="pei-prompt-modal-textarea"
+              value={chatPromptDraft}
+              onChange={(e) => setChatPromptDraft(e.target.value)}
+              rows={22}
+            />
+
+            <div className="pei-prompt-modal-actions">
+              <button
+                type="button"
+                className="pei-prompt-btn secondary"
+                onClick={handleResetChatPrompt}
+                disabled={chatPromptResetting || chatPromptSaving}
+              >
+                {chatPromptResetting ? 'Restaurando...' : 'Restaurar base'}
+              </button>
+              <button
+                type="button"
+                className="pei-prompt-btn ghost"
+                onClick={handleCloseChatPromptModal}
+                disabled={chatPromptSaving || chatPromptResetting}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="pei-prompt-btn primary"
+                onClick={handleSaveChatPrompt}
+                disabled={chatPromptSaving || chatPromptResetting || !chatPromptDraft.trim() || !chatPromptDirty}
+              >
+                {chatPromptSaving ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

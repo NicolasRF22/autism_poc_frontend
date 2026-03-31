@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './DiaryEntry.css';
-import { API_BASE_URL } from '../services/api';
+import { diaryAPI } from '../services/api';
 
 const QUESTIONS = [
   { id: 'lanchou', text: 'Lanchou?' },
@@ -13,11 +13,13 @@ const QUESTIONS = [
   { id: 'cumpriu_combinados', text: 'Cumpriu os combinados?' }
 ];
 
-const ANSWER_OPTIONS = ['Sim', 'Parcialmente', 'Não'];
+const ANSWER_OPTIONS = ['Sim', 'Não', 'Parcialmente'];
 
 const DiaryEntry = () => {
   const { studentName } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const studentId = new URLSearchParams(location.search).get('studentId') || '';
   
   const [teachers, setTeachers] = useState([]);
   const [teacherInput, setTeacherInput] = useState('');
@@ -34,16 +36,13 @@ const DiaryEntry = () => {
     // Definir data de hoje como padrão
     const today = new Date().toISOString().split('T')[0];
     setDiaryDate(today);
-  }, [studentName]);
+  }, [studentName, studentId]);
 
   const loadLastTeachers = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/diary/last-teachers/${encodeURIComponent(studentName)}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.teachers && data.teachers.length > 0) {
-          setTeachers(data.teachers);
-        }
+      const data = await diaryAPI.getLastTeachers(studentName, studentId || null);
+      if (data.teachers && data.teachers.length > 0) {
+        setTeachers(data.teachers);
       }
     } catch (err) {
       console.error('Erro ao carregar professores anteriores:', err);
@@ -52,6 +51,7 @@ const DiaryEntry = () => {
 
   const handleAddTeacher = (e) => {
     e.preventDefault();
+
     if (teacherInput.trim() && !teachers.includes(teacherInput.trim())) {
       setTeachers([...teachers, teacherInput.trim()]);
       setTeacherInput('');
@@ -71,6 +71,11 @@ const DiaryEntry = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!studentId) {
+      alert('Este diário ainda não está vinculado ao cadastro do aluno. Volte e selecione um aluno cadastrado para continuar.');
+      return;
+    }
     
     // Validação
     if (teachers.length === 0) {
@@ -94,29 +99,21 @@ const DiaryEntry = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/diary/entries`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          student_name: studentName,
-          teachers: teachers,
-          diary_date: diaryDate,
-          answers: answers,
-          open_obs: openObs
-        })
+      await diaryAPI.createEntry({
+        student_id: studentId,
+        student_name: studentName,
+        teachers: teachers,
+        diary_date: diaryDate,
+        answers: answers,
+        open_obs: openObs
       });
-
-      if (!response.ok) {
-        throw new Error('Erro ao salvar entrada');
-      }
 
       alert('Entrada de diário salva com sucesso!');
       navigate('/diario');
     } catch (err) {
       console.error(err);
-      setError('Erro ao salvar entrada. Tente novamente.');
+      const backendMessage = err?.response?.data?.error;
+      setError(backendMessage || 'Erro ao salvar entrada. Tente novamente.');
     } finally {
       setLoading(false);
     }

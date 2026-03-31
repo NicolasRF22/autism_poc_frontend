@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pdiAPI } from '../services/api';
+import { pdiAPI, studentAPI } from '../services/api';
 import './PDIPage.css';
 
 const PDIPage = () => {
   const [pdis, setPdis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showNewPDIModal, setShowNewPDIModal] = useState(false);
+  const [availableStudents, setAvailableStudents] = useState([]);
+  const [availableStudentsError, setAvailableStudentsError] = useState('');
+  const [selectedStudentId, setSelectedStudentId] = useState('');
   const navigate = useNavigate();
+
+  const normalizeName = (value) =>
+    String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
 
   useEffect(() => {
     loadPDIs();
@@ -27,8 +39,58 @@ const PDIPage = () => {
     }
   };
 
-  const handleNewPDI = () => {
-    navigate('/pdi/novo');
+  const loadAvailableStudents = async () => {
+    setAvailableStudentsError('');
+
+    try {
+      const data = await pdiAPI.getAvailableStudents();
+      setAvailableStudents(Array.isArray(data) ? data : []);
+    } catch (err) {
+      try {
+        const [allStudents, allPdis] = await Promise.all([
+          studentAPI.getAllStudents(),
+          pdiAPI.getAllPDIs(),
+        ]);
+
+        const usedIds = new Set(
+          (allPdis || [])
+            .map((pdi) => String(pdi?.student_id || '').trim())
+            .filter(Boolean)
+        );
+        const usedNames = new Set(
+          (allPdis || [])
+            .map((pdi) => normalizeName(pdi?.student_name))
+            .filter(Boolean)
+        );
+
+        const eligible = (allStudents || []).filter((student) => {
+          const studentId = String(student?.id || '').trim();
+          const studentName = normalizeName(student?.name || student?.studentName);
+          if (studentId && usedIds.has(studentId)) return false;
+          if (studentName && usedNames.has(studentName)) return false;
+          return true;
+        });
+
+        setAvailableStudents(eligible);
+      } catch (fallbackErr) {
+        console.error('Erro ao carregar alunos elegíveis para PDI:', fallbackErr);
+        setAvailableStudents([]);
+        setAvailableStudentsError('Não foi possível carregar alunos elegíveis para novo PDI.');
+      }
+    }
+  };
+
+  const handleNewPDI = async () => {
+    await loadAvailableStudents();
+    setSelectedStudentId('');
+    setShowNewPDIModal(true);
+  };
+
+  const handleCreateNewPDI = () => {
+    const selected = availableStudents.find((student) => student.id === selectedStudentId);
+    if (!selected) return;
+
+    navigate(`/pdi/novo?studentId=${encodeURIComponent(selected.id)}`);
   };
 
   const handleView = (pdiId) => {
@@ -165,6 +227,45 @@ const PDIPage = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showNewPDIModal && (
+        <div className="modal-overlay" onClick={() => setShowNewPDIModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Criar Novo PDI</h2>
+            <p>Selecione um aluno cadastrado sem PDI:</p>
+            <select
+              value={selectedStudentId}
+              onChange={(e) => setSelectedStudentId(e.target.value)}
+              autoFocus
+            >
+              <option value="">Selecione um aluno</option>
+              {availableStudents.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+
+            {!availableStudentsError && availableStudents.length === 0 && (
+              <p>Todos os alunos cadastrados já possuem PDI.</p>
+            )}
+            {availableStudentsError && <p>{availableStudentsError}</p>}
+
+            <div className="modal-buttons">
+              <button onClick={() => setShowNewPDIModal(false)} className="cancel-button">
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateNewPDI}
+                className="confirm-button"
+                disabled={!selectedStudentId}
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

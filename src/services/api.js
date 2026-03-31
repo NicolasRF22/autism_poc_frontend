@@ -97,8 +97,11 @@ export const authAPI = {
 };
 
 export const adminAPI = {
-  getModelUsage: async () => {
-    const response = await api.get('/admin/model-usage');
+  getModelUsage: async ({ includeHistory = true, historyLimit = null } = {}) => {
+    const params = {};
+    if (includeHistory) params.include_history = '1';
+    if (historyLimit !== null && historyLimit !== undefined) params.history_limit = historyLimit;
+    const response = await api.get('/admin/model-usage', { params });
     return response.data;
   },
 };
@@ -185,6 +188,14 @@ export const ragAPI = {
     return response.data;
   },
 
+  // Baixar documento original
+  downloadDocument: async (docId) => {
+    const response = await api.get(`/rag/documents/${docId}/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   // Enviar mensagem ao chat
   sendMessage: async (message, sessionId, studentFilter = null) => {
     const response = await api.post('/rag/chat', {
@@ -201,6 +212,16 @@ export const ragAPI = {
     return response.data;
   },
 
+  // Prévia das fontes para geração de PEI
+  getPEISourcesPreview: async ({ studentId, studentName, school }) => {
+    const params = {};
+    if (studentId) params.student_id = studentId;
+    if (studentName) params.student_name = studentName;
+    if (school) params.school = school;
+    const response = await api.get('/rag/pei-sources-preview', { params });
+    return response.data;
+  },
+
   // Listar PEIs gerados
   getPEIs: async (studentName, school) => {
     const params = {};
@@ -213,9 +234,49 @@ export const ragAPI = {
   // URL do PDF de um PEI
   getPEIPdfUrl: (peiId) => buildApiUrl(`/rag/peis/${peiId}/pdf`),
 
+  // Baixar/visualizar PDF de um PEI com autenticação
+  downloadPEIPdf: async (peiId) => {
+    const response = await api.get(`/rag/peis/${peiId}/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   // Deletar PEI
   deletePEI: async (peiId) => {
     const response = await api.delete(`/rag/peis/${peiId}`);
+    return response.data;
+  },
+
+  // Prompt de geração de PEI
+  getPEIPrompt: async () => {
+    const response = await api.get('/rag/pei-prompt');
+    return response.data;
+  },
+
+  updatePEIPrompt: async (prompt) => {
+    const response = await api.put('/rag/pei-prompt', { prompt });
+    return response.data;
+  },
+
+  resetPEIPrompt: async () => {
+    const response = await api.post('/rag/pei-prompt/reset');
+    return response.data;
+  },
+
+  // Prompt do chat RAG
+  getChatPrompt: async () => {
+    const response = await api.get('/rag/chat-prompt');
+    return response.data;
+  },
+
+  updateChatPrompt: async (prompt) => {
+    const response = await api.put('/rag/chat-prompt', { prompt });
+    return response.data;
+  },
+
+  resetChatPrompt: async () => {
+    const response = await api.post('/rag/chat-prompt/reset');
     return response.data;
   },
 };
@@ -224,6 +285,12 @@ export const diaryAPI = {
   // Listar todos os alunos com diários (resumos)
   getStudents: async () => {
     const response = await api.get('/diary/students');
+    return response.data;
+  },
+
+  // Listar alunos cadastrados sem diário (elegíveis para novo diário)
+  getAvailableStudents: async () => {
+    const response = await api.get('/diary/available-students');
     return response.data;
   },
 
@@ -245,6 +312,20 @@ export const diaryAPI = {
     return response.data;
   },
 
+  // Atualizar entrada de diário
+  updateEntry: async (entryId, entryData) => {
+    const response = await api.put(`/diary/entries/${entryId}`, entryData);
+    return response.data;
+  },
+
+  // Deletar diário completo de um aluno (todas as entradas)
+  deleteStudentDiary: async (studentName, studentId = null) => {
+    const response = await api.delete(`/diary/students/${encodeURIComponent(studentName)}`, {
+      params: studentId ? { student_id: studentId } : {},
+    });
+    return response.data;
+  },
+
   // Deletar entrada de diário
   deleteEntry: async (entryId) => {
     const response = await api.delete(`/diary/entries/${entryId}`);
@@ -252,8 +333,10 @@ export const diaryAPI = {
   },
 
   // Buscar últimos professores de um aluno
-  getLastTeachers: async (studentName) => {
-    const response = await api.get(`/diary/last-teachers/${encodeURIComponent(studentName)}`);
+  getLastTeachers: async (studentName, studentId = null) => {
+    const response = await api.get(`/diary/last-teachers/${encodeURIComponent(studentName)}`, {
+      params: studentId ? { student_id: studentId } : {},
+    });
     return response.data;
   },
 
@@ -295,9 +378,17 @@ export const pdiAPI = {
     return response.data;
   },
 
+  // Listar alunos cadastrados sem PDI
+  getAvailableStudents: async () => {
+    const response = await api.get('/pdi/available-students');
+    return response.data;
+  },
+
   // Buscar PDI por nome do aluno
-  getPDIByStudent: async (studentName) => {
-    const response = await api.get(`/pdi/${encodeURIComponent(studentName)}`);
+  getPDIByStudent: async (studentName, studentId = null) => {
+    const response = await api.get(`/pdi/${encodeURIComponent(studentName)}`, {
+      params: studentId ? { student_id: studentId } : {},
+    });
     return response.data;
   },
 

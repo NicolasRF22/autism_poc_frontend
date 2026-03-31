@@ -41,7 +41,9 @@ const PDIForm = () => {
 
   // Ler step inicial da query string (se existir)
   const searchParams = new URLSearchParams(location.search);
-  const initialStep = searchParams.get('step') ? parseInt(searchParams.get('step')) : 0;
+  const stepFromQuery = searchParams.get('step') ? parseInt(searchParams.get('step'), 10) : null;
+  const selectedStudentIdFromQuery = searchParams.get('studentId') || '';
+  const initialStep = Number.isInteger(stepFromQuery) ? Math.min(Math.max(stepFromQuery, 1), 4) : 1;
 
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [loading, setLoading] = useState(false);
@@ -73,7 +75,9 @@ const PDIForm = () => {
   }, [id]);
 
   useEffect(() => {
-    loadStudentsCatalog();
+    if (isCreateMode) {
+      initializeCreateFromSelectedStudent();
+    }
   }, []);
 
   const normalizeArrayField = (value) => {
@@ -125,6 +129,27 @@ const PDIForm = () => {
     }
   };
 
+  const initializeCreateFromSelectedStudent = async () => {
+    if (!selectedStudentIdFromQuery) {
+      alert('Para criar um PDI, selecione um aluno cadastrado na lista de PDIs.');
+      navigate('/pdi');
+      return;
+    }
+
+    try {
+      setStudentLookupLoading(true);
+      const student = await studentAPI.getStudent(selectedStudentIdFromQuery);
+      setSelectedStudentId(selectedStudentIdFromQuery);
+      fillHeaderFromStudent(student || {});
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível carregar o aluno selecionado para o novo PDI.');
+      navigate('/pdi');
+    } finally {
+      setStudentLookupLoading(false);
+    }
+  };
+
   const fillHeaderFromStudent = (student) => {
     setStudentName(student.name || student.studentName || '');
     setBirthDate(student.birth_date || student.birthDate || student.date_of_birth || '');
@@ -158,6 +183,7 @@ const PDIForm = () => {
     try {
       setLoading(true);
       const data = await pdiAPI.getPDIById(id);
+      setSelectedStudentId(data.student_id || '');
       
       setStudentName(data.student_name);
       setBirthDate(data.birth_date);
@@ -341,7 +367,7 @@ const PDIForm = () => {
   };
 
   const handlePrevious = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 0));
+    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
   const getFilledSubjectsSummary = () => {
@@ -371,7 +397,12 @@ const PDIForm = () => {
 
   const handleSubmit = async (skipValidation = false) => {
     if (!skipValidation && !validateStep(0)) {
-      setCurrentStep(0);
+      setCurrentStep(1);
+      return;
+    }
+
+    if (!selectedStudentId) {
+      alert('Este PDI precisa estar vinculado a um aluno cadastrado.');
       return;
     }
 
@@ -396,6 +427,7 @@ const PDIForm = () => {
     }
 
     const pdiData = {
+      student_id: selectedStudentId,
       student_name: studentName.trim(),
       birth_date: birthDate,
       guardians: guardians,
@@ -426,16 +458,21 @@ const PDIForm = () => {
   };
 
   const renderStepIndicator = () => {
-    const steps = ['Cabeçalho', '1º Trimestre', '2º Trimestre', '3º Trimestre', 'Revisão'];
+    const steps = [
+      { id: 1, label: '1º Trimestre' },
+      { id: 2, label: '2º Trimestre' },
+      { id: 3, label: '3º Trimestre' },
+      { id: 4, label: 'Revisão' },
+    ];
     return (
       <div className="step-indicator">
         {steps.map((step, idx) => (
           <div
-            key={idx}
-            className={`step-item ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
+            key={step.id}
+            className={`step-item ${step.id === currentStep ? 'active' : ''} ${step.id < currentStep ? 'completed' : ''}`}
           >
             <div className="step-number">{idx + 1}</div>
-            <div className="step-label">{step}</div>
+            <div className="step-label">{step.label}</div>
           </div>
         ))}
       </div>
@@ -672,7 +709,7 @@ const PDIForm = () => {
           
           {teachers.length === 0 ? (
             <div className="no-teachers-warning">
-              ⚠️ Adicione docentes no cabeçalho para habilitar os relatórios
+              ⚠️ Não há docentes vinculados ao cadastro deste aluno
             </div>
           ) : (
             teachers.map((teacher, idx) => (
@@ -775,7 +812,6 @@ const PDIForm = () => {
       {renderStepIndicator()}
 
       <div className="form-content">
-        {currentStep === 0 && renderHeaderStep()}
         {currentStep === 1 && renderTrimesterStep('1')}
         {currentStep === 2 && renderTrimesterStep('2')}
         {currentStep === 3 && renderTrimesterStep('3')}
@@ -783,7 +819,7 @@ const PDIForm = () => {
       </div>
 
       <div className="form-navigation">
-        {currentStep > 0 && (
+        {currentStep > 1 && (
           <button
             type="button"
             onClick={handlePrevious}
