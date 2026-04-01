@@ -5,6 +5,13 @@ import { ragAPI, schoolAPI, studentAPI } from '../services/api';
 import './TesteRAG.css';
 
 const TesteRAG = () => {
+  const normalizeText = (value) =>
+    String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+
   // --- Estudantes ---
   const [students, setStudents] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
@@ -408,8 +415,28 @@ const TesteRAG = () => {
       const sessionId = selectedStudent
         ? `${selectedStudent.student_name}__${selectedStudent.school}`
         : 'default';
+
+      const selectedStudentName = normalizeText(selectedStudent?.student_name);
+      const selectedSchoolName = normalizeText(selectedStudent?.school);
+      const matchedRegisteredStudent = selectedStudent
+        ? registeredStudents.find((studentItem) => {
+            const sameName = normalizeText(studentItem?.name) === selectedStudentName;
+            if (!sameName) return false;
+
+            const schoolItem = studentItem?.school_id
+              ? registeredSchools.find((item) => item.id === studentItem.school_id)
+              : null;
+            const studentSchoolName = normalizeText(schoolItem?.name || studentItem?.school_name);
+            return !selectedSchoolName || studentSchoolName === selectedSchoolName;
+          })
+        : null;
+
       const studentFilter = selectedStudent
-        ? { student_name: selectedStudent.student_name, school: selectedStudent.school }
+        ? {
+            student_id: matchedRegisteredStudent?.id || '',
+            student_name: selectedStudent.student_name,
+            school: selectedStudent.school,
+          }
         : null;
       const data = await ragAPI.sendMessage(text, sessionId, studentFilter);
       setMessages((prev) => [

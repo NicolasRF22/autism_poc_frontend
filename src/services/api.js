@@ -184,13 +184,15 @@ export const ragAPI = {
 
   // Remover documento
   deleteDocument: async (docId) => {
-    const response = await api.delete(`/rag/documents/${docId}`);
+    const encodedDocId = encodeURIComponent(String(docId));
+    const response = await api.delete(`/rag/documents/${encodedDocId}`);
     return response.data;
   },
 
   // Baixar documento original
   downloadDocument: async (docId) => {
-    const response = await api.get(`/rag/documents/${docId}/download`, {
+    const encodedDocId = encodeURIComponent(String(docId));
+    const response = await api.get(`/rag/documents/${encodedDocId}/download`, {
       responseType: 'blob',
     });
     return response.data;
