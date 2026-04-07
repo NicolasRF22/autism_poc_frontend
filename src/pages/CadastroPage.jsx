@@ -9,20 +9,20 @@ const CadastroPage = () => {
     {
       key: 'alunos',
       icon: '👨‍🎓',
-      title: 'Alunos',
-      description: 'Gerencie cadastros de alunos.',
+      title: 'Pré-cadastro de Alunos',
+      description: 'Crie e acesse os pré-cadastros de alunos.',
       listPath: '/students',
       newPath: '/students/new',
-      newLabel: 'Novo Aluno',
+      newLabel: 'Novo Pré-cadastro',
     },
     {
       key: 'escolas',
       icon: '🏫',
-      title: 'Escolas',
-      description: 'Gerencie cadastros de escolas.',
+      title: 'Pré-cadastro de Escolas',
+      description: 'Crie e acesse os pré-cadastros de escolas.',
       listPath: '/schools',
       newPath: '/schools/new',
-      newLabel: 'Nova Escola',
+      newLabel: 'Novo Pré-cadastro',
     },
     {
       key: 'docentes',
@@ -38,8 +38,8 @@ const CadastroPage = () => {
   return (
     <div className="cadastro-page">
       <header className="cadastro-header">
-        <h1>Cadastro</h1>
-        <p>Área administrativa para gerenciar alunos, escolas e docentes.</p>
+        <h1>Pré-Cadastro</h1>
+        <p>Área para criar e acessar pré-cadastros de alunos, escolas e docentes.</p>
       </header>
 
       <section className="cadastro-grid">

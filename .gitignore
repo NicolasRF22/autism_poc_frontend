@@ -6,3 +6,9 @@
 *:Zone.Identifier
 node_modules/
 dist/
+# local env
+.env
+.env.*
+*.env
+*.local
+*:Zone.Identifier

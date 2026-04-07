@@ -59,7 +59,11 @@ const PDIForm = () => {
   const [diagnosis, setDiagnosis] = useState('');
   const [className, setClassName] = useState('');
   const [teachers, setTeachers] = useState([]);
-  const [teacherInput, setTeacherInput] = useState('');
+  const [selectedReportTeacherByTrimester, setSelectedReportTeacherByTrimester] = useState({
+    '1': '',
+    '2': '',
+    '3': '',
+  });
   
   // Estado dos trimestres
   const [trimesters, setTrimesters] = useState({
@@ -79,6 +83,33 @@ const PDIForm = () => {
       initializeCreateFromSelectedStudent();
     }
   }, []);
+
+  const getTeacherOptionsForTrimester = (trimesterNum) => {
+    const linkedTeachers = (teachers || []).map((teacher) => String(teacher || '').trim()).filter(Boolean);
+    const reportTeachers = Object.keys(trimesters?.[trimesterNum]?.relatorio_descritivo || {})
+      .map((teacher) => String(teacher || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set([...linkedTeachers, ...reportTeachers]));
+  };
+
+  useEffect(() => {
+    setSelectedReportTeacherByTrimester((prev) => {
+      const next = { ...prev };
+      ['1', '2', '3'].forEach((trimesterNum) => {
+        const options = getTeacherOptionsForTrimester(trimesterNum);
+        if (!options.length) {
+          next[trimesterNum] = '';
+          return;
+        }
+
+        const current = prev[trimesterNum];
+        if (!current || !options.includes(current)) {
+          next[trimesterNum] = options[0];
+        }
+      });
+      return next;
+    });
+  }, [teachers, trimesters]);
 
   const normalizeArrayField = (value) => {
     if (Array.isArray(value)) {
@@ -158,7 +189,6 @@ const PDIForm = () => {
     setClassName(student.class || student.className || '');
     setTeachers(extractTeachersFromStudent(student));
     setGuardianInput('');
-    setTeacherInput('');
   };
 
   const handleSelectRegisteredStudent = async (event) => {
@@ -262,18 +292,6 @@ const PDIForm = () => {
 
   const handleRemoveGuardian = (guardianToRemove) => {
     setGuardians(guardians.filter(g => g !== guardianToRemove));
-  };
-
-  const handleAddTeacher = (e) => {
-    e.preventDefault();
-    if (teacherInput.trim() && !teachers.includes(teacherInput.trim())) {
-      setTeachers([...teachers, teacherInput.trim()]);
-      setTeacherInput('');
-    }
-  };
-
-  const handleRemoveTeacher = (teacherToRemove) => {
-    setTeachers(teachers.filter(t => t !== teacherToRemove));
   };
 
   const updateSubjectRow = (trimesterNum, subjectId, rowIndex, field, value) => {
@@ -396,7 +414,38 @@ const PDIForm = () => {
   };
 
   const handleSubmit = async (skipValidation = false) => {
-    if (!skipValidation && !validateStep(0)) {
+    const normalizedGuardians = Array.isArray(guardians)
+      ? guardians.map((guardian) => String(guardian || '').trim()).filter(Boolean)
+      : [];
+    const pendingGuardian = guardianInput.trim();
+    const finalGuardians = pendingGuardian && !normalizedGuardians.includes(pendingGuardian)
+      ? [...normalizedGuardians, pendingGuardian]
+      : normalizedGuardians;
+
+    if (finalGuardians.length !== guardians.length) {
+      setGuardians(finalGuardians);
+      setGuardianInput('');
+    }
+
+    if (!skipValidation) {
+      const isHeaderValid = validateStep(0);
+      if (!isHeaderValid) {
+        const hasOtherHeaderIssues =
+          !studentName.trim() ||
+          !birthDate ||
+          !diagnosis.trim() ||
+          !className.trim() ||
+          teachers.length === 0;
+
+        if (hasOtherHeaderIssues || finalGuardians.length === 0) {
+          setCurrentStep(1);
+          return;
+        }
+      }
+    }
+
+    if (finalGuardians.length === 0) {
+      alert('Pelo menos uma filiação é obrigatória');
       setCurrentStep(1);
       return;
     }
@@ -430,7 +479,7 @@ const PDIForm = () => {
       student_id: selectedStudentId,
       student_name: studentName.trim(),
       birth_date: birthDate,
-      guardians: guardians,
+      guardians: finalGuardians,
       diagnosis: diagnosis.trim(),
       class: className.trim(),
       teachers: teachers,
@@ -451,7 +500,8 @@ const PDIForm = () => {
       navigate('/pdi');
     } catch (err) {
       console.error(err);
-      alert('Erro ao salvar PDI: ' + (err.message || 'Erro desconhecido'));
+      const backendMessage = err?.response?.data?.error;
+      alert('Erro ao salvar PDI: ' + (backendMessage || err.message || 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }
@@ -590,32 +640,12 @@ const PDIForm = () => {
             {teachers.map((teacher, idx) => (
               <span key={idx} className="tag">
                 {teacher}
-                {!isViewMode && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTeacher(teacher)}
-                    className="tag-remove"
-                  >
-                    ×
-                  </button>
-                )}
               </span>
             ))}
           </div>
-          {!isViewMode && (
-            <div className="tag-input-group">
-              <input
-                type="text"
-                value={teacherInput}
-                onChange={(e) => setTeacherInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddTeacher(e)}
-                placeholder="Nome do docente"
-              />
-              <button type="button" onClick={handleAddTeacher} className="btn-add-tag">
-                + Adicionar
-              </button>
-            </div>
-          )}
+          <small className="field-help">
+            Docentes vinculados ao aluno no pré-cadastro.
+          </small>
         </div>
       </div>
     </div>
@@ -706,26 +736,51 @@ const PDIForm = () => {
           <p className="report-info">
             Relatório do Desenvolvimento Pedagógico e Comportamental por docente
           </p>
-          
-          {teachers.length === 0 ? (
-            <div className="no-teachers-warning">
-              ⚠️ Não há docentes vinculados ao cadastro deste aluno
-            </div>
-          ) : (
-            teachers.map((teacher, idx) => (
-              <div key={idx} className="teacher-report">
-                <label>Relatório - {teacher}</label>
-                <textarea
-                  value={trimester.relatorio_descritivo?.[teacher] || ''}
-                  onChange={(e) => updateTrimesterReport(trimesterNum, teacher, e.target.value)}
-                  disabled={isViewMode}
-                  rows="10"
-                  placeholder={`Relatório do desenvolvimento pedagógico e comportamental elaborado por ${teacher}...`}
-                  className="large-textarea"
-                />
-              </div>
-            ))
-          )}
+          {(() => {
+            const teacherOptions = getTeacherOptionsForTrimester(trimesterNum);
+            const selectedTeacher = selectedReportTeacherByTrimester[trimesterNum] || teacherOptions[0] || '';
+
+            if (teacherOptions.length === 0) {
+              return (
+                <div className="no-teachers-warning">
+                  ⚠️ Não há docentes vinculados ao cadastro deste aluno
+                </div>
+              );
+            }
+
+            return (
+              <>
+                <div className="form-group">
+                  <label>Docente responsável pelo relatório</label>
+                  <select
+                    value={selectedTeacher}
+                    onChange={(e) => setSelectedReportTeacherByTrimester((prev) => ({
+                      ...prev,
+                      [trimesterNum]: e.target.value,
+                    }))}
+                  >
+                    {teacherOptions.map((teacher) => (
+                      <option key={teacher} value={teacher}>
+                        {teacher}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="teacher-report">
+                  <label>Relatório - {selectedTeacher}</label>
+                  <textarea
+                    value={trimester.relatorio_descritivo?.[selectedTeacher] || ''}
+                    onChange={(e) => updateTrimesterReport(trimesterNum, selectedTeacher, e.target.value)}
+                    disabled={isViewMode}
+                    rows="10"
+                    placeholder={`Relatório do desenvolvimento pedagógico e comportamental elaborado por ${selectedTeacher}...`}
+                    className="large-textarea"
+                  />
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
     );

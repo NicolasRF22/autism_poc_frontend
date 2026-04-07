@@ -41,10 +41,12 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
 
   const menuItems = [
     { path: '/inicio', label: 'Início', icon: '🏠' },
-    { path: '/formularios', label: 'Formulários', icon: '📋' },
+    { path: '/estudo-de-caso', label: 'Estudo de Caso', icon: '📋' },
+    { path: '/cadastro-da-escola', label: 'Cadastro da Escola', icon: '🏫' },
     { path: '/diario', label: 'Diário Individual', icon: '📖' },
     { path: '/pdi', label: 'PDI Individual', icon: '📑' },
-    { path: '/rag', label: 'RAG', icon: '🤖' },
+    { path: '/anexos', label: 'Anexos', icon: '📎' },
+    { path: '/rag', label: 'Chat e PEI', icon: '🤖' },
   ];
 
   if (user?.role === 'admin') {
@@ -58,6 +60,7 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
       <div className={`sidebar ${isOpen ? '' : 'sidebar-hidden'}`} style={{ width: `${width}px` }}>
         <div className="sidebar-header">
           <img className="sidebar-logo" src={logoAutismIa} alt="Autism.iA" />
+          <p className="sidebar-brand-name">SmartPEI</p>
         </div>
 
         <nav className="sidebar-nav">

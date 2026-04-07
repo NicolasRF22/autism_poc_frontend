@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Home from './pages/Home';
-import FormsPage from './pages/FormsPage';
-import FormDetail from './pages/FormDetail';
 import DiaryPage from './pages/DiaryPage';
 import DiaryEntry from './pages/DiaryEntry';
 import PDIPage from './pages/PDIPage';
@@ -17,10 +15,13 @@ import StudentFullForm from './pages/StudentFormNew';
 import TeachersPage from './pages/TeachersPage';
 import TeacherForm from './pages/TeacherFormNew';
 import TesteRAG from './pages/TesteRAG';
+import AttachmentsPage from './pages/AttachmentsPage';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
 import AdminUsagePage from './pages/AdminUsagePage';
 import CadastroPage from './pages/CadastroPage';
+import EstudoDeCasoPage from './pages/EstudoDeCasoPage';
+import CadastroDaEscolaPage from './pages/CadastroDaEscolaPage';
 import { authAPI, clearAuthSession, getAuthToken, getStoredUser } from './services/api';
 import './App.css';
 
@@ -142,8 +143,8 @@ function App() {
               <Route path="/" element={<Navigate to="/inicio" replace />} />
               <Route path="/login" element={<Navigate to="/inicio" replace />} />
               <Route path="/inicio" element={<Home />} />
-              <Route path="/formularios" element={<FormsPage />} />
-              <Route path="/formularios/:formId" element={<FormDetail />} />
+              <Route path="/estudo-de-caso" element={<EstudoDeCasoPage />} />
+              <Route path="/cadastro-da-escola" element={<CadastroDaEscolaPage />} />
               <Route path="/diario" element={<DiaryPage />} />
               <Route path="/diario/:studentName/novo" element={<DiaryEntry />} />
               <Route path="/pdi" element={<PDIPage />} />
@@ -166,33 +167,34 @@ function App() {
               <Route path="/students/:id/edit/completo" element={<StudentFullForm />} />
               <Route
                 path="/teachers"
-                element={user?.role === 'admin' ? <TeachersPage /> : <Navigate to="/formularios" replace />}
+                element={user?.role === 'admin' ? <TeachersPage /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/teachers/new"
-                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/formularios" replace />}
+                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/teachers/:id/view"
-                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/formularios" replace />}
+                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/teachers/:id/edit"
-                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/formularios" replace />}
+                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/inicio" replace />}
               />
               <Route path="/rag" element={<TesteRAG />} />
+              <Route path="/anexos" element={<AttachmentsPage />} />
               <Route path="/teste-rag" element={<Navigate to="/rag" replace />} />
               <Route
                 path="/cadastro"
-                element={user?.role === 'admin' ? <CadastroPage /> : <Navigate to="/formularios" replace />}
+                element={user?.role === 'admin' ? <CadastroPage /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/admin"
-                element={user?.role === 'admin' ? <AdminPage /> : <Navigate to="/formularios" replace />}
+                element={user?.role === 'admin' ? <AdminPage /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/admin/gastos"
-                element={user?.role === 'admin' ? <AdminUsagePage /> : <Navigate to="/formularios" replace />}
+                element={user?.role === 'admin' ? <AdminUsagePage /> : <Navigate to="/inicio" replace />}
               />
               <Route path="*" element={<Navigate to="/inicio" replace />} />
             </Routes>

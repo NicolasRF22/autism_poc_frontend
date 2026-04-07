@@ -101,6 +101,35 @@
   gap: 1rem;
 }
 
+.teachers-select {
+  width: 100%;
+  padding: 0.8rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+  background: white;
+}
+
+.teachers-select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.teachers-help {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.no-teachers-warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+
 .teachers-tags {
   display: flex;
   flex-wrap: wrap;

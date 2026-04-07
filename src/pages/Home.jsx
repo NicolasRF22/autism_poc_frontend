@@ -9,8 +9,6 @@ import logoUnifei from '../assets/logo-unifei.png';
 const Home = () => {
   return (
     <div className="home">
-      <h1 className="home-page-title">Início</h1>
-
       <div className="home-shell">
         <section className="home-hero">
           <p className="home-kicker">Projeto SmartPEI</p>

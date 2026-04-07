@@ -53,10 +53,20 @@
 }
 
 .sidebar-logo {
-  width: 100%;
+  width: 78%;
   height: auto;
   display: block;
+  margin: 0 auto;
   border-radius: 8px;
+}
+
+.sidebar-brand-name {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: white;
 }
 
 .sidebar-nav {

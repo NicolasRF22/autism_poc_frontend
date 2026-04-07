@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { teacherAPI } from '../services/api';
+import { schoolAPI, teacherAPI } from '../services/api';
 import './TeacherFormNew.css';
 
 const emptyForm = {
   name: '',
+  school_id: '',
   school_name: '',
   specialization: '',
   email: '',
@@ -22,9 +23,27 @@ const TeacherFormNew = () => {
   const isNewMode = !id;
 
   const [formData, setFormData] = useState(emptyForm);
+  const [schools, setSchools] = useState([]);
+  const [schoolsLoading, setSchoolsLoading] = useState(true);
   const [loading, setLoading] = useState(!isNewMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadSchools = async () => {
+      try {
+        setSchoolsLoading(true);
+        const data = await schoolAPI.getAllSchools();
+        setSchools(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Erro ao carregar escolas para seleção:', err);
+      } finally {
+        setSchoolsLoading(false);
+      }
+    };
+
+    loadSchools();
+  }, []);
 
   useEffect(() => {
     if (isNewMode) return;
@@ -36,6 +55,7 @@ const TeacherFormNew = () => {
         const data = await teacherAPI.getTeacher(id);
         setFormData({
           name: data.name || '',
+          school_id: data.school_id || '',
           school_name: data.school_name || '',
           specialization: data.specialization || '',
           email: data.email || '',
@@ -53,9 +73,37 @@ const TeacherFormNew = () => {
     loadTeacher();
   }, [id, isNewMode]);
 
+  useEffect(() => {
+    if (!schools.length) return;
+    if (formData.school_id || !formData.school_name) return;
+
+    const normalizedCurrentName = formData.school_name.trim().toLowerCase();
+    const matchedSchool = schools.find(
+      (school) => String(school.name || '').trim().toLowerCase() === normalizedCurrentName,
+    );
+
+    if (matchedSchool) {
+      setFormData((prev) => ({
+        ...prev,
+        school_id: matchedSchool.id,
+      }));
+    }
+  }, [schools, formData.school_id, formData.school_name]);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSchoolChange = (event) => {
+    const schoolId = event.target.value;
+    const selectedSchool = schools.find((school) => school.id === schoolId);
+
+    setFormData((prev) => ({
+      ...prev,
+      school_id: schoolId,
+      school_name: selectedSchool?.name || '',
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -65,6 +113,11 @@ const TeacherFormNew = () => {
 
     if (!formData.name.trim()) {
       setError('Nome do docente é obrigatório.');
+      return;
+    }
+
+    if (!formData.school_id) {
+      setError('Selecione uma escola cadastrada para o docente.');
       return;
     }
 
@@ -130,14 +183,24 @@ const TeacherFormNew = () => {
           </label>
 
           <label>
-            Escola
-            <input
-              type="text"
-              name="school_name"
-              value={formData.school_name}
-              onChange={handleChange}
-              disabled={isViewMode}
-            />
+            Escola *
+            <select
+              name="school_id"
+              value={formData.school_id}
+              onChange={handleSchoolChange}
+              disabled={isViewMode || schoolsLoading}
+              required
+            >
+              <option value="">{schoolsLoading ? 'Carregando escolas...' : 'Selecione uma escola cadastrada'}</option>
+              {schools.map((school) => (
+                <option key={school.id} value={school.id}>
+                  {school.name}
+                </option>
+              ))}
+            </select>
+            {!schoolsLoading && schools.length === 0 && (
+              <small>Cadastre ao menos uma escola antes de cadastrar docentes.</small>
+            )}
           </label>
 
           <label>
