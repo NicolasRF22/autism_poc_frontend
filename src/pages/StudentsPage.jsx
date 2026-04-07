@@ -3,11 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import './PDIPage.css'; // Reusing PDI styles
 import { API_BASE_URL } from '../services/api';
 
-const StudentsPage = () => {
+const StudentsPage = ({ mode = 'pre-registration' }) => {
   const [students, setStudents] = useState([]);
+  const [selectedCaseStudyStudentId, setSelectedCaseStudyStudentId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const isCaseStudyMode = mode === 'case-study';
+  const completedCaseStudies = students.filter((student) => student.case_study_completed);
+  const pendingCaseStudyStudents = students.filter((student) => !student.case_study_completed);
 
   useEffect(() => {
     loadStudents();
@@ -38,7 +42,14 @@ const StudentsPage = () => {
   };
 
   const handleViewComplete = (studentId) => {
-    navigate(`/students/${studentId}/view/completo`);
+    const sourceParam = isCaseStudyMode ? '?source=estudo-de-caso' : '';
+    navigate(`/students/${studentId}/view/completo${sourceParam}`);
+  };
+
+  const handleStartCaseStudy = () => {
+    if (!selectedCaseStudyStudentId) return;
+    const sourceParam = '?source=estudo-de-caso';
+    navigate(`/students/${selectedCaseStudyStudentId}/edit/completo${sourceParam}`);
   };
 
   const handleEdit = (studentId) => {
@@ -46,23 +57,32 @@ const StudentsPage = () => {
   };
 
   const handleEditComplete = (studentId) => {
-    navigate(`/students/${studentId}/edit/completo`);
+    const sourceParam = isCaseStudyMode ? '?source=estudo-de-caso' : '';
+    navigate(`/students/${studentId}/edit/completo${sourceParam}`);
   };
 
   const handleDelete = async (studentId, studentName) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o cadastro de ${studentName}?`)) {
+    const confirmMessage = isCaseStudyMode
+      ? `Tem certeza que deseja excluir o Estudo de Caso de ${studentName}?`
+      : `Tem certeza que deseja excluir o cadastro de ${studentName}?`;
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/students/${studentId}`, {
+      const endpoint = isCaseStudyMode
+        ? `${API_BASE_URL}/students/${studentId}/case-study`
+        : `${API_BASE_URL}/students/${studentId}`;
+
+      const response = await fetch(endpoint, {
         method: 'DELETE'
       });
-      if (!response.ok) throw new Error('Erro ao excluir aluno');
+      if (!response.ok) throw new Error('Erro ao excluir registro');
       loadStudents(); // Reload list
     } catch (err) {
       console.error(err);
-      alert('Erro ao excluir aluno');
+      alert(isCaseStudyMode ? 'Erro ao excluir Estudo de Caso' : 'Erro ao excluir aluno');
     }
   };
 
@@ -100,16 +120,54 @@ const StudentsPage = () => {
   return (
     <div className="pdi-page">
       <div className="page-header">
-        <h1>Cadastro de Alunos</h1>
-        <button className="btn-new-pdi" onClick={handleNew}>
-          + Novo Aluno
-        </button>
+        <h1>
+          {isCaseStudyMode
+            ? `Estudo de Caso (${completedCaseStudies.length})`
+            : `Pré-cadastro de Alunos (${students.length})`}
+        </h1>
+        {!isCaseStudyMode && (
+          <button className="btn-new-pdi" onClick={handleNew}>
+            + Novo Pré-cadastro
+          </button>
+        )}
       </div>
 
-      {students.length === 0 ? (
+      {isCaseStudyMode && (
+        <div className="new-pdi-modal" style={{ marginBottom: '16px' }}>
+          <h3>Iniciar Estudo de Caso</h3>
+          <p>Selecione um aluno pré-cadastrado para abrir o formulário completo.</p>
+          <select
+            value={selectedCaseStudyStudentId}
+            onChange={(e) => setSelectedCaseStudyStudentId(e.target.value)}
+            disabled={pendingCaseStudyStudents.length === 0}
+          >
+            <option value="">Selecione um aluno</option>
+            {pendingCaseStudyStudents.map((student) => (
+              <option key={student.id} value={student.id}>
+                {student.name}
+              </option>
+            ))}
+          </select>
+          <div className="modal-actions">
+            <button
+              className="btn-create"
+              onClick={handleStartCaseStudy}
+              disabled={!selectedCaseStudyStudentId || pendingCaseStudyStudents.length === 0}
+            >
+              Iniciar Estudo de Caso
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(isCaseStudyMode ? completedCaseStudies.length : students.length) === 0 ? (
         <div className="no-pdis-message">
-          <p>👨‍🎓 Nenhum aluno cadastrado ainda.</p>
-          <p>Clique em "Novo Aluno" para começar.</p>
+          <p>{isCaseStudyMode ? '📋 Nenhum Estudo de Caso concluído ainda.' : '👨‍🎓 Nenhum aluno cadastrado ainda.'}</p>
+          <p>
+            {isCaseStudyMode
+              ? 'Selecione um aluno pré-cadastrado acima para iniciar o estudo de caso.'
+              : 'Clique em "Novo Pré-cadastro" para começar.'}
+          </p>
         </div>
       ) : (
         <div className="table-container">
@@ -126,7 +184,7 @@ const StudentsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {students.map((student) => (
+              {(isCaseStudyMode ? completedCaseStudies : students).map((student) => (
                 <tr key={student.id}>
                   <td>{student.name}</td>
                   <td>{student.age || '-'}</td>
@@ -135,34 +193,42 @@ const StudentsPage = () => {
                   <td>{student.class || '-'}</td>
                   <td>{formatDate(student.updated_at)}</td>
                   <td className="actions-cell">
-                    <button
-                      className="btn-action btn-view"
-                      onClick={() => handleView(student.id)}
-                      title="Visualizar Pré-cadastro"
-                    >
-                      👁️
-                    </button>
-                    <button
-                      className="btn-action btn-review"
-                      onClick={() => handleViewComplete(student.id)}
-                      title="Visualizar Cadastro Completo"
-                    >
-                      📋
-                    </button>
-                    <button
-                      className="btn-action btn-edit"
-                      onClick={() => handleEdit(student.id)}
-                      title="Editar Pré-cadastro"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      className="btn-action btn-review"
-                      onClick={() => handleEditComplete(student.id)}
-                      title="Editar Cadastro Completo"
-                    >
-                      📝
-                    </button>
+                    {!isCaseStudyMode && (
+                      <button
+                        className="btn-action btn-view"
+                        onClick={() => handleView(student.id)}
+                        title="Visualizar Pré-cadastro"
+                      >
+                        👁️
+                      </button>
+                    )}
+                    {isCaseStudyMode && (
+                      <button
+                        className="btn-action btn-review"
+                        onClick={() => handleViewComplete(student.id)}
+                        title="Visualizar Estudo de Caso"
+                      >
+                        📋
+                      </button>
+                    )}
+                    {!isCaseStudyMode && (
+                      <button
+                        className="btn-action btn-edit"
+                        onClick={() => handleEdit(student.id)}
+                        title="Editar Pré-cadastro"
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {isCaseStudyMode && (
+                      <button
+                        className="btn-action btn-review"
+                        onClick={() => handleEditComplete(student.id)}
+                        title="Editar Estudo de Caso"
+                      >
+                        📝
+                      </button>
+                    )}
                     <button
                       className="btn-action btn-delete"
                       onClick={() => handleDelete(student.id, student.name)}

@@ -113,6 +113,11 @@ export const formsAPI = {
     return response.data;
   },
 
+  getFormCounts: async () => {
+    const response = await api.get('/forms/counts');
+    return response.data;
+  },
+
   // Buscar um formulário específico
   getForm: async (formId) => {
     const response = await api.get(`/forms/${formId}`);
@@ -158,6 +163,20 @@ export const formsAPI = {
   },
 };
 
+export const caseStudyAPI = {
+  deleteForm: async (studentId) => {
+    const response = await api.delete(`/students/${studentId}/case-study`);
+    return response.data;
+  },
+};
+
+export const schoolRegistrationAPI = {
+  deleteForm: async (schoolId) => {
+    const response = await api.delete(`/schools/${schoolId}/registration`);
+    return response.data;
+  },
+};
+
 export const ragAPI = {
   // Upload e indexação de PDF
   uploadDocument: async (file, metadata) => {
@@ -184,26 +203,25 @@ export const ragAPI = {
 
   // Remover documento
   deleteDocument: async (docId) => {
-    const encodedDocId = encodeURIComponent(String(docId));
-    const response = await api.delete(`/rag/documents/${encodedDocId}`);
+    const response = await api.delete(`/rag/documents/${docId}`);
     return response.data;
   },
 
   // Baixar documento original
   downloadDocument: async (docId) => {
-    const encodedDocId = encodeURIComponent(String(docId));
-    const response = await api.get(`/rag/documents/${encodedDocId}/download`, {
+    const response = await api.get(`/rag/documents/${docId}/download`, {
       responseType: 'blob',
     });
     return response.data;
   },
 
   // Enviar mensagem ao chat
-  sendMessage: async (message, sessionId, studentFilter = null) => {
+  sendMessage: async (message, sessionId, studentFilter = null, selectedSources = null) => {
     const response = await api.post('/rag/chat', {
       message,
       session_id: sessionId,
       ...(studentFilter || {}),
+      ...(selectedSources ? { selected_sources: selectedSources } : {}),
     });
     return response.data;
   },

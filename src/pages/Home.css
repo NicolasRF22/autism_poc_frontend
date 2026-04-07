@@ -4,14 +4,6 @@
   margin: 0 auto;
 }
 
-.home-page-title {
-  margin: 0 0 14px;
-  font-size: 40px;
-  font-weight: 700;
-  color: #1f2f57;
-  text-align: center;
-}
-
 .home-shell {
   background: #ffffff;
   border-radius: 16px;
@@ -31,7 +23,7 @@
 
 .home-kicker {
   margin: 0 0 8px;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 700;
   color: #4a90e2;
   letter-spacing: 0.08em;
@@ -40,7 +32,7 @@
 
 .home-info-line {
   margin: 0 0 6px;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1.45;
   color: #2f3e5c;
 }
@@ -59,7 +51,7 @@
 .home-summary-text {
   margin: 0 0 14px;
   text-align: justify;
-  font-size: 23px;
+  font-size: 18px;
   line-height: 1.62;
   color: #2f3e5c;
 }
@@ -141,12 +133,12 @@
     padding: 20px;
   }
 
-  .home-page-title {
-    font-size: 32px;
+  .home-info-line {
+    font-size: 16px;
   }
 
-  .home-info-line {
-    font-size: 18px;
+  .home-kicker {
+    font-size: 16px;
   }
 
   .home-summary {
@@ -154,7 +146,7 @@
   }
 
   .home-summary-text {
-    font-size: 19px;
+    font-size: 15px;
   }
 
   .home-shell {

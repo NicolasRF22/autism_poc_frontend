@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './DiaryEntry.css';
-import { diaryAPI } from '../services/api';
+import { diaryAPI, studentAPI } from '../services/api';
 
 const QUESTIONS = [
   { id: 'lanchou', text: 'Lanchou?' },
@@ -21,45 +21,75 @@ const DiaryEntry = () => {
   const location = useLocation();
   const studentId = new URLSearchParams(location.search).get('studentId') || '';
   
+  const [availableTeachers, setAvailableTeachers] = useState([]);
   const [teachers, setTeachers] = useState([]);
-  const [teacherInput, setTeacherInput] = useState('');
   const [diaryDate, setDiaryDate] = useState('');
   const [answers, setAnswers] = useState({});
   const [openObs, setOpenObs] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const normalizeArrayField = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item || '').trim()).filter(Boolean);
+    }
+
+    if (typeof value === 'string') {
+      return value
+        .split(/\n|,|;/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  };
+
+  const extractTeachersFromStudent = (student) => {
+    const direct = normalizeArrayField(student?.teachers || student?.docentes);
+    if (direct.length > 0) return Array.from(new Set(direct));
+
+    const fallback = [student?.teacher_name, student?.teacherName]
+      .map((item) => String(item || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set(fallback));
+  };
+
   useEffect(() => {
-    // Carregar professores anteriores se o aluno já tiver diário
-    loadLastTeachers();
+    // Carregar docentes vinculados ao pré-cadastro do aluno
+    loadLinkedTeachers();
     
     // Definir data de hoje como padrão
     const today = new Date().toISOString().split('T')[0];
     setDiaryDate(today);
   }, [studentName, studentId]);
 
-  const loadLastTeachers = async () => {
+  const loadLinkedTeachers = async () => {
     try {
-      const data = await diaryAPI.getLastTeachers(studentName, studentId || null);
-      if (data.teachers && data.teachers.length > 0) {
-        setTeachers(data.teachers);
+      if (!studentId) {
+        setAvailableTeachers([]);
+        setTeachers([]);
+        return;
+      }
+
+      const student = await studentAPI.getStudent(studentId);
+      const linkedTeachers = extractTeachersFromStudent(student);
+      setAvailableTeachers(linkedTeachers);
+
+      if (linkedTeachers.length > 0) {
+        setTeachers([linkedTeachers[0]]);
+      } else {
+        setTeachers([]);
       }
     } catch (err) {
-      console.error('Erro ao carregar professores anteriores:', err);
+      console.error('Erro ao carregar docentes vinculados:', err);
+      setAvailableTeachers([]);
+      setTeachers([]);
     }
   };
 
-  const handleAddTeacher = (e) => {
-    e.preventDefault();
-
-    if (teacherInput.trim() && !teachers.includes(teacherInput.trim())) {
-      setTeachers([...teachers, teacherInput.trim()]);
-      setTeacherInput('');
-    }
-  };
-
-  const handleRemoveTeacher = (teacherToRemove) => {
-    setTeachers(teachers.filter(t => t !== teacherToRemove));
+  const handleTeacherSelectionChange = (event) => {
+    const selected = Array.from(event.target.selectedOptions || []).map((option) => option.value);
+    setTeachers(selected);
   };
 
   const handleAnswerChange = (questionId, answer) => {
@@ -76,10 +106,15 @@ const DiaryEntry = () => {
       alert('Este diário ainda não está vinculado ao cadastro do aluno. Volte e selecione um aluno cadastrado para continuar.');
       return;
     }
+
+    if (availableTeachers.length === 0) {
+      alert('Este aluno não possui docentes vinculados no pré-cadastro. Atualize o pré-cadastro do aluno para continuar.');
+      return;
+    }
     
     // Validação
     if (teachers.length === 0) {
-      alert('Adicione pelo menos um professor');
+      alert('Selecione pelo menos um docente vinculado');
       return;
     }
     
@@ -148,38 +183,30 @@ const DiaryEntry = () => {
           </div>
 
           <div className="form-group">
-            <label>Professor(a):</label>
+            <label>Docente(s) vinculado(s):</label>
             <div className="teachers-container">
-              <div className="teachers-tags">
-                {teachers.map((teacher, index) => (
-                  <span key={index} className="teacher-tag">
-                    {teacher}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTeacher(teacher)}
-                      className="remove-tag"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="add-teacher">
-                <input
-                  type="text"
-                  value={teacherInput}
-                  onChange={(e) => setTeacherInput(e.target.value)}
-                  placeholder="Nome do professor"
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddTeacher(e)}
-                />
-                <button
-                  type="button"
-                  onClick={handleAddTeacher}
-                  className="add-button"
-                >
-                  + Adicionar
-                </button>
-              </div>
+              {availableTeachers.length > 0 ? (
+                <>
+                  <select
+                    multiple
+                    value={teachers}
+                    onChange={handleTeacherSelectionChange}
+                    className="teachers-select"
+                    size={Math.min(Math.max(availableTeachers.length, 3), 6)}
+                  >
+                    {availableTeachers.map((teacher) => (
+                      <option key={teacher} value={teacher}>
+                        {teacher}
+                      </option>
+                    ))}
+                  </select>
+                  <small className="teachers-help">Segure Ctrl (Windows) para selecionar mais de um docente.</small>
+                </>
+              ) : (
+                <div className="no-teachers-warning">
+                  ⚠️ Nenhum docente vinculado ao aluno no pré-cadastro.
+                </div>
+              )}
             </div>
           </div>
 

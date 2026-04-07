@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './PDIForm.css';
 import { API_BASE_URL } from '../services/api';
+import { formsAPI } from '../services/api';
 
 const SchoolFormNew = () => {
   const navigate = useNavigate();
@@ -9,6 +10,8 @@ const SchoolFormNew = () => {
   const location = useLocation();
   const isViewMode = location.pathname.includes('/view');
   const isEditMode = location.pathname.includes('/edit');
+  const source = new URLSearchParams(location.search).get('source');
+  const backPath = source === 'cadastro-da-escola' ? '/cadastro-da-escola' : '/schools';
 
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -180,7 +183,7 @@ const SchoolFormNew = () => {
     } catch (err) {
       console.error(err);
       alert('Erro ao carregar dados da escola');
-      navigate('/schools');
+      navigate(backPath);
     } finally {
       setLoading(false);
     }
@@ -243,7 +246,8 @@ const SchoolFormNew = () => {
       externalTherapists, clinicPartnerships, pedagogicalTherapeuticIntegration,
       supportNetworks, medicationProtocol,
       certification, enrollmentDocuments, developmentReports, publicAgreements,
-      progressTracking
+      progressTracking,
+      school_registration_completed: source === 'cadastro-da-escola'
     };
 
     try {
@@ -261,8 +265,17 @@ const SchoolFormNew = () => {
 
       if (!response.ok) throw new Error('Erro ao salvar escola');
 
+      if (source === 'cadastro-da-escola') {
+        const payload = await response.json();
+        const savedSchoolId = payload?.school?.id || id;
+        await formsAPI.submitForm('cadastro_escola', schoolData, {
+          source: 'cadastro-da-escola',
+          pre_registration_id: savedSchoolId,
+        });
+      }
+
       alert(isEditMode ? 'Escola atualizada com sucesso!' : 'Escola cadastrada com sucesso!');
-      navigate('/schools');
+      navigate(backPath);
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar dados da escola');
@@ -1079,7 +1092,7 @@ const SchoolFormNew = () => {
         <h2>
           {isViewMode ? 'Visualizar' : isEditMode ? 'Editar' : 'Novo'} Cadastro de Escola
         </h2>
-        <button className="btn-secondary" onClick={() => navigate('/schools')}>
+        <button className="btn-secondary" onClick={() => navigate(backPath)}>
           Voltar
         </button>
       </div>

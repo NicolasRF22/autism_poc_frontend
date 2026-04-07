@@ -65,6 +65,7 @@
 }
 
 .teacher-form input,
+.teacher-form select,
 .teacher-form textarea {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -77,6 +78,7 @@
 }
 
 .teacher-form input:focus,
+.teacher-form select:focus,
 .teacher-form textarea:focus {
   outline: none;
   border-color: #4a90d9;
@@ -84,6 +86,7 @@
 }
 
 .teacher-form input:disabled,
+.teacher-form select:disabled,
 .teacher-form textarea:disabled {
   background: #f8fafc;
   color: #475569;

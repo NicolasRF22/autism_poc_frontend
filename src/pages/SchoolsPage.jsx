@@ -3,11 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import './PDIPage.css'; // Reusing PDI styles
 import { API_BASE_URL } from '../services/api';
 
-const SchoolsPage = () => {
+const SchoolsPage = ({ mode = 'pre-registration' }) => {
   const [schools, setSchools] = useState([]);
+  const [selectedSchoolRegistrationId, setSelectedSchoolRegistrationId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const isSchoolRegistrationMode = mode === 'school-registration';
+  const completedSchoolRegistrations = schools.filter((school) => school.school_registration_completed);
+  const pendingSchoolRegistrations = schools.filter((school) => !school.school_registration_completed);
 
   useEffect(() => {
     loadSchools();
@@ -38,7 +42,14 @@ const SchoolsPage = () => {
   };
 
   const handleViewComplete = (schoolId) => {
-    navigate(`/schools/${schoolId}/view/completo`);
+    const sourceParam = isSchoolRegistrationMode ? '?source=cadastro-da-escola' : '';
+    navigate(`/schools/${schoolId}/view/completo${sourceParam}`);
+  };
+
+  const handleStartSchoolRegistration = () => {
+    if (!selectedSchoolRegistrationId) return;
+    const sourceParam = '?source=cadastro-da-escola';
+    navigate(`/schools/${selectedSchoolRegistrationId}/edit/completo${sourceParam}`);
   };
 
   const handleEdit = (schoolId) => {
@@ -46,23 +57,32 @@ const SchoolsPage = () => {
   };
 
   const handleEditComplete = (schoolId) => {
-    navigate(`/schools/${schoolId}/edit/completo`);
+    const sourceParam = isSchoolRegistrationMode ? '?source=cadastro-da-escola' : '';
+    navigate(`/schools/${schoolId}/edit/completo${sourceParam}`);
   };
 
   const handleDelete = async (schoolId, schoolName) => {
-    if (!window.confirm(`Tem certeza que deseja excluir a escola ${schoolName}?`)) {
+    const confirmMessage = isSchoolRegistrationMode
+      ? `Tem certeza que deseja excluir o Cadastro da Escola ${schoolName}?`
+      : `Tem certeza que deseja excluir a escola ${schoolName}?`;
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/schools/${schoolId}`, {
+      const endpoint = isSchoolRegistrationMode
+        ? `${API_BASE_URL}/schools/${schoolId}/registration`
+        : `${API_BASE_URL}/schools/${schoolId}`;
+
+      const response = await fetch(endpoint, {
         method: 'DELETE'
       });
-      if (!response.ok) throw new Error('Erro ao excluir escola');
+      if (!response.ok) throw new Error('Erro ao excluir registro');
       loadSchools(); // Reload list
     } catch (err) {
       console.error(err);
-      alert('Erro ao excluir escola');
+      alert(isSchoolRegistrationMode ? 'Erro ao excluir Cadastro da Escola' : 'Erro ao excluir escola');
     }
   };
 
@@ -100,16 +120,54 @@ const SchoolsPage = () => {
   return (
     <div className="pdi-page">
       <div className="page-header">
-        <h1>Cadastro de Escolas</h1>
-        <button className="btn-new-pdi" onClick={handleNew}>
-          + Nova Escola
-        </button>
+        <h1>
+          {isSchoolRegistrationMode
+            ? `Cadastro da Escola (${completedSchoolRegistrations.length})`
+            : `Pré-cadastro de Escolas (${schools.length})`}
+        </h1>
+        {!isSchoolRegistrationMode && (
+          <button className="btn-new-pdi" onClick={handleNew}>
+            + Novo Pré-cadastro
+          </button>
+        )}
       </div>
 
-      {schools.length === 0 ? (
+      {isSchoolRegistrationMode && (
+        <div className="new-pdi-modal" style={{ marginBottom: '16px' }}>
+          <h3>Iniciar Cadastro da Escola</h3>
+          <p>Selecione uma escola pré-cadastrada para abrir o formulário completo.</p>
+          <select
+            value={selectedSchoolRegistrationId}
+            onChange={(e) => setSelectedSchoolRegistrationId(e.target.value)}
+            disabled={pendingSchoolRegistrations.length === 0}
+          >
+            <option value="">Selecione uma escola</option>
+            {pendingSchoolRegistrations.map((school) => (
+              <option key={school.id} value={school.id}>
+                {school.name}
+              </option>
+            ))}
+          </select>
+          <div className="modal-actions">
+            <button
+              className="btn-create"
+              onClick={handleStartSchoolRegistration}
+              disabled={!selectedSchoolRegistrationId || pendingSchoolRegistrations.length === 0}
+            >
+              Iniciar Cadastro da Escola
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(isSchoolRegistrationMode ? completedSchoolRegistrations.length : schools.length) === 0 ? (
         <div className="no-pdis-message">
-          <p>🏫 Nenhuma escola cadastrada ainda.</p>
-          <p>Clique em "Nova Escola" para começar.</p>
+          <p>{isSchoolRegistrationMode ? '📋 Nenhum Cadastro da Escola concluído ainda.' : '🏫 Nenhuma escola cadastrada ainda.'}</p>
+          <p>
+            {isSchoolRegistrationMode
+              ? 'Selecione uma escola pré-cadastrada acima para iniciar o cadastro completo.'
+              : 'Clique em "Novo Pré-cadastro" para começar.'}
+          </p>
         </div>
       ) : (
         <div className="table-container">
@@ -125,7 +183,7 @@ const SchoolsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {schools.map((school) => (
+              {(isSchoolRegistrationMode ? completedSchoolRegistrations : schools).map((school) => (
                 <tr key={school.id}>
                   <td>{school.name}</td>
                   <td>{school.cnpj || '-'}</td>
@@ -133,34 +191,42 @@ const SchoolsPage = () => {
                   <td>{school.city || '-'}</td>
                   <td>{formatDate(school.updated_at)}</td>
                   <td className="actions-cell">
-                    <button
-                      className="btn-action btn-view"
-                      onClick={() => handleView(school.id)}
-                      title="Visualizar Pré-cadastro"
-                    >
-                      👁️
-                    </button>
-                    <button
-                      className="btn-action btn-review"
-                      onClick={() => handleViewComplete(school.id)}
-                      title="Visualizar Cadastro Completo"
-                    >
-                      📋
-                    </button>
-                    <button
-                      className="btn-action btn-edit"
-                      onClick={() => handleEdit(school.id)}
-                      title="Editar Pré-cadastro"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      className="btn-action btn-review"
-                      onClick={() => handleEditComplete(school.id)}
-                      title="Editar Cadastro Completo"
-                    >
-                      📝
-                    </button>
+                    {!isSchoolRegistrationMode && (
+                      <button
+                        className="btn-action btn-view"
+                        onClick={() => handleView(school.id)}
+                        title="Visualizar Pré-cadastro"
+                      >
+                        👁️
+                      </button>
+                    )}
+                    {isSchoolRegistrationMode && (
+                      <button
+                        className="btn-action btn-review"
+                        onClick={() => handleViewComplete(school.id)}
+                        title="Visualizar Cadastro da Escola"
+                      >
+                        📋
+                      </button>
+                    )}
+                    {!isSchoolRegistrationMode && (
+                      <button
+                        className="btn-action btn-edit"
+                        onClick={() => handleEdit(school.id)}
+                        title="Editar Pré-cadastro"
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {isSchoolRegistrationMode && (
+                      <button
+                        className="btn-action btn-review"
+                        onClick={() => handleEditComplete(school.id)}
+                        title="Editar Cadastro da Escola"
+                      >
+                        📝
+                      </button>
+                    )}
                     <button
                       className="btn-action btn-delete"
                       onClick={() => handleDelete(school.id, school.name)}

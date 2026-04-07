@@ -5,33 +5,63 @@ import { ragAPI, schoolAPI, studentAPI } from '../services/api';
 import './TesteRAG.css';
 
 const TesteRAG = () => {
-  const normalizeText = (value) =>
-    String(value || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-      .toLowerCase();
-
-  // --- Estudantes ---
+  // --- Estudantes (contexto para chat/PEI) ---
   const [students, setStudents] = useState([]);
-  const [studentsLoading, setStudentsLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null); // {student_name, school, documents, ...}
-  const [expandedUpload, setExpandedUpload] = useState(false);
-
-  // --- Upload ---
-  const [uploadStudentName, setUploadStudentName] = useState('');
-  const [uploadSchool, setUploadSchool] = useState('');
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [registeredStudents, setRegisteredStudents] = useState([]);
   const [registeredSchools, setRegisteredSchools] = useState([]);
-  const [selectedRegisteredStudentId, setSelectedRegisteredStudentId] = useState('');
 
   // --- Chat ---
   const [chatHistories, setChatHistories] = useState({});
   const [inputMessage, setInputMessage] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [selectedChatStudentId, setSelectedChatStudentId] = useState('');
+  const [chatSourcesPreview, setChatSourcesPreview] = useState(null);
+  const [chatSourcesLoading, setChatSourcesLoading] = useState(false);
+  const [chatSelectedSources, setChatSelectedSources] = useState({
+    vector_documents: true,
+    diary: true,
+    pdi: true,
+    student_pre_registration: true,
+    teachers_pre_registration: true,
+    school_pre_registration: true,
+    linked_peis: true,
+  });
   const messagesEndRef = useRef(null);
+
+  const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+  const getSchoolNameFromRegisteredStudent = (studentItem) => {
+    if (!studentItem) return '';
+    const schoolItem = studentItem.school_id
+      ? registeredSchools.find((item) => item.id === studentItem.school_id)
+      : null;
+    return schoolItem?.name || studentItem.school_name || '';
+  };
+
+  const findRagStudentByNameSchool = (studentName, schoolName) => (
+    students.find((studentItem) => (
+      normalizeText(studentItem.student_name) === normalizeText(studentName)
+      && normalizeText(studentItem.school) === normalizeText(schoolName)
+    ))
+  );
+
+  const buildChatStudentContext = (studentItem) => {
+    if (!studentItem) return null;
+
+    const studentName = studentItem.name || '';
+    const schoolName = getSchoolNameFromRegisteredStudent(studentItem);
+    const ragStudent = findRagStudentByNameSchool(studentName, schoolName);
+
+    if (ragStudent) return ragStudent;
+
+    return {
+      student_name: studentName,
+      school: schoolName,
+      documents: [],
+      document_count: 0,
+    };
+  };
 
   // --- Derived: chat history para o estudante ativo ---
   const studentKey = selectedStudent
@@ -61,6 +91,15 @@ const TesteRAG = () => {
   const [peiViewerLoading, setPeiViewerLoading] = useState(false);
   const [peiSourcesPreview, setPeiSourcesPreview] = useState(null);
   const [peiSourcesLoading, setPeiSourcesLoading] = useState(false);
+  const [peiSelectedSources, setPeiSelectedSources] = useState({
+    vector_documents: true,
+    diary: true,
+    pdi: true,
+    student_pre_registration: true,
+    teachers_pre_registration: true,
+    school_pre_registration: true,
+    linked_peis: true,
+  });
   const [peiPrompt, setPeiPrompt] = useState('');
   const [initialPeiPrompt, setInitialPeiPrompt] = useState('');
   const [peiPromptLoading, setPeiPromptLoading] = useState(true);
@@ -87,6 +126,29 @@ const TesteRAG = () => {
     loadPeiPrompt();
     loadChatPrompt();
   }, []);
+
+  useEffect(() => {
+    if (!selectedChatStudentId) {
+      setSelectedStudent(null);
+      setChatSourcesPreview(null);
+      return;
+    }
+
+    const studentItem = registeredStudents.find((item) => item.id === selectedChatStudentId);
+    if (!studentItem) {
+      setSelectedStudent(null);
+      setChatSourcesPreview(null);
+      return;
+    }
+
+    setSelectedStudent(buildChatStudentContext(studentItem));
+    const schoolName = getSchoolNameFromRegisteredStudent(studentItem);
+    loadChatSourcesPreview({
+      studentId: studentItem.id,
+      studentName: studentItem.name || '',
+      school: schoolName,
+    });
+  }, [selectedChatStudentId, registeredStudents, registeredSchools, students]);
 
   const loadPeiPrompt = async () => {
     setPeiPromptLoading(true);
@@ -143,14 +205,6 @@ const TesteRAG = () => {
     } catch (e) { console.error(e); }
   };
 
-  useEffect(() => {
-    if (selectedStudent) {
-      loadPeiList(selectedStudent.student_name, selectedStudent.school);
-    } else {
-      setPeiList([]);
-    }
-  }, [selectedStudent]);
-
   useEffect(() => () => {
     setViewingPeiUrl((prev) => {
       if (prev && prev.startsWith('blob:')) {
@@ -191,90 +245,17 @@ const TesteRAG = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistories, studentKey]);
 
-  // Quando seleciona estudante, pré-preenche PEI
-  useEffect(() => {
-    if (selectedStudent) {
-      setStudentName(selectedStudent.student_name);
-      setSchool(selectedStudent.school);
-      const matchedStudent = registeredStudents.find((studentItem) =>
-        String(studentItem.name || '').trim().toLowerCase() === String(selectedStudent.student_name || '').trim().toLowerCase(),
-      );
-      if (matchedStudent?.id) {
-        setPeiSelectedStudentId(matchedStudent.id);
-      }
-      setPeiResult(null);
-    }
-  }, [selectedStudent, registeredStudents]);
-
   const loadStudents = async () => {
-    setStudentsLoading(true);
     try {
       const data = await ragAPI.getStudents();
       setStudents(data);
-      // Atualiza o estudante selecionado com dados frescos
-      if (selectedStudent) {
-        const updated = data.find(
-          (s) =>
-            s.student_name === selectedStudent.student_name &&
-            s.school === selectedStudent.school
-        );
-        setSelectedStudent(updated || null);
-      }
     } catch (err) {
       console.error('Erro ao carregar estudantes:', err);
-    } finally {
-      setStudentsLoading(false);
     }
   };
 
-  const handleSelectStudent = (student) => {
-    if (
-      selectedStudent &&
-      selectedStudent.student_name === student.student_name &&
-      selectedStudent.school === student.school
-    ) {
-      setSelectedStudent(null); // deselect
-    } else {
-      setSelectedStudent(student);
-    }
-  };
-
-  const openUploadFor = (student = null) => {
-    setExpandedUpload(true);
-    setUploadStudentName(student?.student_name || '');
-    setUploadSchool(student?.school || '');
-
-    if (!student) {
-      setSelectedRegisteredStudentId('');
-      return;
-    }
-
-    const matchedStudent = registeredStudents.find((studentItem) =>
-      String(studentItem.name || '').trim().toLowerCase() === String(student.student_name || '').trim().toLowerCase(),
-    );
-
-    setSelectedRegisteredStudentId(matchedStudent?.id || '');
-  };
-
-  const handleRegisteredStudentChange = (event) => {
-    const studentId = event.target.value;
-    setSelectedRegisteredStudentId(studentId);
-
-    if (!studentId) {
-      setUploadStudentName('');
-      setUploadSchool('');
-      return;
-    }
-
-    const studentItem = registeredStudents.find((item) => item.id === studentId);
-    if (!studentItem) return;
-
-    setUploadStudentName(studentItem.name || '');
-
-    const schoolItem = studentItem.school_id
-      ? registeredSchools.find((item) => item.id === studentItem.school_id)
-      : null;
-    setUploadSchool(schoolItem?.name || studentItem.school_name || '');
+  const handleChatStudentChange = (event) => {
+    setSelectedChatStudentId(event.target.value);
   };
 
   const handlePeiStudentChange = (event) => {
@@ -328,7 +309,20 @@ const TesteRAG = () => {
         studentName: selectedStudentName,
         school: selectedSchool,
       });
-      setPeiSourcesPreview(data?.sources || null);
+      const nextSources = data?.sources || null;
+      setPeiSourcesPreview(nextSources);
+
+      if (nextSources) {
+        setPeiSelectedSources({
+          vector_documents: Boolean(nextSources.vector_documents?.included),
+          diary: Boolean(nextSources.diary?.included),
+          pdi: Boolean(nextSources.pdi?.included),
+          student_pre_registration: Boolean(nextSources.student_pre_registration?.included),
+          teachers_pre_registration: Boolean(nextSources.teachers_pre_registration?.included),
+          school_pre_registration: Boolean(nextSources.school_pre_registration?.included),
+          linked_peis: Boolean(nextSources.linked_peis?.included),
+        });
+      }
     } catch (err) {
       console.error('Erro ao carregar prévia de fontes do PEI:', err);
       setPeiSourcesPreview(null);
@@ -337,68 +331,39 @@ const TesteRAG = () => {
     }
   };
 
-  const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    e.target.value = '';
-    if (!files.length) return;
-
-    if (!uploadStudentName.trim() || !uploadSchool.trim()) {
-      alert('Preencha o nome do estudante e a escola antes de enviar o PDF.');
+  const loadChatSourcesPreview = async ({ studentId, studentName: selectedStudentName, school: selectedSchool }) => {
+    if (!studentId || !selectedStudentName) {
+      setChatSourcesPreview(null);
       return;
     }
 
-    setUploadLoading(true);
-    const errors = [];
+    setChatSourcesLoading(true);
+    try {
+      const data = await ragAPI.getPEISourcesPreview({
+        studentId,
+        studentName: selectedStudentName,
+        school: selectedSchool,
+      });
 
-    for (let i = 0; i < files.length; i++) {
-      setUploadProgress({ current: i + 1, total: files.length });
-      try {
-        await ragAPI.uploadDocument(files[i], {
-          student_name: uploadStudentName.trim(),
-          school: uploadSchool.trim(),
+      const nextSources = data?.sources || null;
+      setChatSourcesPreview(nextSources);
+
+      if (nextSources) {
+        setChatSelectedSources({
+          vector_documents: Boolean(nextSources.vector_documents?.included),
+          diary: Boolean(nextSources.diary?.included),
+          pdi: Boolean(nextSources.pdi?.included),
+          student_pre_registration: Boolean(nextSources.student_pre_registration?.included),
+          teachers_pre_registration: Boolean(nextSources.teachers_pre_registration?.included),
+          school_pre_registration: Boolean(nextSources.school_pre_registration?.included),
+          linked_peis: Boolean(nextSources.linked_peis?.included),
         });
-      } catch (err) {
-        errors.push(`${files[i].name}: ${err.response?.data?.error || err.message}`);
       }
-    }
-
-    await loadStudents();
-    setUploadLoading(false);
-    setUploadProgress({ current: 0, total: 0 });
-
-    if (errors.length === 0) {
-      setExpandedUpload(false);
-      setUploadStudentName('');
-      setUploadSchool('');
-      setSelectedRegisteredStudentId('');
-    } else {
-      alert(`Erros ao enviar:\n${errors.join('\n')}`);
-    }
-  };
-
-  const handleDeleteDocument = async (docId) => {
-    if (!window.confirm('Remover este documento do índice?')) return;
-    try {
-      await ragAPI.deleteDocument(docId);
-      await loadStudents();
     } catch (err) {
-      alert('Erro ao remover: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleDownloadDocument = async (docId, fileName) => {
-    try {
-      const blob = await ragAPI.downloadDocument(docId);
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = fileName || `documento_${docId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      alert('Erro ao baixar documento: ' + (err.response?.data?.error || err.message));
+      console.error('Erro ao carregar prévia de fontes do Chat:', err);
+      setChatSourcesPreview(null);
+    } finally {
+      setChatSourcesLoading(false);
     }
   };
 
@@ -415,30 +380,10 @@ const TesteRAG = () => {
       const sessionId = selectedStudent
         ? `${selectedStudent.student_name}__${selectedStudent.school}`
         : 'default';
-
-      const selectedStudentName = normalizeText(selectedStudent?.student_name);
-      const selectedSchoolName = normalizeText(selectedStudent?.school);
-      const matchedRegisteredStudent = selectedStudent
-        ? registeredStudents.find((studentItem) => {
-            const sameName = normalizeText(studentItem?.name) === selectedStudentName;
-            if (!sameName) return false;
-
-            const schoolItem = studentItem?.school_id
-              ? registeredSchools.find((item) => item.id === studentItem.school_id)
-              : null;
-            const studentSchoolName = normalizeText(schoolItem?.name || studentItem?.school_name);
-            return !selectedSchoolName || studentSchoolName === selectedSchoolName;
-          })
-        : null;
-
       const studentFilter = selectedStudent
-        ? {
-            student_id: matchedRegisteredStudent?.id || '',
-            student_name: selectedStudent.student_name,
-            school: selectedStudent.school,
-          }
+        ? { student_name: selectedStudent.student_name, school: selectedStudent.school }
         : null;
-      const data = await ragAPI.sendMessage(text, sessionId, studentFilter);
+      const data = await ragAPI.sendMessage(text, sessionId, studentFilter, chatSelectedSources);
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: data.response, sources: data.sources },
@@ -475,6 +420,12 @@ const TesteRAG = () => {
       return;
     }
 
+    const selectedCount = Object.values(peiSelectedSources).filter(Boolean).length;
+    if (selectedCount === 0) {
+      alert('Selecione pelo menos uma fonte para gerar o PEI.');
+      return;
+    }
+
     setPeiLoading(true);
     setPeiResult(null);
     clearViewingPei();
@@ -494,6 +445,7 @@ const TesteRAG = () => {
         student_id: peiSelectedStudentId,
         student_name: studentName.trim(),
         school: school.trim(),
+        selected_sources: peiSelectedSources,
       });
       const clientDurationMs = Math.max(0, Math.round(performance.now() - startedAt));
       clearInterval(timer);
@@ -650,6 +602,112 @@ const TesteRAG = () => {
   const peiPromptDirty = peiPromptDraft.trim() !== initialPeiPrompt.trim();
   const chatPromptDirty = chatPromptDraft.trim() !== initialChatPrompt.trim();
 
+  const chatSourceOptions = [
+    {
+      key: 'vector_documents',
+      label: 'Documentos do RAG',
+      detail: `${chatSourcesPreview?.vector_documents?.document_count || 0} arquivo(s)`,
+      available: Boolean(chatSourcesPreview?.vector_documents?.included),
+    },
+    {
+      key: 'diary',
+      label: 'Diário Individual',
+      detail: chatSourcesPreview?.diary?.included
+        ? `${chatSourcesPreview.diary.entries_count} entrada(s)`
+        : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.diary?.included),
+    },
+    {
+      key: 'pdi',
+      label: 'PDI',
+      detail: chatSourcesPreview?.pdi?.included ? 'encontrado' : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.pdi?.included),
+    },
+    {
+      key: 'student_pre_registration',
+      label: 'Pré-cadastro do Aluno',
+      detail: chatSourcesPreview?.student_pre_registration?.included ? 'incluído' : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.student_pre_registration?.included),
+    },
+    {
+      key: 'teachers_pre_registration',
+      label: 'Pré-cadastro de Docente(s)',
+      detail: chatSourcesPreview?.teachers_pre_registration?.included
+        ? `${chatSourcesPreview.teachers_pre_registration.count || 0} docente(s)`
+        : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.teachers_pre_registration?.included),
+    },
+    {
+      key: 'school_pre_registration',
+      label: 'Pré-cadastro da Escola',
+      detail: chatSourcesPreview?.school_pre_registration?.included
+        ? (chatSourcesPreview.school_pre_registration.school_name || 'incluído')
+        : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.school_pre_registration?.included),
+    },
+    {
+      key: 'linked_peis',
+      label: 'PEIs anteriores vinculados',
+      detail: chatSourcesPreview?.linked_peis?.included
+        ? `${chatSourcesPreview.linked_peis.count || 0} PEI(s)`
+        : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.linked_peis?.included),
+    },
+  ];
+
+  const sourceOptions = [
+    {
+      key: 'vector_documents',
+      label: 'Documentos do RAG',
+      detail: `${peiSourcesPreview?.vector_documents?.document_count || 0} arquivo(s)`,
+      available: Boolean(peiSourcesPreview?.vector_documents?.included),
+    },
+    {
+      key: 'diary',
+      label: 'Diário Individual',
+      detail: peiSourcesPreview?.diary?.included
+        ? `${peiSourcesPreview.diary.entries_count} entrada(s)`
+        : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.diary?.included),
+    },
+    {
+      key: 'pdi',
+      label: 'PDI',
+      detail: peiSourcesPreview?.pdi?.included ? 'encontrado' : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.pdi?.included),
+    },
+    {
+      key: 'student_pre_registration',
+      label: 'Pré-cadastro do Aluno',
+      detail: peiSourcesPreview?.student_pre_registration?.included ? 'incluído' : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.student_pre_registration?.included),
+    },
+    {
+      key: 'teachers_pre_registration',
+      label: 'Pré-cadastro de Docente(s)',
+      detail: peiSourcesPreview?.teachers_pre_registration?.included
+        ? `${peiSourcesPreview.teachers_pre_registration.count || 0} docente(s)`
+        : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.teachers_pre_registration?.included),
+    },
+    {
+      key: 'school_pre_registration',
+      label: 'Pré-cadastro da Escola',
+      detail: peiSourcesPreview?.school_pre_registration?.included
+        ? (peiSourcesPreview.school_pre_registration.school_name || 'incluído')
+        : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.school_pre_registration?.included),
+    },
+    {
+      key: 'linked_peis',
+      label: 'PEIs anteriores vinculados',
+      detail: peiSourcesPreview?.linked_peis?.included
+        ? `${peiSourcesPreview.linked_peis.count || 0} PEI(s)`
+        : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.linked_peis?.included),
+    },
+  ];
+
   return (
     <div className="rag-page">
       <div className="rag-header">
@@ -658,145 +716,25 @@ const TesteRAG = () => {
       </div>
 
       <div className="rag-grid">
-        {/* ========================= COLUNA 1: Estudantes ========================= */}
-        <div className="rag-panel docs-panel">
-          <div className="students-header">
-            <h2>👥 Estudantes</h2>
-            <button className="add-student-btn" onClick={() => openUploadFor(null)}>
-              + PDF
-            </button>
-          </div>
-
-          {/* Formulário de upload (colapsável) */}
-          {expandedUpload && (
-            <div className="upload-form">
-              <div className="upload-form-header">
-                <span>Adicionar documento</span>
-                <button className="close-upload-btn" onClick={() => setExpandedUpload(false)}>✕</button>
-              </div>
-              <select
-                value={selectedRegisteredStudentId}
-                onChange={handleRegisteredStudentChange}
-                className="upload-input"
-                disabled={uploadLoading}
-              >
-                <option value="">Selecionar aluno cadastrado</option>
-                {registeredStudents.map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.name}{student.school_name ? ` — ${student.school_name}` : ''}
-                  </option>
-                ))}
-              </select>
-              <label className={`upload-btn ${uploadLoading ? 'loading' : ''}`}>
-                {uploadLoading ? `Indexando ${uploadProgress.current}/${uploadProgress.total}...` : '📎 Selecionar PDFs'}
-                <input
-                  type="file"
-                  accept=".pdf"
-                  multiple
-                  onChange={handleFileUpload}
-                  disabled={uploadLoading}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            </div>
-          )}
-
-          {/* Lista de estudantes */}
-          <div className="students-list">
-            {studentsLoading ? (
-              <p className="docs-empty">Carregando...</p>
-            ) : students.length === 0 ? (
-              <div className="docs-empty">
-                <p>Nenhum estudante cadastrado.</p>
-                <button className="first-upload-btn" onClick={() => openUploadFor(null)}>
-                  + Adicionar primeiro PDF
-                </button>
-              </div>
-            ) : (
-              students.map((student) => {
-                const isSelected =
-                  selectedStudent &&
-                  selectedStudent.student_name === student.student_name &&
-                  selectedStudent.school === student.school;
-                return (
-                  <div
-                    key={`${student.student_name}__${student.school}`}
-                    className={`student-card ${isSelected ? 'active' : ''}`}
-                    onClick={() => handleSelectStudent(student)}
-                  >
-                    <div className="student-card-main">
-                      <div className="student-info">
-                        <span className="student-name">{student.student_name}</span>
-                        <span className="student-school">{student.school}</span>
-                      </div>
-                      <div className="student-meta">
-                        <span className="student-doc-count">
-                          {student.document_count} doc{student.document_count !== 1 ? 's' : ''}
-                        </span>
-                        <button
-                          className="student-upload-btn"
-                          title="Adicionar documento"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openUploadFor(student);
-                          }}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Documentos do estudante (visível quando selecionado) */}
-                    {isSelected && (
-                      <div className="student-docs">
-                        {student.documents.map((doc) => (
-                          <div key={doc.doc_id} className="doc-item">
-                            <div className="doc-info">
-                              <span className="doc-name" title={doc.file_name}>
-                                📎 {doc.file_name}
-                              </span>
-                              <span className="doc-date">
-                                {doc.upload_date
-                                  ? new Date(doc.upload_date).toLocaleDateString('pt-BR')
-                                  : ''}
-                              </span>
-                            </div>
-                            <div className="doc-actions">
-                              <button
-                                className="doc-download"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDownloadDocument(doc.doc_id, doc.file_name);
-                                }}
-                                title="Baixar documento"
-                              >
-                                ⬇️
-                              </button>
-                              <button
-                                className="doc-delete"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteDocument(doc.doc_id);
-                                }}
-                                title="Remover documento"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* ========================= COLUNA 2: Chat ========================= */}
+        {/* ========================= COLUNA 1: Chat ========================= */}
         <div className="rag-panel chat-panel">
           <div className="chat-header">
+            <select
+              className="chat-student-select"
+              value={selectedChatStudentId}
+              onChange={handleChatStudentChange}
+              disabled={registeredStudents.length === 0}
+            >
+              <option value="">Selecionar aluno cadastrado</option>
+              {registeredStudents.map((student) => {
+                const schoolName = getSchoolNameFromRegisteredStudent(student);
+                return (
+                  <option key={student.id} value={student.id}>
+                    {student.name}{schoolName ? ` — ${schoolName}` : ''}
+                  </option>
+                );
+              })}
+            </select>
             <h2>💬 Chat</h2>
             {selectedStudent && (
               <span className="chat-context-badge">
@@ -811,6 +749,39 @@ const TesteRAG = () => {
           </div>
 
           <div className="messages-area">
+            {selectedStudent && (
+              <div className="chat-sources-preview">
+                <h4 className="pei-sources-title">📎 Fontes usadas no chat</h4>
+                {chatSourcesLoading ? (
+                  <p className="pei-sources-loading">Carregando fontes...</p>
+                ) : (
+                  <ul className="pei-sources-list">
+                    {chatSourceOptions.map((source) => (
+                      <li key={source.key} className={!source.available ? 'disabled' : ''}>
+                        <label className="pei-source-option">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(chatSelectedSources[source.key])}
+                            disabled={!source.available}
+                            onChange={(event) => {
+                              const checked = event.target.checked;
+                              setChatSelectedSources((prev) => ({
+                                ...prev,
+                                [source.key]: checked,
+                              }));
+                            }}
+                          />
+                          <span>
+                            {source.label}: <strong>{source.detail}</strong>
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
             {messages.length === 0 ? (
               <div className="chat-empty">
                 {selectedStudent ? (
@@ -820,8 +791,8 @@ const TesteRAG = () => {
                   </>
                 ) : (
                   <>
-                    <p>Selecione um estudante ou faça upload de documentos.</p>
-                    <p className="chat-hint">O chat buscará contexto em todos os documentos.</p>
+                    <p>Selecione um aluno cadastrado para iniciar o chat.</p>
+                    <p className="chat-hint">O contexto será aplicado ao aluno selecionado.</p>
                   </>
                 )}
               </div>
@@ -913,18 +884,27 @@ const TesteRAG = () => {
                 ) : (
                   <>
                     <ul className="pei-sources-list">
-                      <li>
-                        Documentos do RAG: <strong>{peiSourcesPreview?.vector_documents?.document_count || 0}</strong>
-                      </li>
-                      <li>
-                        Diário: <strong>{peiSourcesPreview?.diary?.included ? `${peiSourcesPreview.diary.entries_count} entrada(s)` : 'não encontrado'}</strong>
-                      </li>
-                      <li>
-                        PDI: <strong>{peiSourcesPreview?.pdi?.included ? 'incluído' : 'não encontrado'}</strong>
-                      </li>
-                      <li>
-                        Cadastro do aluno: <strong>incluído</strong>
-                      </li>
+                      {sourceOptions.map((source) => (
+                        <li key={source.key} className={!source.available ? 'disabled' : ''}>
+                          <label className="pei-source-option">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(peiSelectedSources[source.key])}
+                              disabled={!source.available}
+                              onChange={(event) => {
+                                const checked = event.target.checked;
+                                setPeiSelectedSources((prev) => ({
+                                  ...prev,
+                                  [source.key]: checked,
+                                }));
+                              }}
+                            />
+                            <span>
+                              {source.label}: <strong>{source.detail}</strong>
+                            </span>
+                          </label>
+                        </li>
+                      ))}
                     </ul>
                     {Array.isArray(peiSourcesPreview?.vector_documents?.documents)
                       && peiSourcesPreview.vector_documents.documents.length > 0 && (
@@ -937,6 +917,9 @@ const TesteRAG = () => {
                           {peiSourcesPreview.vector_documents.documents.length > 3 ? '...' : ''}
                         </p>
                       )}
+                    <p className="pei-sources-files">
+                      Selecione as fontes desejadas antes de gerar o PEI. Fontes não encontradas ficam desabilitadas.
+                    </p>
                   </>
                 )}
               </div>

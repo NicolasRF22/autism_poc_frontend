@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './PDIForm.css';
 import { API_BASE_URL } from '../services/api';
+import { formsAPI } from '../services/api';
 
 const StudentFormNew = () => {
   const navigate = useNavigate();
@@ -9,6 +10,8 @@ const StudentFormNew = () => {
   const location = useLocation();
   const isViewMode = location.pathname.includes('/view');
   const isEditMode = location.pathname.includes('/edit');
+  const source = new URLSearchParams(location.search).get('source');
+  const backPath = source === 'estudo-de-caso' ? '/estudo-de-caso' : '/students';
 
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -249,7 +252,7 @@ const StudentFormNew = () => {
     } catch (err) {
       console.error(err);
       alert('Erro ao carregar dados do aluno');
-      navigate('/students');
+      navigate(backPath);
     } finally {
       setLoading(false);
     }
@@ -316,7 +319,8 @@ const StudentFormNew = () => {
       feedingChallenging, feedingObs,
       familyParticipates, familyCommunication, familySupport, familyCollaboration,
       familyOpenness, familyObs,
-      pedagogicalAdaptations, pedagogicalDevelopment
+      pedagogicalAdaptations, pedagogicalDevelopment,
+      case_study_completed: source === 'estudo-de-caso'
     };
 
     try {
@@ -334,8 +338,17 @@ const StudentFormNew = () => {
 
       if (!response.ok) throw new Error('Erro ao salvar aluno');
 
+      if (source === 'estudo-de-caso') {
+        const payload = await response.json();
+        const savedStudentId = payload?.student?.id || id;
+        await formsAPI.submitForm('cadastro_aluno', studentData, {
+          source: 'estudo-de-caso',
+          pre_registration_id: savedStudentId,
+        });
+      }
+
       alert(isEditMode ? 'Cadastro atualizado com sucesso!' : 'Aluno cadastrado com sucesso!');
-      navigate('/students');
+      navigate(backPath);
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar dados do aluno');
@@ -1347,7 +1360,7 @@ const StudentFormNew = () => {
         <h2>
           {isViewMode ? 'Visualizar' : isEditMode ? 'Editar' : 'Novo'} Cadastro de Aluno
         </h2>
-        <button className="btn-secondary" onClick={() => navigate('/students')}>
+        <button className="btn-secondary" onClick={() => navigate(backPath)}>
           Voltar
         </button>
       </div>
