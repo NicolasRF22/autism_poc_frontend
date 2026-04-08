@@ -31,6 +31,26 @@ const TesteRAG = () => {
 
   const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
+  const sanitizeFilenamePart = (value) => (
+    String(value || 'estudante')
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9_-]/g, '')
+  );
+
+  const buildTimestampFilenamePart = () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  };
+
+  const toPdfBlob = (value) => {
+    if (value instanceof Blob) return value;
+    if (value?.blob instanceof Blob) return value.blob;
+    if (value instanceof ArrayBuffer) return new Blob([value], { type: 'application/pdf' });
+    return null;
+  };
+
   const getSchoolNameFromRegisteredStudent = (studentItem) => {
     if (!studentItem) return '';
     const schoolItem = studentItem.school_id
@@ -198,9 +218,13 @@ const TesteRAG = () => {
     }
   };
 
-  const loadPeiList = async (sName, sSchool) => {
+  const loadPeiList = async (studentId, sName, sSchool) => {
     try {
-      const data = await ragAPI.getPEIs(sName, sSchool);
+      const data = await ragAPI.getPEIs({
+        studentId,
+        studentName: sName,
+        school: sSchool,
+      });
       setPeiList(data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
     } catch (e) { console.error(e); }
   };
@@ -226,7 +250,9 @@ const TesteRAG = () => {
   const handleViewPEI = async (peiId) => {
     try {
       setPeiViewerLoading(true);
-      const blob = await ragAPI.downloadPEIPdf(peiId);
+      const payload = await ragAPI.downloadPEIPdf(peiId);
+      const blob = toPdfBlob(payload);
+      if (!blob) throw new Error('Arquivo PDF inválido retornado pela API.');
       const blobUrl = URL.createObjectURL(blob);
       setViewingPeiUrl((prev) => {
         if (prev && prev.startsWith('blob:')) {
@@ -287,7 +313,7 @@ const TesteRAG = () => {
     setStudentName(studentItem.name || '');
     setSchool(schoolName);
 
-    loadPeiList(studentItem.name || '', schoolName);
+    loadPeiList(studentId, studentItem.name || '', schoolName);
 
     loadPeiSourcesPreview({
       studentId,
@@ -453,7 +479,7 @@ const TesteRAG = () => {
       setLastPeiClientDurationMs(clientDurationMs);
       setPeiResult({ ...data, client_generation_time_ms: clientDurationMs });
       // Refresh PEI list
-      await loadPeiList(studentName.trim(), school.trim());
+      await loadPeiList(peiSelectedStudentId, studentName.trim(), school.trim());
       setTimeout(() => setPeiProgress({ stage: 0, label: '' }), 1200);
     } catch (err) {
       clearInterval(timer);
@@ -469,7 +495,7 @@ const TesteRAG = () => {
     try {
       await ragAPI.deletePEI(peiId);
       clearViewingPei();
-      await loadPeiList(studentName.trim(), school.trim());
+      await loadPeiList(peiSelectedStudentId, studentName.trim(), school.trim());
     } catch (err) {
       alert('Erro ao remover: ' + (err.response?.data?.error || err.message));
     }
@@ -477,11 +503,17 @@ const TesteRAG = () => {
 
   const handleDownloadPEI = async (peiId, sName) => {
     try {
-      const blob = await ragAPI.downloadPEIPdf(peiId);
+      const payload = typeof ragAPI.downloadPEIPdfWithMetadata === 'function'
+        ? await ragAPI.downloadPEIPdfWithMetadata(peiId)
+        : await ragAPI.downloadPEIPdf(peiId);
+      const blob = toPdfBlob(payload);
+      if (!blob) throw new Error('Arquivo PDF inválido retornado pela API.');
+      const filename = payload?.filename;
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `PEI_${(sName || 'estudante').replace(/\s+/g, '_')}.pdf`;
+      const fallbackName = `PEI_${sanitizeFilenamePart(sName)}_${buildTimestampFilenamePart()}.pdf`;
+      a.download = filename || fallbackName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
