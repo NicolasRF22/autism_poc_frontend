@@ -39,6 +39,11 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     event.preventDefault();
   };
 
+  const role = user?.role || '';
+  const canAccessTeacherManagement = ['admin', 'secretaria', 'viewer'].includes(role);
+  const canAccessCadastro = ['admin'].includes(role);
+  const canAccessPreRegistrationPages = ['admin', 'secretaria'].includes(role);
+  const canAccessTeacherStudentManagement = ['admin', 'secretaria', 'coordenacao'].includes(role);
   const menuItems = [
     { path: '/inicio', label: 'Início', icon: '🏠' },
     { path: '/estudo-de-caso', label: 'Estudo de Caso', icon: '📋' },
@@ -49,8 +54,24 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     { path: '/rag', label: 'Chat e PEI', icon: '🤖' },
   ];
 
-  if (user?.role === 'admin') {
+  if (canAccessCadastro) {
     menuItems.push({ path: '/cadastro', label: 'Cadastro', icon: '🗂️' });
+  }
+
+  if (canAccessPreRegistrationPages) {
+    menuItems.push({ path: '/schools', label: 'Escolas', icon: '🏫' });
+    menuItems.push({ path: '/students', label: 'Alunos', icon: '🧒' });
+  }
+
+  if (canAccessTeacherManagement) {
+    menuItems.push({ path: '/teachers', label: 'Docentes', icon: '👩‍🏫' });
+  }
+
+  if (canAccessTeacherStudentManagement) {
+    menuItems.push({ path: '/teacher-student-management', label: 'Docentes x Alunos', icon: '🔗' });
+  }
+
+  if (user?.role === 'admin') {
     menuItems.push({ path: '/admin', label: 'Administração', icon: '🛡️' });
     menuItems.push({ path: '/admin/gastos', label: 'Gastos IA', icon: '💸' });
   }

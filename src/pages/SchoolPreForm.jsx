@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { schoolAPI } from '../services/api';
+import { getStoredUser, municipalityAPI, schoolAPI } from '../services/api';
 import './SchoolPreForm.css';
 
 const emptyForm = {
   name: '',
   cnpj: '',
   institution_type: '',
-  city: '',
+  municipio_id: '',
   notes: '',
 };
 
@@ -19,11 +19,44 @@ const SchoolPreForm = () => {
   const isViewMode = location.pathname.endsWith('/view');
   const isEditMode = location.pathname.endsWith('/edit');
   const isNewMode = !id;
+  const currentUser = getStoredUser();
+  const isSecretariaScoped = currentUser?.role === 'secretaria' && Boolean(currentUser?.municipio_id);
+  const isCoordenacao = currentUser?.role === 'coordenacao';
+  const isMunicipioLocked = isSecretariaScoped || isCoordenacao;
 
   const [formData, setFormData] = useState(emptyForm);
+  const [municipalities, setMunicipalities] = useState([]);
+  const [municipalitiesLoading, setMunicipalitiesLoading] = useState(true);
   const [loading, setLoading] = useState(!isNewMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadMunicipalities = async () => {
+      try {
+        setMunicipalitiesLoading(true);
+        const data = await municipalityAPI.getAllMunicipalities();
+        const nextMunicipalities = Array.isArray(data) ? data : [];
+        setMunicipalities(nextMunicipalities);
+
+        if (isSecretariaScoped) {
+          const userMunicipioId = String(currentUser?.municipio_id || '').trim();
+          if (userMunicipioId) {
+            setFormData((prev) => ({
+              ...prev,
+              municipio_id: prev.municipio_id || userMunicipioId,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao carregar municípios para o formulário de escola:', err);
+      } finally {
+        setMunicipalitiesLoading(false);
+      }
+    };
+
+    loadMunicipalities();
+  }, [isSecretariaScoped, currentUser?.municipio_id]);
 
   useEffect(() => {
     if (isNewMode) return;
@@ -37,7 +70,7 @@ const SchoolPreForm = () => {
           name: data.name || '',
           cnpj: data.cnpj || '',
           institution_type: data.institution_type || '',
-          city: data?.address?.city || data.city || '',
+          municipio_id: data.municipio_id || '',
           notes: data.notes || '',
         });
       } catch (err) {
@@ -66,12 +99,21 @@ const SchoolPreForm = () => {
       return;
     }
 
+    if (!String(formData.municipio_id || '').trim()) {
+      setError('Município é obrigatório para o pré-cadastro da escola.');
+      return;
+    }
+
+    const selectedMunicipality = municipalities.find((item) => item.id === formData.municipio_id);
+    const municipalityLabel = selectedMunicipality?.name || formData.municipio_id;
+
     const payload = {
       name: formData.name,
       cnpj: formData.cnpj,
       institution_type: formData.institution_type,
+      municipio_id: formData.municipio_id,
       address: {
-        city: formData.city,
+        city: municipalityLabel,
       },
       notes: formData.notes,
     };
@@ -162,14 +204,35 @@ const SchoolPreForm = () => {
           </div>
 
           <label>
-            Cidade
-            <input
-              type="text"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-              disabled={isViewMode}
-            />
+            Município *
+            {isMunicipioLocked ? (
+              <>
+                <input
+                  type="text"
+                  value={municipalities.find((m) => m.id === formData.municipio_id)?.name || formData.municipio_id || ''}
+                  disabled
+                  readOnly
+                />
+                <small className="school-pre-help">Município atribuído à sua conta.</small>
+              </>
+            ) : (
+              <>
+                <select
+                  name="municipio_id"
+                  value={formData.municipio_id}
+                  onChange={handleChange}
+                  disabled={isViewMode || municipalitiesLoading}
+                  required
+                >
+                  <option value="">{municipalitiesLoading ? 'Carregando municípios...' : 'Selecione um município'}</option>
+                  {municipalities.map((municipality) => (
+                    <option key={municipality.id} value={municipality.id}>
+                      {municipality.name} ({municipality.id})
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
           </label>
 
           <label>

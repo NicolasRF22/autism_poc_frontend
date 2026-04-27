@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { schoolAPI, studentAPI, teacherAPI } from '../services/api';
+import { schoolAPI, studentAPI } from '../services/api';
 import './StudentPreForm.css';
 
 const emptyForm = {
@@ -8,10 +8,6 @@ const emptyForm = {
   age: '',
   school_id: '',
   school_name: '',
-  teacher_ids: [],
-  teachers: [],
-  teacher_id: '',
-  teacher_name: '',
   grade: '',
   class: '',
   guardians: [],
@@ -29,28 +25,11 @@ const StudentPreForm = () => {
 
   const [formData, setFormData] = useState(emptyForm);
   const [schools, setSchools] = useState([]);
-  const [teachers, setTeachers] = useState([]);
   const [schoolsLoading, setSchoolsLoading] = useState(true);
-  const [teachersLoading, setTeachersLoading] = useState(true);
   const [loading, setLoading] = useState(!isNewMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [guardianInput, setGuardianInput] = useState('');
-
-  const normalizeArrayField = (value) => {
-    if (Array.isArray(value)) {
-      return value.map((item) => String(item || '').trim()).filter(Boolean);
-    }
-
-    if (typeof value === 'string') {
-      return value
-        .split(/\n|,|;/)
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-
-    return [];
-  };
 
   useEffect(() => {
     const loadSchools = async () => {
@@ -66,22 +45,6 @@ const StudentPreForm = () => {
     };
 
     loadSchools();
-  }, []);
-
-  useEffect(() => {
-    const loadTeachers = async () => {
-      try {
-        setTeachersLoading(true);
-        const data = await teacherAPI.getAllTeachers();
-        setTeachers(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Erro ao carregar docentes para seleção:', err);
-      } finally {
-        setTeachersLoading(false);
-      }
-    };
-
-    loadTeachers();
   }, []);
 
   useEffect(() => {
@@ -102,39 +65,6 @@ const StudentPreForm = () => {
   }, [schools, formData.school_id, formData.school_name]);
 
   useEffect(() => {
-    if (!teachers.length) return;
-    if (Array.isArray(formData.teacher_ids) && formData.teacher_ids.length > 0) return;
-
-    const normalizedTeacherNames = normalizeArrayField(formData.teachers);
-    if (normalizedTeacherNames.length === 0 && !formData.teacher_name) return;
-
-    const nameCandidates = normalizedTeacherNames.length > 0
-      ? normalizedTeacherNames
-      : [String(formData.teacher_name || '').trim()].filter(Boolean);
-
-    const matchedTeacherIds = teachers
-      .filter((teacher) => nameCandidates.some(
-        (teacherName) => String(teacher.name || '').trim().toLowerCase() === teacherName.toLowerCase(),
-      ))
-      .map((teacher) => teacher.id);
-
-    if (matchedTeacherIds.length > 0) {
-      const firstTeacher = teachers.find((teacher) => teacher.id === matchedTeacherIds[0]);
-      const matchedTeacherNames = teachers
-        .filter((teacher) => matchedTeacherIds.includes(teacher.id))
-        .map((teacher) => teacher.name);
-
-      setFormData((prev) => ({
-        ...prev,
-        teacher_ids: matchedTeacherIds,
-        teachers: matchedTeacherNames,
-        teacher_id: matchedTeacherIds[0],
-        teacher_name: firstTeacher?.name || '',
-      }));
-    }
-  }, [teachers, formData.teacher_ids, formData.teachers, formData.teacher_name]);
-
-  useEffect(() => {
     if (isNewMode) return;
 
     const loadStudent = async () => {
@@ -142,20 +72,11 @@ const StudentPreForm = () => {
         setLoading(true);
         setError('');
         const data = await studentAPI.getStudent(id);
-        const teacherIds = Array.isArray(data.teacher_ids)
-          ? data.teacher_ids.filter(Boolean)
-          : [data.teacher_id].filter(Boolean);
-        const teacherNames = normalizeArrayField(data.teachers || data.teacher_name);
-        const firstTeacherName = teacherNames[0] || '';
         setFormData({
           name: data.name || data.studentName || '',
           age: data.age || data.studentAge || '',
           school_id: data.school_id || '',
           school_name: data.school_name || data.schoolName || '',
-          teacher_ids: teacherIds,
-          teachers: teacherNames,
-          teacher_id: teacherIds[0] || '',
-          teacher_name: firstTeacherName,
           grade: data.grade || data.schoolYear || '',
           class: data.class || data.className || '',
           guardians: Array.isArray(data.guardians) ? data.guardians : [],
@@ -185,20 +106,6 @@ const StudentPreForm = () => {
       ...prev,
       school_id: schoolId,
       school_name: selectedSchool?.name || '',
-    }));
-  };
-
-  const handleTeacherChange = (event) => {
-    const selectedTeacherIds = Array.from(event.target.selectedOptions || []).map((option) => option.value);
-    const selectedTeachers = teachers.filter((teacher) => selectedTeacherIds.includes(teacher.id));
-    const selectedTeacherNames = selectedTeachers.map((teacher) => teacher.name);
-
-    setFormData((prev) => ({
-      ...prev,
-      teacher_ids: selectedTeacherIds,
-      teachers: selectedTeacherNames,
-      teacher_id: selectedTeacherIds[0] || '',
-      teacher_name: selectedTeacherNames[0] || '',
     }));
   };
 
@@ -246,11 +153,6 @@ const StudentPreForm = () => {
 
     if (!formData.school_id) {
       setError('Selecione uma escola cadastrada para o aluno.');
-      return;
-    }
-
-    if (!Array.isArray(formData.teacher_ids) || formData.teacher_ids.length === 0) {
-      setError('Selecione pelo menos um docente cadastrado para o aluno.');
       return;
     }
 
@@ -374,31 +276,6 @@ const StudentPreForm = () => {
               />
             </label>
           </div>
-
-          <label>
-            Docente(s) Vinculado(s) *
-            <select
-              name="teacher_ids"
-              value={formData.teacher_ids}
-              onChange={handleTeacherChange}
-              disabled={isViewMode || teachersLoading}
-              required
-              multiple
-              size={Math.min(Math.max(teachers.length, 4), 8)}
-            >
-              {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.id}>
-                  {teacher.name}
-                </option>
-              ))}
-            </select>
-            {!teachersLoading && teachers.length > 0 && (
-              <small>Segure Ctrl (Windows) para selecionar múltiplos docentes.</small>
-            )}
-            {!teachersLoading && teachers.length === 0 && (
-              <small>Cadastre ao menos um docente antes de vincular o aluno.</small>
-            )}
-          </label>
 
           <label>
             Filiação(ões)

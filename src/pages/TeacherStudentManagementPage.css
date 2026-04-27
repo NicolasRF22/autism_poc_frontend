@@ -1,0 +1,85 @@
+.teacher-student-page {
+  padding: 24px;
+}
+
+.teacher-student-card {
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.teacher-student-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.teacher-student-subtitle {
+  color: #475467;
+  margin-bottom: 16px;
+}
+
+.teacher-student-refresh,
+.teacher-student-save {
+  border: 1px solid #d0d5dd;
+  background: #f9fafb;
+  color: #101828;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.teacher-student-save {
+  background: #1d2939;
+  border-color: #1d2939;
+  color: #fff;
+}
+
+.teacher-student-save:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.teacher-student-error {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  color: #b42318;
+  border-radius: 8px;
+}
+
+.teacher-student-table-wrap {
+  overflow-x: auto;
+}
+
+.teacher-student-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.teacher-student-table th,
+.teacher-student-table td {
+  border-bottom: 1px solid #eaecf0;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.teacher-student-table select {
+  width: 100%;
+  min-width: 220px;
+}
+
+@media (max-width: 768px) {
+  .teacher-student-page {
+    padding: 12px;
+  }
+
+  .teacher-student-card {
+    padding: 14px;
+  }
+}

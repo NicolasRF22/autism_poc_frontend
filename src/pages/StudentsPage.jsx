@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PDIPage.css'; // Reusing PDI styles
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, getFetchErrorMessage, getStoredUser } from '../services/api';
 
 const StudentsPage = ({ mode = 'pre-registration' }) => {
   const [students, setStudents] = useState([]);
@@ -10,6 +10,9 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const isCaseStudyMode = mode === 'case-study';
+  const currentRole = getStoredUser()?.role || '';
+  const canManagePreRegistration = ['admin', 'secretaria'].includes(currentRole);
+  const canManageCaseStudy = currentRole === 'professor';
   const completedCaseStudies = students.filter((student) => student.case_study_completed);
   const pendingCaseStudyStudents = students.filter((student) => !student.case_study_completed);
 
@@ -22,11 +25,14 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
       setLoading(true);
       setError(null);
       const response = await fetch(`${API_BASE_URL}/students`);
-      if (!response.ok) throw new Error('Erro ao carregar alunos');
+      if (!response.ok) {
+        const message = await getFetchErrorMessage(response, 'Erro ao carregar alunos');
+        throw new Error(message);
+      }
       const data = await response.json();
       setStudents(data);
     } catch (err) {
-      setError('Erro ao carregar alunos. Verifique se o backend está rodando.');
+      setError(err?.message || 'Erro ao carregar alunos. Verifique se o backend está rodando.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -78,11 +84,14 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
       const response = await fetch(endpoint, {
         method: 'DELETE'
       });
-      if (!response.ok) throw new Error('Erro ao excluir registro');
+      if (!response.ok) {
+        const message = await getFetchErrorMessage(response, 'Erro ao excluir registro');
+        throw new Error(message);
+      }
       loadStudents(); // Reload list
     } catch (err) {
       console.error(err);
-      alert(isCaseStudyMode ? 'Erro ao excluir Estudo de Caso' : 'Erro ao excluir aluno');
+      alert(err?.message || (isCaseStudyMode ? 'Erro ao excluir Estudo de Caso' : 'Erro ao excluir aluno'));
     }
   };
 
@@ -125,14 +134,14 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
             ? `Estudo de Caso (${completedCaseStudies.length})`
             : `Pré-cadastro de Alunos (${students.length})`}
         </h1>
-        {!isCaseStudyMode && (
+        {!isCaseStudyMode && canManagePreRegistration && (
           <button className="btn-new-pdi" onClick={handleNew}>
             + Novo Pré-cadastro
           </button>
         )}
       </div>
 
-      {isCaseStudyMode && (
+      {isCaseStudyMode && canManageCaseStudy && (
         <div className="new-pdi-modal" style={{ marginBottom: '16px' }}>
           <h3>Iniciar Estudo de Caso</h3>
           <p>Selecione um aluno pré-cadastrado para abrir o formulário completo.</p>
@@ -211,7 +220,7 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
                         📋
                       </button>
                     )}
-                    {!isCaseStudyMode && (
+                    {!isCaseStudyMode && canManagePreRegistration && (
                       <button
                         className="btn-action btn-edit"
                         onClick={() => handleEdit(student.id)}
@@ -220,7 +229,7 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
                         ✏️
                       </button>
                     )}
-                    {isCaseStudyMode && (
+                    {isCaseStudyMode && canManageCaseStudy && (
                       <button
                         className="btn-action btn-review"
                         onClick={() => handleEditComplete(student.id)}
@@ -229,13 +238,15 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
                         📝
                       </button>
                     )}
-                    <button
-                      className="btn-action btn-delete"
-                      onClick={() => handleDelete(student.id, student.name)}
-                      title="Excluir"
-                    >
-                      🗑️
-                    </button>
+                    {((!isCaseStudyMode && canManagePreRegistration) || (isCaseStudyMode && canManageCaseStudy)) && (
+                      <button
+                        className="btn-action btn-delete"
+                        onClick={() => handleDelete(student.id, student.name)}
+                        title="Excluir"
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PDIPage.css'; // Reusing PDI styles
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, getFetchErrorMessage, getStoredUser } from '../services/api';
 
 const SchoolsPage = ({ mode = 'pre-registration' }) => {
   const [schools, setSchools] = useState([]);
@@ -10,6 +10,9 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const isSchoolRegistrationMode = mode === 'school-registration';
+  const currentRole = getStoredUser()?.role || '';
+  const canManagePreRegistration = ['admin', 'secretaria'].includes(currentRole);
+  const canManageSchoolRegistration = ['admin', 'coordenacao'].includes(currentRole);
   const completedSchoolRegistrations = schools.filter((school) => school.school_registration_completed);
   const pendingSchoolRegistrations = schools.filter((school) => !school.school_registration_completed);
 
@@ -22,11 +25,14 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
       setLoading(true);
       setError(null);
       const response = await fetch(`${API_BASE_URL}/schools`);
-      if (!response.ok) throw new Error('Erro ao carregar escolas');
+      if (!response.ok) {
+        const message = await getFetchErrorMessage(response, 'Erro ao carregar escolas');
+        throw new Error(message);
+      }
       const data = await response.json();
       setSchools(data);
     } catch (err) {
-      setError('Erro ao carregar escolas. Verifique se o backend está rodando.');
+      setError(err?.message || 'Erro ao carregar escolas. Verifique se o backend está rodando.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -78,11 +84,14 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
       const response = await fetch(endpoint, {
         method: 'DELETE'
       });
-      if (!response.ok) throw new Error('Erro ao excluir registro');
+      if (!response.ok) {
+        const message = await getFetchErrorMessage(response, 'Erro ao excluir registro');
+        throw new Error(message);
+      }
       loadSchools(); // Reload list
     } catch (err) {
       console.error(err);
-      alert(isSchoolRegistrationMode ? 'Erro ao excluir Cadastro da Escola' : 'Erro ao excluir escola');
+      alert(err?.message || (isSchoolRegistrationMode ? 'Erro ao excluir Cadastro da Escola' : 'Erro ao excluir escola'));
     }
   };
 
@@ -125,14 +134,14 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
             ? `Cadastro da Escola (${completedSchoolRegistrations.length})`
             : `Pré-cadastro de Escolas (${schools.length})`}
         </h1>
-        {!isSchoolRegistrationMode && (
+        {!isSchoolRegistrationMode && canManagePreRegistration && (
           <button className="btn-new-pdi" onClick={handleNew}>
             + Novo Pré-cadastro
           </button>
         )}
       </div>
 
-      {isSchoolRegistrationMode && (
+      {isSchoolRegistrationMode && canManageSchoolRegistration && (
         <div className="new-pdi-modal" style={{ marginBottom: '16px' }}>
           <h3>Iniciar Cadastro da Escola</h3>
           <p>Selecione uma escola pré-cadastrada para abrir o formulário completo.</p>
@@ -209,7 +218,7 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
                         📋
                       </button>
                     )}
-                    {!isSchoolRegistrationMode && (
+                    {!isSchoolRegistrationMode && canManagePreRegistration && (
                       <button
                         className="btn-action btn-edit"
                         onClick={() => handleEdit(school.id)}
@@ -218,7 +227,7 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
                         ✏️
                       </button>
                     )}
-                    {isSchoolRegistrationMode && (
+                    {isSchoolRegistrationMode && canManageSchoolRegistration && (
                       <button
                         className="btn-action btn-review"
                         onClick={() => handleEditComplete(school.id)}
@@ -227,13 +236,15 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
                         📝
                       </button>
                     )}
-                    <button
-                      className="btn-action btn-delete"
-                      onClick={() => handleDelete(school.id, school.name)}
-                      title="Excluir"
-                    >
-                      🗑️
-                    </button>
+                    {((!isSchoolRegistrationMode && canManagePreRegistration) || (isSchoolRegistrationMode && canManageSchoolRegistration)) && (
+                      <button
+                        className="btn-action btn-delete"
+                        onClick={() => handleDelete(school.id, school.name)}
+                        title="Excluir"
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

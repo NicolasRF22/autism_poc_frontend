@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { teacherAPI } from '../services/api';
+import { getApiErrorMessage, teacherAPI } from '../services/api';
 import './PDIPage.css';
 
-const TeachersPage = () => {
+const TeachersPage = ({ user }) => {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const canManageTeachers = ['admin', 'secretaria'].includes(user?.role || '');
 
   const loadTeachers = async () => {
     try {
@@ -16,7 +17,7 @@ const TeachersPage = () => {
       const data = await teacherAPI.getAllTeachers();
       setTeachers(data || []);
     } catch (err) {
-      setError('Erro ao carregar docentes. Verifique se você possui perfil admin.');
+      setError(getApiErrorMessage(err, 'Erro ao carregar docentes.'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -37,7 +38,7 @@ const TeachersPage = () => {
       loadTeachers();
     } catch (err) {
       console.error(err);
-      alert('Erro ao excluir docente');
+      alert(getApiErrorMessage(err, 'Erro ao excluir docente'));
     }
   };
 
@@ -76,9 +77,11 @@ const TeachersPage = () => {
     <div className="pdi-page">
       <div className="page-header">
         <h1>Cadastro de Docentes</h1>
-        <button className="btn-new-pdi" onClick={() => navigate('/teachers/new')}>
-          + Novo Docente
-        </button>
+        {canManageTeachers && (
+          <button className="btn-new-pdi" onClick={() => navigate('/teachers/new')}>
+            + Novo Docente
+          </button>
+        )}
       </div>
 
       {teachers.length === 0 ? (
@@ -113,20 +116,24 @@ const TeachersPage = () => {
                     >
                       👁️
                     </button>
-                    <button
-                      className="btn-action btn-edit"
-                      onClick={() => navigate(`/teachers/${teacher.id}/edit`)}
-                      title="Editar"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      className="btn-action btn-delete"
-                      onClick={() => handleDelete(teacher.id, teacher.name)}
-                      title="Excluir"
-                    >
-                      🗑️
-                    </button>
+                    {canManageTeachers && (
+                      <button
+                        className="btn-action btn-edit"
+                        onClick={() => navigate(`/teachers/${teacher.id}/edit`)}
+                        title="Editar"
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {canManageTeachers && (
+                      <button
+                        className="btn-action btn-delete"
+                        onClick={() => handleDelete(teacher.id, teacher.name)}
+                        title="Excluir"
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

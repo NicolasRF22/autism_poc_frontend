@@ -14,6 +14,7 @@ import StudentPreForm from './pages/StudentPreForm';
 import StudentFullForm from './pages/StudentFormNew';
 import TeachersPage from './pages/TeachersPage';
 import TeacherForm from './pages/TeacherFormNew';
+import TeacherStudentManagementPage from './pages/TeacherStudentManagementPage';
 import TesteRAG from './pages/TesteRAG';
 import AttachmentsPage from './pages/AttachmentsPage';
 import LoginPage from './pages/LoginPage';
@@ -41,6 +42,19 @@ const getInitialSidebarWidth = () => {
 
   return getDefaultSidebarWidth();
 };
+
+const TEACHER_LIST_ROLES = new Set(['admin', 'secretaria', 'viewer']);
+const TEACHER_MANAGEMENT_ROLES = new Set(['admin', 'secretaria']);
+const CADASTRO_ROLES = new Set(['admin']);
+const STUDENT_CREATE_ROLES = new Set(['admin', 'secretaria']);
+const STUDENT_EDIT_ROLES = new Set(['admin', 'secretaria', 'coordenacao']);
+const SCHOOL_CREATE_ROLES = new Set(['admin', 'secretaria']);
+const SCHOOL_EDIT_ROLES = new Set(['admin', 'secretaria', 'coordenacao']);
+const LEARNING_EDIT_ROLES = new Set(['admin', 'professor']);
+const SCHOOL_REGISTRATION_ROLES = new Set(['admin', 'coordenacao']);
+const TEACHER_STUDENT_LINK_ROLES = new Set(['admin', 'secretaria', 'coordenacao']);
+
+const hasAnyRole = (user, allowedRoles) => allowedRoles.has(user?.role || '');
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -118,6 +132,17 @@ function App() {
     setSidebarWidth(clampSidebarWidth(newWidth));
   };
 
+  const canAccessTeacherManagement = hasAnyRole(user, TEACHER_MANAGEMENT_ROLES);
+  const canAccessTeacherList = hasAnyRole(user, TEACHER_LIST_ROLES) || canAccessTeacherManagement;
+  const canAccessCadastro = hasAnyRole(user, CADASTRO_ROLES);
+  const canCreateStudent = hasAnyRole(user, STUDENT_CREATE_ROLES);
+  const canEditStudent = hasAnyRole(user, STUDENT_EDIT_ROLES);
+  const canCreateSchool = hasAnyRole(user, SCHOOL_CREATE_ROLES);
+  const canEditSchool = hasAnyRole(user, SCHOOL_EDIT_ROLES);
+  const canEditLearning = hasAnyRole(user, LEARNING_EDIT_ROLES);
+  const canEditSchoolRegistration = hasAnyRole(user, SCHOOL_REGISTRATION_ROLES);
+  const canAccessTeacherStudentLinks = hasAnyRole(user, TEACHER_STUDENT_LINK_ROLES);
+
   return (
     <Router>
       {!user ? (
@@ -146,47 +171,60 @@ function App() {
               <Route path="/estudo-de-caso" element={<EstudoDeCasoPage />} />
               <Route path="/cadastro-da-escola" element={<CadastroDaEscolaPage />} />
               <Route path="/diario" element={<DiaryPage />} />
-              <Route path="/diario/:studentName/novo" element={<DiaryEntry />} />
+              <Route
+                path="/diario/:studentName/novo"
+                element={canEditLearning ? <DiaryEntry /> : <Navigate to="/inicio" replace />}
+              />
               <Route path="/pdi" element={<PDIPage />} />
-              <Route path="/pdi/novo" element={<PDIForm />} />
+              <Route path="/pdi/novo" element={canEditLearning ? <PDIForm /> : <Navigate to="/inicio" replace />} />
               <Route path="/pdi/:id/view" element={<PDIForm />} />
-              <Route path="/pdi/:id/edit" element={<PDIForm />} />
+              <Route path="/pdi/:id/edit" element={canEditLearning ? <PDIForm /> : <Navigate to="/inicio" replace />} />
               <Route path="/schools" element={<SchoolsPage />} />
-              <Route path="/schools/new" element={<SchoolPreForm />} />
+              <Route path="/schools/new" element={canCreateSchool ? <SchoolPreForm /> : <Navigate to="/inicio" replace />} />
               <Route path="/schools/:id/view" element={<SchoolPreForm />} />
-              <Route path="/schools/:id/edit" element={<SchoolPreForm />} />
+              <Route path="/schools/:id/edit" element={canEditSchool ? <SchoolPreForm /> : <Navigate to="/inicio" replace />} />
               <Route path="/schools/new/completo" element={<SchoolFullForm />} />
               <Route path="/schools/:id/view/completo" element={<SchoolFullForm />} />
-              <Route path="/schools/:id/edit/completo" element={<SchoolFullForm />} />
+              <Route
+                path="/schools/:id/edit/completo"
+                element={canEditSchoolRegistration ? <SchoolFullForm /> : <Navigate to="/inicio" replace />}
+              />
               <Route path="/students" element={<StudentsPage />} />
-              <Route path="/students/new" element={<StudentPreForm />} />
+              <Route path="/students/new" element={canCreateStudent ? <StudentPreForm /> : <Navigate to="/inicio" replace />} />
               <Route path="/students/:id/view" element={<StudentPreForm />} />
-              <Route path="/students/:id/edit" element={<StudentPreForm />} />
+              <Route path="/students/:id/edit" element={canEditStudent ? <StudentPreForm /> : <Navigate to="/inicio" replace />} />
               <Route path="/students/new/completo" element={<StudentFullForm />} />
               <Route path="/students/:id/view/completo" element={<StudentFullForm />} />
-              <Route path="/students/:id/edit/completo" element={<StudentFullForm />} />
+              <Route
+                path="/students/:id/edit/completo"
+                element={canEditLearning ? <StudentFullForm /> : <Navigate to="/inicio" replace />}
+              />
               <Route
                 path="/teachers"
-                element={user?.role === 'admin' ? <TeachersPage /> : <Navigate to="/inicio" replace />}
+                element={canAccessTeacherList ? <TeachersPage user={user} /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/teachers/new"
-                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/inicio" replace />}
+                element={canAccessTeacherManagement ? <TeacherForm /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/teachers/:id/view"
-                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/inicio" replace />}
+                element={canAccessTeacherManagement ? <TeacherForm /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/teachers/:id/edit"
-                element={user?.role === 'admin' ? <TeacherForm /> : <Navigate to="/inicio" replace />}
+                element={canAccessTeacherManagement ? <TeacherForm /> : <Navigate to="/inicio" replace />}
+              />
+              <Route
+                path="/teacher-student-management"
+                element={canAccessTeacherStudentLinks ? <TeacherStudentManagementPage user={user} /> : <Navigate to="/inicio" replace />}
               />
               <Route path="/rag" element={<TesteRAG />} />
               <Route path="/anexos" element={<AttachmentsPage />} />
               <Route path="/teste-rag" element={<Navigate to="/rag" replace />} />
               <Route
                 path="/cadastro"
-                element={user?.role === 'admin' ? <CadastroPage /> : <Navigate to="/inicio" replace />}
+                element={canAccessCadastro ? <CadastroPage /> : <Navigate to="/inicio" replace />}
               />
               <Route
                 path="/admin"

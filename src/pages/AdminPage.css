@@ -18,7 +18,7 @@
 
 .admin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -27,6 +27,38 @@
   border-radius: 10px;
   padding: 16px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+}
+
+.admin-card-create-user {
+  order: 1;
+  grid-column: 1 / -1;
+}
+
+.admin-card-municipalities {
+  order: 2;
+}
+
+.admin-card-relations {
+  order: 3;
+}
+
+.admin-card-users {
+  order: 4;
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 960px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-card-users {
+    grid-column: auto;
+  }
+
+  .admin-card-create-user {
+    grid-column: auto;
+  }
 }
 
 .admin-card h2 {
@@ -85,6 +117,22 @@
   font-size: 13px;
 }
 
+.admin-delete-btn {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  height: 34px;
+  padding: 0 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .admin-alert {
   border-radius: 8px;
   padding: 10px;
@@ -129,4 +177,16 @@
 
 .admin-audit-card {
   margin-bottom: 24px;
+}
+
+.admin-relations-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-relations-section h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #334155;
 }

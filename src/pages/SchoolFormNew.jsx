@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './PDIForm.css';
 import { API_BASE_URL } from '../services/api';
 import { formsAPI } from '../services/api';
+import { getStoredUser, municipalityAPI } from '../services/api';
 
 const SchoolFormNew = () => {
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ const SchoolFormNew = () => {
   const isEditMode = location.pathname.includes('/edit');
   const source = new URLSearchParams(location.search).get('source');
   const backPath = source === 'cadastro-da-escola' ? '/cadastro-da-escola' : '/schools';
+  const currentUser = getStoredUser();
+  const isSecretariaScoped = currentUser?.role === 'secretaria' && Boolean(currentUser?.municipio_id);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -22,6 +25,9 @@ const SchoolFormNew = () => {
   const [institutionType, setInstitutionType] = useState('');
   const [operatingHours, setOperatingHours] = useState('');
   const [address, setAddress] = useState('');
+  const [municipioId, setMunicipioId] = useState('');
+  const [municipalities, setMunicipalities] = useState([]);
+  const [municipalitiesLoading, setMunicipalitiesLoading] = useState(true);
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
@@ -102,6 +108,33 @@ const SchoolFormNew = () => {
     }
   }, [id]);
 
+  useEffect(() => {
+    const loadMunicipalities = async () => {
+      try {
+        setMunicipalitiesLoading(true);
+        const data = await municipalityAPI.getAllMunicipalities();
+        const normalized = Array.isArray(data) ? data : [];
+        setMunicipalities(normalized);
+      } catch (err) {
+        console.error('Erro ao carregar municípios:', err);
+      } finally {
+        setMunicipalitiesLoading(false);
+      }
+    };
+
+    loadMunicipalities();
+  }, []);
+
+  useEffect(() => {
+    if (!isSecretariaScoped || id) return;
+    const userMunicipioId = String(currentUser?.municipio_id || '').trim();
+    if (!userMunicipioId) return;
+
+    const matchedMunicipality = municipalities.find((item) => item.id === userMunicipioId);
+    setMunicipioId(userMunicipioId);
+    setAddress(matchedMunicipality?.name || userMunicipioId);
+  }, [isSecretariaScoped, id, currentUser?.municipio_id, municipalities]);
+
   const loadSchool = async () => {
     try {
       setLoading(true);
@@ -117,6 +150,7 @@ const SchoolFormNew = () => {
       setCnpj(data.cnpj || '');
       setInstitutionType(data.institutionType || data.institution_type || '');
       setOperatingHours(data.operatingHours || '');
+      setMunicipioId(data.municipio_id || '');
       setAddress(addressValue);
       setPhone(data.phone || '');
       setEmail(data.email || '');
@@ -226,6 +260,11 @@ const SchoolFormNew = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!String(municipioId || '').trim()) {
+      alert('Selecione um município para a escola.');
+      return;
+    }
+
     const normalizedAddress = {
       city: String(address || '').trim(),
     };
@@ -233,6 +272,7 @@ const SchoolFormNew = () => {
     const schoolData = {
       name, cnpj, institutionType, operatingHours, phone, email, website,
       institution_type: institutionType,
+      municipio_id: String(municipioId || '').trim(),
       address: normalizedAddress,
       educationLevels, totalStudents, teaStudents, maxTeaCapacity, classrooms,
       multifunctionalRooms, sensorySpaces, accessibility,
@@ -309,6 +349,7 @@ const SchoolFormNew = () => {
             <p><strong>CNPJ:</strong> {cnpj || '(não informado)'}</p>
             <p><strong>Tipo:</strong> {institutionType || '(não informado)'}</p>
             <p><strong>Horário:</strong> {operatingHours || '(não informado)'}</p>
+            <p><strong>Município:</strong> {municipioId || '(não informado)'}</p>
             <p><strong>Endereço:</strong> {address || '(não informado)'}</p>
             <p><strong>Telefone:</strong> {phone || '(não informado)'}</p>
             <p><strong>E-mail:</strong> {email || '(não informado)'}</p>
@@ -530,14 +571,43 @@ const SchoolFormNew = () => {
             </div>
 
             <div className="form-group">
+              <label>Município *</label>
+              <select
+                value={municipioId}
+                onChange={(e) => {
+                  const nextMunicipioId = e.target.value;
+                  setMunicipioId(nextMunicipioId);
+                  if (!isSecretariaScoped) {
+                    const matchedMunicipality = municipalities.find((item) => item.id === nextMunicipioId);
+                    if (matchedMunicipality?.name) {
+                      setAddress(matchedMunicipality.name);
+                    }
+                  }
+                }}
+                disabled={isViewMode || isSecretariaScoped || municipalitiesLoading}
+                required
+              >
+                <option value="">{municipalitiesLoading ? 'Carregando municípios...' : 'Selecione...'}</option>
+                {municipalities.map((municipality) => (
+                  <option key={municipality.id} value={municipality.id}>
+                    {municipality.name} ({municipality.id})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
               <label>Endereço completo</label>
               <textarea
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Rua, Número, Bairro, Cidade - Estado, CEP"
                 rows="3"
-                disabled={isViewMode}
+                disabled={isViewMode || isSecretariaScoped}
               />
+              {isSecretariaScoped && (
+                <small>Campo definido automaticamente pelo município da secretaria.</small>
+              )}
             </div>
 
             <div className="form-group">

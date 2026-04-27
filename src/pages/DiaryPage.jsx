@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { diaryAPI, studentAPI } from '../services/api';
+import { diaryAPI, getStoredUser, studentAPI } from '../services/api';
 import './DiaryPage.css';
 
 // Mapeamento das perguntas (versão resumida para visualização)
@@ -82,6 +82,8 @@ const DiaryPage = () => {
   const [editOpenObs, setEditOpenObs] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const navigate = useNavigate();
+  const currentRole = getStoredUser()?.role || '';
+  const canEditDiary = ['admin', 'professor'].includes(currentRole);
 
   useEffect(() => {
     loadStudents();
@@ -536,15 +538,19 @@ const DiaryPage = () => {
           <button onClick={handleBackToList} className="back-button">← Voltar</button>
           <h1>Diário de {selectedStudent.student_name}</h1>
           <div className="student-history-actions">
-            <button onClick={handleNewEntry} className="new-entry-button">
-              + Nova Entrada
-            </button>
-            <button
-              onClick={() => handleDeleteDiary(selectedStudent)}
-              className="danger-diary-button"
-            >
-              🗑️ Apagar Diário
-            </button>
+            {canEditDiary && (
+              <button onClick={handleNewEntry} className="new-entry-button">
+                + Nova Entrada
+              </button>
+            )}
+            {canEditDiary && (
+              <button
+                onClick={() => handleDeleteDiary(selectedStudent)}
+                className="danger-diary-button"
+              >
+                🗑️ Apagar Diário
+              </button>
+            )}
           </div>
         </div>
 
@@ -608,22 +614,24 @@ const DiaryPage = () => {
               <div key={entry.id} className="entry-card">
                 <div className="entry-header">
                   <h3>📅 {formatDate(entry.diary_date, { dateOnly: true })}</h3>
-                  <div className="entry-actions">
-                    <button
-                      onClick={() => handleEditEntry(entry)}
-                      className="edit-button"
-                      title="Editar entrada"
-                    >
-                      ✏️
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteEntry(entry.id)}
-                      className="delete-button"
-                      title="Excluir entrada"
-                    >
-                      🗑️
-                    </button>
-                  </div>
+                  {canEditDiary && (
+                    <div className="entry-actions">
+                      <button
+                        onClick={() => handleEditEntry(entry)}
+                        className="edit-button"
+                        title="Editar entrada"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        className="delete-button"
+                        title="Excluir entrada"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="entry-info">
                   <p><strong>Professor(es):</strong> {entry.teachers.join(', ')}</p>
@@ -728,12 +736,16 @@ const DiaryPage = () => {
         <h1>Diário de Acompanhamento Individual</h1>
         <p>Registros diários de atividades e comportamentos</p>
         <div className="diary-actions">
-          <button onClick={() => setShowImportModal(true)} className="import-diary-button">
-            ⬆️ Importar PDF
-          </button>
-          <button onClick={handleNewDiary} className="new-diary-button">
-            + Novo Diário
-          </button>
+          {canEditDiary && (
+            <button onClick={() => setShowImportModal(true)} className="import-diary-button">
+              ⬆️ Importar PDF
+            </button>
+          )}
+          {canEditDiary && (
+            <button onClick={handleNewDiary} className="new-diary-button">
+              + Novo Diário
+            </button>
+          )}
         </div>
       </div>
 
@@ -757,15 +769,17 @@ const DiaryPage = () => {
                 <p><strong>Professor(es):</strong> {student.last_teachers.join(', ')}</p>
                 <p><strong>Total de registros:</strong> {student.total_entries}</p>
               </div>
-              <button
-                className="danger-diary-button card-delete-diary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteDiary(student);
-                }}
-              >
-                🗑️ Apagar Diário
-              </button>
+              {canEditDiary && (
+                <button
+                  className="danger-diary-button card-delete-diary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteDiary(student);
+                  }}
+                >
+                  🗑️ Apagar Diário
+                </button>
+              )}
               <button className="view-button">Ver Histórico →</button>
             </div>
           ))}

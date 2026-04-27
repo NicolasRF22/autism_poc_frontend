@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pdiAPI, studentAPI } from '../services/api';
+import { getStoredUser, pdiAPI, studentAPI } from '../services/api';
 import './PDIPage.css';
 
 const PDIPage = () => {
@@ -12,6 +12,8 @@ const PDIPage = () => {
   const [availableStudentsError, setAvailableStudentsError] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const navigate = useNavigate();
+  const currentRole = getStoredUser()?.role || '';
+  const canEditPdi = ['admin', 'professor'].includes(currentRole);
 
   const normalizeName = (value) =>
     String(value || '')
@@ -154,9 +156,11 @@ const PDIPage = () => {
     <div className="pdi-page">
       <div className="page-header">
         <h1>Planos de Desenvolvimento Individual (PDI)</h1>
-        <button className="btn-new-pdi" onClick={handleNewPDI}>
-          + Novo PDI
-        </button>
+        {canEditPdi && (
+          <button className="btn-new-pdi" onClick={handleNewPDI}>
+            + Novo PDI
+          </button>
+        )}
       </div>
 
       {pdis.length === 0 ? (
@@ -208,20 +212,24 @@ const PDIPage = () => {
                     >
                       👁️
                     </button>
-                    <button 
-                      className="btn-action btn-edit" 
-                      onClick={() => handleEdit(pdi.id)}
-                      title="Editar"
-                    >
-                      ✏️
-                    </button>
-                    <button 
-                      className="btn-action btn-delete" 
-                      onClick={() => handleDelete(pdi.id, pdi.student_name)}
-                      title="Excluir"
-                    >
-                      🗑️
-                    </button>
+                    {canEditPdi && (
+                      <button
+                        className="btn-action btn-edit"
+                        onClick={() => handleEdit(pdi.id)}
+                        title="Editar"
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {canEditPdi && (
+                      <button
+                        className="btn-action btn-delete"
+                        onClick={() => handleDelete(pdi.id, pdi.student_name)}
+                        title="Excluir"
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

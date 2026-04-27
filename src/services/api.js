@@ -29,12 +29,50 @@ export const clearAuthSession = () => {
   localStorage.removeItem(AUTH_USER_KEY);
 };
 
+export const getApiErrorMessage = (error, fallbackMessage = 'Erro ao processar requisição') => {
+  return error?.response?.data?.error || error?.message || fallbackMessage;
+};
+
+export const getFetchErrorMessage = async (response, fallbackMessage = 'Erro ao processar requisição') => {
+  try {
+    const payload = await response.json();
+    if (payload?.error) {
+      return payload.error;
+    }
+    return fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+const parseFilenameFromContentDisposition = (contentDisposition) => {
+  if (!contentDisposition) return null;
+
+  // RFC 5987 format: filename*=UTF-8''...
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]).replace(/\"/g, '').trim();
+    } catch {
+      return utf8Match[1].replace(/\"/g, '').trim();
+    }
+  }
+
+  // Fallback format: filename="..."
+  const basicMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  if (basicMatch?.[1]) {
+    return basicMatch[1].trim();
+  }
+
+  return null;
+};
 
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
@@ -90,6 +128,11 @@ export const authAPI = {
     return response.data;
   },
 
+  deleteUser: async (userId) => {
+    const response = await api.delete(`/auth/users/${userId}`);
+    return response.data;
+  },
+
   getAuditEvents: async (limit = 200) => {
     const response = await api.get('/audit/events', { params: { limit } });
     return response.data;
@@ -106,15 +149,25 @@ export const adminAPI = {
   },
 };
 
+export const municipalityAPI = {
+  getAllMunicipalities: async () => {
+    const response = await api.get('/municipalities');
+    return response.data;
+  },
+
+  createMunicipality: async ({ name, id }) => {
+    const response = await api.post('/municipalities', {
+      name,
+      ...(id ? { id } : {}),
+    });
+    return response.data;
+  },
+};
+
 export const formsAPI = {
   // Buscar todos os formulários
   getAllForms: async () => {
     const response = await api.get('/forms');
-    return response.data;
-  },
-
-  getFormCounts: async () => {
-    const response = await api.get('/forms/counts');
     return response.data;
   },
 
@@ -163,20 +216,6 @@ export const formsAPI = {
   },
 };
 
-export const caseStudyAPI = {
-  deleteForm: async (studentId) => {
-    const response = await api.delete(`/students/${studentId}/case-study`);
-    return response.data;
-  },
-};
-
-export const schoolRegistrationAPI = {
-  deleteForm: async (schoolId) => {
-    const response = await api.delete(`/schools/${schoolId}/registration`);
-    return response.data;
-  },
-};
-
 export const ragAPI = {
   // Upload e indexação de PDF
   uploadDocument: async (file, metadata) => {
@@ -203,25 +242,26 @@ export const ragAPI = {
 
   // Remover documento
   deleteDocument: async (docId) => {
-    const response = await api.delete(`/rag/documents/${docId}`);
+    const encodedDocId = encodeURIComponent(String(docId));
+    const response = await api.delete(`/rag/documents/${encodedDocId}`);
     return response.data;
   },
 
   // Baixar documento original
   downloadDocument: async (docId) => {
-    const response = await api.get(`/rag/documents/${docId}/download`, {
+    const encodedDocId = encodeURIComponent(String(docId));
+    const response = await api.get(`/rag/documents/${encodedDocId}/download`, {
       responseType: 'blob',
     });
     return response.data;
   },
 
   // Enviar mensagem ao chat
-  sendMessage: async (message, sessionId, studentFilter = null, selectedSources = null) => {
+  sendMessage: async (message, sessionId, studentFilter = null) => {
     const response = await api.post('/rag/chat', {
       message,
       session_id: sessionId,
       ...(studentFilter || {}),
-      ...(selectedSources ? { selected_sources: selectedSources } : {}),
     });
     return response.data;
   },
@@ -243,8 +283,9 @@ export const ragAPI = {
   },
 
   // Listar PEIs gerados
-  getPEIs: async (studentName, school) => {
+  getPEIs: async ({ studentId, studentName, school } = {}) => {
     const params = {};
+    if (studentId) params.student_id = studentId;
     if (studentName) params.student_name = studentName;
     if (school) params.school = school;
     const response = await api.get('/rag/peis', { params });
@@ -254,12 +295,23 @@ export const ragAPI = {
   // URL do PDF de um PEI
   getPEIPdfUrl: (peiId) => buildApiUrl(`/rag/peis/${peiId}/pdf`),
 
-  // Baixar/visualizar PDF de um PEI com autenticação
+  // Baixar/visualizar PDF de um PEI com autenticação (compatível: retorna Blob)
   downloadPEIPdf: async (peiId) => {
     const response = await api.get(`/rag/peis/${peiId}/pdf`, {
       responseType: 'blob',
     });
     return response.data;
+  },
+
+  // Baixar PDF + metadados úteis (nome sugerido pelo backend)
+  downloadPEIPdfWithMetadata: async (peiId) => {
+    const response = await api.get(`/rag/peis/${peiId}/pdf`, {
+      responseType: 'blob',
+    });
+    return {
+      blob: response.data,
+      filename: parseFilenameFromContentDisposition(response.headers?.['content-disposition']),
+    };
   },
 
   // Deletar PEI

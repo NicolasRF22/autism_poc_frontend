@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './PDIForm.css';
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, getAuthToken, getStoredUser } from '../services/api';
 import { formsAPI } from '../services/api';
 
 const StudentFormNew = () => {
@@ -142,7 +142,12 @@ const StudentFormNew = () => {
   const loadStudent = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/students/${id}`);
+      const response = await fetch(`${API_BASE_URL}/students/${id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      });
       if (!response.ok) throw new Error('Erro ao carregar aluno');
       const data = await response.json();
 
@@ -325,25 +330,42 @@ const StudentFormNew = () => {
 
     try {
       setLoading(true);
-      const url = id
-        ? `${API_BASE_URL}/students/${id}`
-        : `${API_BASE_URL}/students`;
-      const method = id ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(studentData),
-      });
+      const currentUser = getStoredUser();
+      const currentRole = (currentUser?.role || '').trim().toLowerCase();
 
-      if (!response.ok) throw new Error('Erro ao salvar aluno');
+      let savedStudentId = id || '';
+
+      // Professores não têm permissão para criar/editar pré-cadastro de aluno
+      // (essas ações são restritas a admin/secretaria). Para estudo de caso,
+      // professores apenas submetem o formulário de estudo sem alterar o
+      // pré-cadastro. Se houver um `id` existente usamos ele como pre_registration_id.
+      if (currentRole !== 'professor') {
+        const url = id
+          ? `${API_BASE_URL}/students/${id}`
+          : `${API_BASE_URL}/students`;
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify(studentData),
+        });
+
+        if (!response.ok) throw new Error('Erro ao salvar aluno');
+
+        const payload = await response.json().catch(() => null) || null;
+        savedStudentId = (payload && (payload.student?.id || payload.student_id)) || id || savedStudentId;
+      }
 
       if (source === 'estudo-de-caso') {
-        const payload = await response.json();
-        const savedStudentId = payload?.student?.id || id;
+        const metadata = savedStudentId ? { pre_registration_id: savedStudentId } : {};
         await formsAPI.submitForm('cadastro_aluno', studentData, {
           source: 'estudo-de-caso',
-          pre_registration_id: savedStudentId,
+          ...metadata,
         });
       }
 

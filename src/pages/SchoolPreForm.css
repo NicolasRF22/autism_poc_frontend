@@ -64,7 +64,14 @@
   color: #334155;
 }
 
+.school-pre-help {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
 .school-pre-form input,
+.school-pre-form select,
 .school-pre-form textarea {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -77,6 +84,7 @@
 }
 
 .school-pre-form input:focus,
+.school-pre-form select:focus,
 .school-pre-form textarea:focus {
   outline: none;
   border-color: #4a90d9;
@@ -84,6 +92,7 @@
 }
 
 .school-pre-form input:disabled,
+.school-pre-form select:disabled,
 .school-pre-form textarea:disabled {
   background: #f8fafc;
   color: #475569;
