@@ -30,6 +30,10 @@ const AdminPage = () => {
   const [savingUser, setSavingUser] = useState(false);
   const [savingMunicipality, setSavingMunicipality] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState('');
+  const [deletingMunicipalityId, setDeletingMunicipalityId] = useState('');
+  const [deletingSchoolId, setDeletingSchoolId] = useState('');
+  const [deletingTeacherId, setDeletingTeacherId] = useState('');
+  const [deletingStudentId, setDeletingStudentId] = useState('');
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -363,6 +367,81 @@ const AdminPage = () => {
     }
   };
 
+  const handleDeleteMunicipality = async (municipioId) => {
+    if (!municipioId) return;
+    if (!window.confirm('Confirma apagar o município selecionado? Esta ação removerá o município do banco.')) return;
+    try {
+      setDeletingMunicipalityId(municipioId);
+      await municipalityAPI.deleteMunicipality(municipioId);
+      await Promise.all([loadMunicipalities(), loadSchools(), loadPreRegistrationData()]);
+    } catch (err) {
+      const msg = err?.response?.data?.error || 'Erro ao apagar município';
+      alert(msg);
+    } finally {
+      setDeletingMunicipalityId('');
+    }
+  };
+
+  const handleDeleteSchool = async (schoolId, schoolName) => {
+    if (!schoolId) return;
+    const confirmed = window.confirm(`Deseja apagar a escola "${schoolName || schoolId}"?`);
+    if (!confirmed) return;
+
+    setError('');
+    setSuccess('');
+    try {
+      setDeletingSchoolId(schoolId);
+      await schoolAPI.deleteSchool(schoolId);
+      setSuccess('Escola apagada com sucesso');
+      await Promise.all([loadSchools(), loadPreRegistrationData()]);
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Erro ao apagar escola';
+      setError(message);
+    } finally {
+      setDeletingSchoolId('');
+    }
+  };
+
+  const handleDeleteTeacher = async (teacherId, teacherName) => {
+    if (!teacherId) return;
+    const confirmed = window.confirm(`Deseja apagar o professor "${teacherName || teacherId}"?`);
+    if (!confirmed) return;
+
+    setError('');
+    setSuccess('');
+    try {
+      setDeletingTeacherId(teacherId);
+      await teacherAPI.deleteTeacher(teacherId);
+      setSuccess('Professor apagado com sucesso');
+      await loadPreRegistrationData();
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Erro ao apagar professor';
+      setError(message);
+    } finally {
+      setDeletingTeacherId('');
+    }
+  };
+
+  const handleDeleteStudent = async (studentId, studentName) => {
+    if (!studentId) return;
+    const confirmed = window.confirm(`Deseja apagar o aluno "${studentName || studentId}"?`);
+    if (!confirmed) return;
+
+    setError('');
+    setSuccess('');
+    try {
+      setDeletingStudentId(studentId);
+      await studentAPI.deleteStudent(studentId);
+      setSuccess('Aluno apagado com sucesso');
+      await loadPreRegistrationData();
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Erro ao apagar aluno';
+      setError(message);
+    } finally {
+      setDeletingStudentId('');
+    }
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-header">
@@ -538,6 +617,7 @@ const AdminPage = () => {
                   <tr>
                     <th>Nome</th>
                     <th>municipio_id</th>
+                    <th>Ação</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -545,6 +625,16 @@ const AdminPage = () => {
                     <tr key={municipality.id}>
                       <td>{municipality.name}</td>
                       <td>{municipality.id}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="admin-delete-btn"
+                          disabled={deletingMunicipalityId === municipality.id}
+                          onClick={() => handleDeleteMunicipality(municipality.id)}
+                        >
+                          {deletingMunicipalityId === municipality.id ? 'Apagando...' : 'Apagar'}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -582,6 +672,7 @@ const AdminPage = () => {
                         <tr>
                           <th>Escola</th>
                           <th>Município</th>
+                          <th>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -589,6 +680,16 @@ const AdminPage = () => {
                           <tr key={row.id}>
                             <td>{row.name}</td>
                             <td>{row.municipioName} ({row.municipioId})</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="admin-delete-small-btn"
+                                disabled={deletingSchoolId === row.id}
+                                onClick={() => handleDeleteSchool(row.id, row.name)}
+                              >
+                                {deletingSchoolId === row.id ? 'Apagando...' : 'Apagar'}
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -610,6 +711,7 @@ const AdminPage = () => {
                           <th>Escola</th>
                           <th>Município</th>
                           <th>Alunos</th>
+                          <th>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -619,6 +721,16 @@ const AdminPage = () => {
                             <td>{row.schoolName}</td>
                             <td>{row.municipioName}</td>
                             <td>{row.students.length ? row.students.join(', ') : '-'}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="admin-delete-small-btn"
+                                disabled={deletingTeacherId === row.id}
+                                onClick={() => handleDeleteTeacher(row.id, row.name)}
+                              >
+                                {deletingTeacherId === row.id ? 'Apagando...' : 'Apagar'}
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -640,6 +752,7 @@ const AdminPage = () => {
                           <th>Município</th>
                           <th>Escola</th>
                           <th>Professor(es)</th>
+                          <th>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -649,6 +762,16 @@ const AdminPage = () => {
                             <td>{row.municipioName}</td>
                             <td>{row.schoolName}</td>
                             <td>{row.teacherNames.length ? row.teacherNames.join(', ') : '-'}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="admin-delete-small-btn"
+                                disabled={deletingStudentId === row.id}
+                                onClick={() => handleDeleteStudent(row.id, row.name)}
+                              >
+                                {deletingStudentId === row.id ? 'Apagando...' : 'Apagar'}
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>

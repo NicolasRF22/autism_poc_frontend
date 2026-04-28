@@ -162,6 +162,11 @@ export const municipalityAPI = {
     });
     return response.data;
   },
+  deleteMunicipality: async (municipioId) => {
+    const encoded = encodeURIComponent(String(municipioId || '')).trim();
+    const response = await api.delete(`/municipalities/${encoded}`);
+    return response.data;
+  },
 };
 
 export const formsAPI = {
