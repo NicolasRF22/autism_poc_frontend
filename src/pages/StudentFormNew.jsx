@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './PDIForm.css';
+import { GRADES } from '../constants/grades';
 import { API_BASE_URL, getAuthToken, getStoredUser } from '../services/api';
 import { formsAPI } from '../services/api';
 
@@ -266,7 +267,7 @@ const StudentFormNew = () => {
   const validateStep = (step) => {
     switch (step) {
       case 0:
-        return studentName.trim() !== '' && studentAge.trim() !== '';
+        return studentName.trim() !== '' && studentAge.trim() !== '' && String(schoolYear || '').trim() !== '';
       default:
         return true;
     }
@@ -663,13 +664,18 @@ const StudentFormNew = () => {
             </div>
 
             <div className="form-group">
-              <label>Ano escolar do Aluno</label>
-              <input
-                type="text"
+              <label>Ano escolar do Aluno *</label>
+              <select
                 value={schoolYear}
                 onChange={(e) => setSchoolYear(e.target.value)}
                 disabled={isViewMode}
-              />
+                required
+              >
+                <option value="">Selecione o ano escolar</option>
+                {GRADES.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">

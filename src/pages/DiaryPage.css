@@ -426,6 +426,75 @@
   font-size: 0.9rem;
 }
 
+.entry-images {
+  margin-top: 0.75rem;
+}
+
+.entry-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.entry-image-thumb {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.entry-image-thumb img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.image-preview-modal {
+  max-width: 96vw;
+  width: 96vw;
+  max-height: 90vh;
+  height: 90vh;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.image-preview-modal img {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  flex: 1;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.image-preview-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.image-preview-modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #2c3e50;
+}
+
+.image-preview-modal-header button {
+  border: none;
+  background: #ecf0f1;
+  color: #2c3e50;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;

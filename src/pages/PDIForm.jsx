@@ -2,24 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { pdiAPI, studentAPI } from '../services/api';
 import './PDIForm.css';
+import { getPdiSubjectsForGrade } from '../constants/pdiSubjects';
 
-// Constante de matérias (movida para fora do componente)
-const subjects = [
-  { id: 'lingua_portuguesa', name: 'Língua Portuguesa' },
-  { id: 'matematica', name: 'Matemática' },
-  { id: 'historia', name: 'História' },
-  { id: 'geografia', name: 'Geografia' },
-  { id: 'ciencias', name: 'Ciências' },
-  { id: 'ensino_religioso', name: 'Ensino Religioso' },
-  { id: 'arte', name: 'Arte' },
-];
-
-// Função para criar trimestre vazio (movida para fora do componente)
-function createEmptyTrimester() {
+function createEmptyTrimester(subjects) {
   const trimester = {
     relatorio_descritivo: {},
   };
-  subjects.forEach(subject => {
+  subjects.forEach((subject) => {
     trimester[subject.id] = [
       {
         habilidades: '',
@@ -54,6 +43,7 @@ const PDIForm = () => {
   // Estados do formulário
   const [studentName, setStudentName] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [studentGrade, setStudentGrade] = useState('');
   const [guardians, setGuardians] = useState([]);
   const [guardianInput, setGuardianInput] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
@@ -65,12 +55,16 @@ const PDIForm = () => {
     '3': '',
   });
   
-  // Estado dos trimestres
-  const [trimesters, setTrimesters] = useState({
-    '1': createEmptyTrimester(),
-    '2': createEmptyTrimester(),
-    '3': createEmptyTrimester(),
+  const subjects = getPdiSubjectsForGrade(studentGrade);
+
+  const buildEmptyTrimesters = (subjectsList) => ({
+    '1': createEmptyTrimester(subjectsList),
+    '2': createEmptyTrimester(subjectsList),
+    '3': createEmptyTrimester(subjectsList),
   });
+
+  // Estado dos trimestres
+  const [trimesters, setTrimesters] = useState(() => buildEmptyTrimesters(subjects));
 
   useEffect(() => {
     if (id) {
@@ -140,6 +134,7 @@ const PDIForm = () => {
     return fallback;
   };
 
+
   const extractTeachersFromStudent = (student) => {
     const direct = normalizeArrayField(student.teachers || student.docentes);
     if (direct.length > 0) return direct;
@@ -168,22 +163,26 @@ const PDIForm = () => {
     }
 
     try {
+      setLoading(true);
       setStudentLookupLoading(true);
       const student = await studentAPI.getStudent(selectedStudentIdFromQuery);
       setSelectedStudentId(selectedStudentIdFromQuery);
       fillHeaderFromStudent(student || {});
+      setTrimesters(buildEmptyTrimesters(getPdiSubjectsForGrade(student?.grade || student?.schoolYear || '')));
     } catch (err) {
       console.error(err);
       alert('Não foi possível carregar o aluno selecionado para o novo PDI.');
       navigate('/pdi');
     } finally {
       setStudentLookupLoading(false);
+      setLoading(false);
     }
   };
 
   const fillHeaderFromStudent = (student) => {
     setStudentName(student.name || student.studentName || '');
     setBirthDate(student.birth_date || student.birthDate || student.date_of_birth || '');
+    setStudentGrade(student.grade || student.schoolYear || '');
     setGuardians(extractGuardiansFromStudent(student));
     setDiagnosis(student.diagnosis || student.diagnostic || '');
     setClassName(student.class || student.className || '');
@@ -201,6 +200,7 @@ const PDIForm = () => {
       setStudentLookupLoading(true);
       const student = await studentAPI.getStudent(studentId);
       fillHeaderFromStudent(student || {});
+      setTrimesters(buildEmptyTrimesters(getPdiSubjectsForGrade(student?.grade || student?.schoolYear || '')));
     } catch (err) {
       console.error(err);
       alert('Não foi possível carregar os dados do aluno selecionado.');
@@ -214,61 +214,72 @@ const PDIForm = () => {
       setLoading(true);
       const data = await pdiAPI.getPDIById(id);
       setSelectedStudentId(data.student_id || '');
-      
+
       setStudentName(data.student_name);
       setBirthDate(data.birth_date);
+      let resolvedStudentGrade = data.student_grade || data.grade || '';
       setGuardians(data.guardians || []);
       setDiagnosis(data.diagnosis);
       setClassName(data.class);
       setTeachers(data.teachers || []);
-      
-      // Converter formato antigo para novo formato se necessário
+
+      if (!String(resolvedStudentGrade).trim() && data.student_id) {
+        try {
+          const student = await studentAPI.getStudent(data.student_id);
+          resolvedStudentGrade = student?.grade || student?.schoolYear || '';
+        } catch (studentErr) {
+          console.error('Erro ao carregar ano do aluno vinculado ao PDI:', studentErr);
+        }
+      }
+
+      setStudentGrade(resolvedStudentGrade);
+
+      const subjectsForStudent = getPdiSubjectsForGrade(resolvedStudentGrade);
       const convertedTrimesters = {};
       ['1', '2', '3'].forEach(trimNum => {
         if (data.trimesters && data.trimesters[trimNum]) {
           convertedTrimesters[trimNum] = {
             relatorio_descritivo: data.trimesters[trimNum].relatorio_descritivo || {},
           };
-          
-          subjects.forEach(subject => {
+          subjectsForStudent.forEach((subject) => {
             const subjectData = data.trimesters[trimNum][subject.id];
-            
+
             if (Array.isArray(subjectData)) {
-              // Novo formato - já é array de objetos
               convertedTrimesters[trimNum][subject.id] = subjectData;
-            } else if (subjectData && typeof subjectData === 'object') {
-              // Formato antigo - objeto com strings ou arrays
+              return;
+            }
+
+            if (subjectData && typeof subjectData === 'object') {
               if (Array.isArray(subjectData.habilidades)) {
-                // Formato intermediário - arrays separados
                 const maxLength = Math.max(
                   subjectData.habilidades?.length || 0,
                   subjectData.adaptacoes?.length || 0,
-                  subjectData.aprendizagens?.length || 0
+                  subjectData.aprendizagens?.length || 0,
                 );
                 convertedTrimesters[trimNum][subject.id] = Array.from({ length: maxLength }, (_, i) => ({
                   habilidades: subjectData.habilidades?.[i] || '',
                   adaptacoes: subjectData.adaptacoes?.[i] || '',
                   aprendizagens: subjectData.aprendizagens?.[i] || '',
                 }));
-              } else {
-                // Formato muito antigo - strings simples
-                convertedTrimesters[trimNum][subject.id] = [{
-                  habilidades: subjectData.habilidades || '',
-                  adaptacoes: subjectData.adaptacoes || '',
-                  aprendizagens: subjectData.aprendizagens || '',
-                }];
+                return;
               }
-            } else {
-              // Sem dados - criar linha vazia
+
               convertedTrimesters[trimNum][subject.id] = [{
-                habilidades: '',
-                adaptacoes: '',
-                aprendizagens: '',
+                habilidades: subjectData.habilidades || '',
+                adaptacoes: subjectData.adaptacoes || '',
+                aprendizagens: subjectData.aprendizagens || '',
               }];
+              return;
             }
+
+            convertedTrimesters[trimNum][subject.id] = [{
+              habilidades: '',
+              adaptacoes: '',
+              aprendizagens: '',
+            }];
           });
         } else {
-          convertedTrimesters[trimNum] = createEmptyTrimester();
+          convertedTrimesters[trimNum] = createEmptyTrimester(subjectsForStudent);
         }
       });
       
@@ -479,6 +490,7 @@ const PDIForm = () => {
       student_id: selectedStudentId,
       student_name: studentName.trim(),
       birth_date: birthDate,
+      student_grade: studentGrade,
       guardians: finalGuardians,
       diagnosis: diagnosis.trim(),
       class: className.trim(),

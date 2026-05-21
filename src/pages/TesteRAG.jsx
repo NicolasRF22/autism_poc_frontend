@@ -13,8 +13,11 @@ const TesteRAG = () => {
 
   // --- Chat ---
   const [chatHistories, setChatHistories] = useState({});
+  const [chatSessionIds, setChatSessionIds] = useState({});
   const [inputMessage, setInputMessage] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatHistoryLoading, setChatHistoryLoading] = useState(false);
+  const [chatResetLoading, setChatResetLoading] = useState(false);
   const [selectedChatStudentId, setSelectedChatStudentId] = useState('');
   const [chatSourcesPreview, setChatSourcesPreview] = useState(null);
   const [chatSourcesLoading, setChatSourcesLoading] = useState(false);
@@ -28,6 +31,7 @@ const TesteRAG = () => {
     linked_peis: true,
   });
   const messagesEndRef = useRef(null);
+  const chatLoadRequestRef = useRef(0);
 
   const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
@@ -89,6 +93,7 @@ const TesteRAG = () => {
     : null;
 
   const messages = studentKey ? (chatHistories[studentKey] || []) : [];
+  const activeSessionId = studentKey ? (chatSessionIds[studentKey] || '') : '';
 
   const setMessages = (updater) => {
     if (!studentKey) return;
@@ -96,6 +101,15 @@ const TesteRAG = () => {
       const current = prev[studentKey] || [];
       const next = typeof updater === 'function' ? updater(current) : updater;
       return { ...prev, [studentKey]: next };
+    });
+  };
+
+  const setMessagesForKey = (key, updater) => {
+    if (!key) return;
+    setChatHistories((prev) => {
+      const current = prev[key] || [];
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return { ...prev, [key]: next };
     });
   };
 
@@ -151,6 +165,7 @@ const TesteRAG = () => {
     if (!selectedChatStudentId) {
       setSelectedStudent(null);
       setChatSourcesPreview(null);
+      setChatHistoryLoading(false);
       return;
     }
 
@@ -158,17 +173,77 @@ const TesteRAG = () => {
     if (!studentItem) {
       setSelectedStudent(null);
       setChatSourcesPreview(null);
+      setChatHistoryLoading(false);
       return;
     }
 
-    setSelectedStudent(buildChatStudentContext(studentItem));
+    const nextStudent = buildChatStudentContext(studentItem);
+    setSelectedStudent(nextStudent);
     const schoolName = getSchoolNameFromRegisteredStudent(studentItem);
     loadChatSourcesPreview({
       studentId: studentItem.id,
       studentName: studentItem.name || '',
       school: schoolName,
     });
+
+    const nextStudentKey = nextStudent
+      ? `${nextStudent.student_name}__${nextStudent.school}`
+      : null;
+    loadChatHistoryForStudent({
+      studentId: studentItem.id,
+      studentName: studentItem.name || '',
+      school: schoolName,
+      targetStudentKey: nextStudentKey,
+    });
   }, [selectedChatStudentId, registeredStudents, registeredSchools, students]);
+
+  const loadChatHistoryForStudent = async ({ studentId, studentName: selectedStudentName, school: selectedSchool, targetStudentKey }) => {
+    if (!studentId || !targetStudentKey) {
+      return;
+    }
+
+    const requestId = chatLoadRequestRef.current + 1;
+    chatLoadRequestRef.current = requestId;
+    setChatHistoryLoading(true);
+
+    try {
+      const data = await ragAPI.getCurrentChatSession({
+        studentId,
+        studentName: selectedStudentName,
+        school: selectedSchool,
+      });
+
+      if (chatLoadRequestRef.current !== requestId) return;
+
+      const loadedMessages = Array.isArray(data?.messages)
+        ? data.messages
+          .filter((item) => item && (item.role === 'user' || item.role === 'assistant'))
+          .map((item) => ({
+            role: item.role,
+            content: item.content || '',
+            sources: Array.isArray(item.sources?.documents)
+              ? item.sources.documents
+              : (Array.isArray(item.sources) ? item.sources : []),
+          }))
+        : [];
+
+      setMessagesForKey(targetStudentKey, loadedMessages);
+      if (data?.session_id) {
+        setChatSessionIds((prev) => ({
+          ...prev,
+          [targetStudentKey]: data.session_id,
+        }));
+      }
+    } catch (err) {
+      if (chatLoadRequestRef.current !== requestId) return;
+      console.error('Erro ao carregar histórico do chat:', err);
+      setMessagesForKey(targetStudentKey, []);
+    } finally {
+      if (chatLoadRequestRef.current === requestId) {
+        setChatHistoryLoading(false);
+      }
+    }
+  };
 
   const loadPeiPrompt = async () => {
     setPeiPromptLoading(true);
@@ -403,13 +478,22 @@ const TesteRAG = () => {
     setChatLoading(true);
 
     try {
-      const sessionId = selectedStudent
-        ? `${selectedStudent.student_name}__${selectedStudent.school}`
-        : 'default';
-      const studentFilter = selectedStudent
-        ? { student_name: selectedStudent.student_name, school: selectedStudent.school }
-        : null;
-      const data = await ragAPI.sendMessage(text, sessionId, studentFilter, chatSelectedSources);
+      const data = await ragAPI.sendMessage({
+        message: text,
+        sessionId: activeSessionId,
+        studentId: selectedChatStudentId,
+        studentName: selectedStudent?.student_name || '',
+        school: selectedStudent?.school || '',
+        selectedSources: chatSelectedSources,
+      });
+
+      if (data?.session_id && studentKey) {
+        setChatSessionIds((prev) => ({
+          ...prev,
+          [studentKey]: data.session_id,
+        }));
+      }
+
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: data.response, sources: data.sources },
@@ -425,6 +509,37 @@ const TesteRAG = () => {
       ]);
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  const handleClearChatHistory = async () => {
+    if (!selectedStudent || !selectedChatStudentId) return;
+    if (!window.confirm('Limpar todo o histórico deste aluno para o seu usuário? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    setChatResetLoading(true);
+    try {
+      const data = await ragAPI.clearCurrentChatSession({
+        studentId: selectedChatStudentId,
+        studentName: selectedStudent.student_name,
+        school: selectedStudent.school,
+      });
+
+      if (studentKey) {
+        setMessagesForKey(studentKey, []);
+      }
+
+      if (data?.session_id && studentKey) {
+        setChatSessionIds((prev) => ({
+          ...prev,
+          [studentKey]: data.session_id,
+        }));
+      }
+    } catch (err) {
+      alert('Erro ao limpar histórico: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setChatResetLoading(false);
     }
   };
 
@@ -634,25 +749,40 @@ const TesteRAG = () => {
   const peiPromptDirty = peiPromptDraft.trim() !== initialPeiPrompt.trim();
   const chatPromptDirty = chatPromptDraft.trim() !== initialChatPrompt.trim();
 
+  const formatPreviewDetail = (baseDetail, excerpt) => {
+    const cleanExcerpt = String(excerpt || '').trim();
+    if (!cleanExcerpt) return baseDetail;
+    const shortExcerpt = cleanExcerpt.slice(0, 90);
+    return `${baseDetail} · ${shortExcerpt}${cleanExcerpt.length > 90 ? '...' : ''}`;
+  };
+
   const chatSourceOptions = [
     {
       key: 'vector_documents',
       label: 'Documentos do RAG',
-      detail: `${chatSourcesPreview?.vector_documents?.document_count || 0} arquivo(s)`,
+      detail: formatPreviewDetail(
+        `${chatSourcesPreview?.vector_documents?.document_count || 0} arquivo(s)`,
+        chatSourcesPreview?.vector_documents?.excerpt,
+      ),
       available: Boolean(chatSourcesPreview?.vector_documents?.included),
     },
     {
       key: 'diary',
       label: 'Diário Individual',
       detail: chatSourcesPreview?.diary?.included
-        ? `${chatSourcesPreview.diary.entries_count} entrada(s)`
+        ? formatPreviewDetail(
+            `${chatSourcesPreview.diary.entries_count} entrada(s)`,
+            chatSourcesPreview?.diary?.excerpt,
+          )
         : 'não encontrado',
       available: Boolean(chatSourcesPreview?.diary?.included),
     },
     {
       key: 'pdi',
       label: 'PDI',
-      detail: chatSourcesPreview?.pdi?.included ? 'encontrado' : 'não encontrado',
+      detail: chatSourcesPreview?.pdi?.included
+        ? formatPreviewDetail('encontrado', chatSourcesPreview?.pdi?.excerpt)
+        : 'não encontrado',
       available: Boolean(chatSourcesPreview?.pdi?.included),
     },
     {
@@ -681,7 +811,10 @@ const TesteRAG = () => {
       key: 'linked_peis',
       label: 'PEIs anteriores vinculados',
       detail: chatSourcesPreview?.linked_peis?.included
-        ? `${chatSourcesPreview.linked_peis.count || 0} PEI(s)`
+        ? formatPreviewDetail(
+            `${chatSourcesPreview.linked_peis.count || 0} PEI(s)`,
+            chatSourcesPreview?.linked_peis?.excerpt,
+          )
         : 'não encontrado',
       available: Boolean(chatSourcesPreview?.linked_peis?.included),
     },
@@ -691,21 +824,29 @@ const TesteRAG = () => {
     {
       key: 'vector_documents',
       label: 'Documentos do RAG',
-      detail: `${peiSourcesPreview?.vector_documents?.document_count || 0} arquivo(s)`,
+      detail: formatPreviewDetail(
+        `${peiSourcesPreview?.vector_documents?.document_count || 0} arquivo(s)`,
+        peiSourcesPreview?.vector_documents?.excerpt,
+      ),
       available: Boolean(peiSourcesPreview?.vector_documents?.included),
     },
     {
       key: 'diary',
       label: 'Diário Individual',
       detail: peiSourcesPreview?.diary?.included
-        ? `${peiSourcesPreview.diary.entries_count} entrada(s)`
+        ? formatPreviewDetail(
+            `${peiSourcesPreview.diary.entries_count} entrada(s)`,
+            peiSourcesPreview?.diary?.excerpt,
+          )
         : 'não encontrado',
       available: Boolean(peiSourcesPreview?.diary?.included),
     },
     {
       key: 'pdi',
       label: 'PDI',
-      detail: peiSourcesPreview?.pdi?.included ? 'encontrado' : 'não encontrado',
+      detail: peiSourcesPreview?.pdi?.included
+        ? formatPreviewDetail('encontrado', peiSourcesPreview?.pdi?.excerpt)
+        : 'não encontrado',
       available: Boolean(peiSourcesPreview?.pdi?.included),
     },
     {
@@ -734,7 +875,10 @@ const TesteRAG = () => {
       key: 'linked_peis',
       label: 'PEIs anteriores vinculados',
       detail: peiSourcesPreview?.linked_peis?.included
-        ? `${peiSourcesPreview.linked_peis.count || 0} PEI(s)`
+        ? formatPreviewDetail(
+            `${peiSourcesPreview.linked_peis.count || 0} PEI(s)`,
+            peiSourcesPreview?.linked_peis?.excerpt,
+          )
         : 'não encontrado',
       available: Boolean(peiSourcesPreview?.linked_peis?.included),
     },
@@ -774,8 +918,8 @@ const TesteRAG = () => {
               </span>
             )}
             {messages.length > 0 && (
-              <button className="clear-btn" onClick={() => setMessages([])}>
-                Limpar
+              <button className="clear-btn" onClick={handleClearChatHistory} disabled={chatResetLoading}>
+                {chatResetLoading ? 'Limpando...' : 'Limpar'}
               </button>
             )}
           </div>
@@ -814,7 +958,11 @@ const TesteRAG = () => {
               </div>
             )}
 
-            {messages.length === 0 ? (
+            {chatHistoryLoading ? (
+              <div className="chat-empty">
+                <p>Carregando histórico do aluno...</p>
+              </div>
+            ) : messages.length === 0 ? (
               <div className="chat-empty">
                 {selectedStudent ? (
                   <>
@@ -870,9 +1018,9 @@ const TesteRAG = () => {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder={selectedStudent ? 'Digite sua mensagem...' : 'Selecione um estudante primeiro...'}
-              disabled={chatLoading || !selectedStudent}
+              disabled={chatLoading || chatHistoryLoading || chatResetLoading || !selectedStudent}
             />
-            <button type="submit" disabled={chatLoading || !inputMessage.trim() || !selectedStudent}>
+            <button type="submit" disabled={chatLoading || chatHistoryLoading || chatResetLoading || !inputMessage.trim() || !selectedStudent}>
               Enviar
             </button>
           </form>

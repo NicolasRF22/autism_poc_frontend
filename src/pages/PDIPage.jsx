@@ -27,12 +27,54 @@ const PDIPage = () => {
     loadPDIs();
   }, []);
 
+  const buildStudentGradeLookup = (students) => {
+    const byId = new Map();
+    const byName = new Map();
+
+    (Array.isArray(students) ? students : []).forEach((student) => {
+      const studentId = String(student?.id || '').trim();
+      const studentName = normalizeName(student?.name || student?.studentName);
+      const studentGrade = student?.grade || student?.schoolYear || '';
+
+      if (studentId) {
+        byId.set(studentId, studentGrade);
+      }
+      if (studentName) {
+        byName.set(studentName, studentGrade);
+      }
+    });
+
+    return { byId, byName };
+  };
+
   const loadPDIs = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await pdiAPI.getAllPDIs();
-      setPdis(data);
+      const [data, students] = await Promise.all([
+        pdiAPI.getAllPDIs(),
+        studentAPI.getAllStudents().catch(() => []),
+      ]);
+
+      const gradeLookup = buildStudentGradeLookup(students);
+      const enrichedPdis = (Array.isArray(data) ? data : []).map((pdi) => {
+        const currentGrade = String(pdi?.student_grade || '').trim();
+        if (currentGrade) return pdi;
+
+        const studentId = String(pdi?.student_id || '').trim();
+        if (studentId && gradeLookup.byId.has(studentId)) {
+          return { ...pdi, student_grade: gradeLookup.byId.get(studentId) || '' };
+        }
+
+        const studentName = normalizeName(pdi?.student_name);
+        if (studentName && gradeLookup.byName.has(studentName)) {
+          return { ...pdi, student_grade: gradeLookup.byName.get(studentName) || '' };
+        }
+
+        return pdi;
+      });
+
+      setPdis(enrichedPdis);
     } catch (err) {
       setError('Erro ao carregar PDIs. Verifique se o backend está rodando.');
       console.error(err);
@@ -174,6 +216,7 @@ const PDIPage = () => {
             <thead>
               <tr>
                 <th>Aluno</th>
+                <th>Ano</th>
                 <th>Turma</th>
                 <th>Diagnóstico</th>
                 <th>Docentes</th>
@@ -185,6 +228,7 @@ const PDIPage = () => {
               {pdis.map((pdi) => (
                 <tr key={pdi.id}>
                   <td className="student-name">{pdi.student_name}</td>
+                  <td>{pdi.student_grade || '-'}</td>
                   <td>{pdi.class}</td>
                   <td className="diagnosis">{pdi.diagnosis}</td>
                   <td className="teachers-cell">

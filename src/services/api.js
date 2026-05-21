@@ -5,6 +5,13 @@ export const buildApiUrl = (path) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${API_BASE_URL}${normalizedPath}`;
 };
+export const buildAuthenticatedUrl = (path) => {
+  const url = buildApiUrl(path);
+  const token = getAuthToken();
+  if (!token) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}token=${encodeURIComponent(token)}`;
+};
 export const AUTH_TOKEN_KEY = 'autism_ia_token';
 export const AUTH_USER_KEY = 'autism_ia_user';
 
@@ -262,11 +269,46 @@ export const ragAPI = {
   },
 
   // Enviar mensagem ao chat
-  sendMessage: async (message, sessionId, studentFilter = null) => {
-    const response = await api.post('/rag/chat', {
+  sendMessage: async ({
+    message,
+    sessionId = '',
+    studentId = '',
+    studentName = '',
+    school = '',
+    selectedSources = null,
+    newSession = false,
+  }) => {
+    const payload = {
       message,
-      session_id: sessionId,
-      ...(studentFilter || {}),
+      ...(sessionId ? { session_id: sessionId } : {}),
+      ...(studentId ? { student_id: studentId } : {}),
+      ...(studentName ? { student_name: studentName } : {}),
+      ...(school ? { school } : {}),
+      ...(selectedSources ? { selected_sources: selectedSources } : {}),
+      ...(newSession ? { new_session: true } : {}),
+    };
+    const response = await api.post('/rag/chat', payload);
+    return response.data;
+  },
+
+  // Carregar sessão canônica do chat (aluno + usuário logado)
+  getCurrentChatSession: async ({ studentId, studentName, school } = {}) => {
+    const params = {};
+    if (studentId) params.student_id = studentId;
+    if (studentName) params.student_name = studentName;
+    if (school) params.school = school;
+    const response = await api.get('/rag/chat/current-session', { params });
+    return response.data;
+  },
+
+  // Limpar sessão canônica do chat (aluno + usuário logado)
+  clearCurrentChatSession: async ({ studentId, studentName, school } = {}) => {
+    const response = await api.delete('/rag/chat/current-session', {
+      data: {
+        ...(studentId ? { student_id: studentId } : {}),
+        ...(studentName ? { student_name: studentName } : {}),
+        ...(school ? { school } : {}),
+      },
     });
     return response.data;
   },
@@ -380,6 +422,38 @@ export const diaryAPI = {
   // Criar nova entrada de diário
   createEntry: async (entryData) => {
     const response = await api.post('/diary/entries', entryData);
+    return response.data;
+  },
+
+  // Upload de imagens para uma entrada de diário
+  uploadEntryImages: async (entryId, files) => {
+    const formData = new FormData();
+    (files || []).forEach((file) => {
+      formData.append('files', file);
+    });
+    const response = await api.post(`/diary/entries/${entryId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  // Listar imagens de uma entrada de diário
+  listEntryImages: async (entryId) => {
+    const response = await api.get(`/diary/entries/${entryId}/images`);
+    return response.data;
+  },
+
+  // Baixar/visualizar imagem anexada
+  downloadEntryImage: async (imageId) => {
+    const response = await api.get(`/diary/images/${imageId}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Remover imagem anexada
+  deleteEntryImage: async (imageId) => {
+    const response = await api.delete(`/diary/images/${imageId}`);
     return response.data;
   },
 

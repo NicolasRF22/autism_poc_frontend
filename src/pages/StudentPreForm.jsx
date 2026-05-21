@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { schoolAPI, studentAPI } from '../services/api';
 import './StudentPreForm.css';
+import { GRADES } from '../constants/grades';
 
 const emptyForm = {
   name: '',
@@ -141,6 +142,11 @@ const StudentPreForm = () => {
       ? [...normalizedGuardians, pendingGuardian]
       : normalizedGuardians;
 
+
+    if (!formData.grade || !String(formData.grade).trim()) {
+      setError('Selecione o ano escolar do aluno.');
+      return;
+    }
     if (!formData.name.trim()) {
       setError('Nome do aluno é obrigatório.');
       return;
@@ -255,14 +261,19 @@ const StudentPreForm = () => {
 
           <div className="student-pre-row">
             <label>
-              Ano
-              <input
-                type="text"
+              Ano *
+              <select
                 name="grade"
                 value={formData.grade}
                 onChange={handleChange}
                 disabled={isViewMode}
-              />
+                required
+              >
+                <option value="">Selecione o ano escolar</option>
+                {GRADES.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
             </label>
 
             <label>

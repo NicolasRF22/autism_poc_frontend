@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { diaryAPI, getStoredUser, studentAPI } from '../services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { buildAuthenticatedUrl, diaryAPI, getStoredUser, studentAPI } from '../services/api';
 import './DiaryPage.css';
 
 // Mapeamento das perguntas (versão resumida para visualização)
@@ -81,17 +81,85 @@ const DiaryPage = () => {
   const [editAnswers, setEditAnswers] = useState({});
   const [editOpenObs, setEditOpenObs] = useState('');
   const [editLoading, setEditLoading] = useState(false);
+  const [entryImagesById, setEntryImagesById] = useState({});
+  const [previewImage, setPreviewImage] = useState(null);
+  const [previewTitle, setPreviewTitle] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const currentRole = getStoredUser()?.role || '';
   const canEditDiary = ['admin', 'professor'].includes(currentRole);
+
+  const queryParams = new URLSearchParams(location.search);
+  const autoStudentName = queryParams.get('student') || '';
+  const autoStudentId = queryParams.get('studentId') || '';
 
   useEffect(() => {
     loadStudents();
   }, []);
 
   useEffect(() => {
+    if (!autoStudentName || selectedStudent || students.length === 0) return;
+
+    const normalizedAutoName = normalizeName(autoStudentName);
+    const normalizedAutoId = String(autoStudentId || '').trim();
+    const match = students.find((student) => {
+      const studentId = String(student?.student_id || '').trim();
+      if (normalizedAutoId && studentId) {
+        return studentId === normalizedAutoId;
+      }
+      return normalizeName(student?.student_name) === normalizedAutoName;
+    });
+
+    if (match) {
+      handleStudentClick(match);
+      return;
+    }
+
+    const loadFallback = async () => {
+      try {
+        const data = await diaryAPI.getStudentEntries(autoStudentName);
+        setStudentEntries(data);
+        setSelectedStudent({
+          student_name: autoStudentName,
+          student_id: normalizedAutoId || null,
+          last_teachers: data?.[0]?.teachers || [],
+          last_date: data?.[0]?.diary_date || null,
+          total_entries: data.length,
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadFallback();
+  }, [autoStudentName, autoStudentId, selectedStudent, students]);
+
+  useEffect(() => {
     applyDateFilter();
   }, [studentEntries, dateFilter, customDate]);
+
+  useEffect(() => {
+    if (!selectedStudent || studentEntries.length === 0) {
+      setEntryImagesById({});
+      return;
+    }
+
+    const loadImages = async () => {
+      const next = {};
+      await Promise.all(studentEntries.map(async (entry) => {
+        try {
+          const images = await diaryAPI.listEntryImages(entry.id);
+          next[entry.id] = Array.isArray(images) ? images : [];
+        } catch (err) {
+          console.warn('Erro ao carregar imagens da entrada:', entry.id, err);
+          next[entry.id] = [];
+        }
+      }));
+      setEntryImagesById(next);
+    };
+
+    loadImages();
+  }, [selectedStudent, studentEntries]);
 
   const applyDateFilter = () => {
     if (studentEntries.length === 0) {
@@ -330,73 +398,22 @@ const DiaryPage = () => {
   };
 
   const handleEditEntry = (entry) => {
-    setEditingEntry(entry);
-    setEditDiaryDate(entry.diary_date || '');
-    setEditTeachers((entry.teachers || []).join(', '));
-    setEditAnswers(entry.answers || {});
-    setEditOpenObs(entry.open_obs || '');
+    const params = new URLSearchParams();
+    if (selectedStudent?.student_id) {
+      params.set('studentId', selectedStudent.student_id);
+    }
+    params.set('entryId', entry.id);
+    navigate(`/diario/${encodeURIComponent(selectedStudent.student_name)}/novo?${params.toString()}`);
   };
 
-  const handleCloseEditModal = () => {
-    setEditingEntry(null);
-    setEditDiaryDate('');
-    setEditTeachers('');
-    setEditAnswers({});
-    setEditOpenObs('');
-    setEditLoading(false);
+  const openPreview = (url, title = 'Imagem') => {
+    setPreviewImage(url);
+    setPreviewTitle(title);
   };
 
-  const handleEditAnswerChange = (questionId, value) => {
-    setEditAnswers((prev) => ({
-      ...prev,
-      [questionId]: value,
-    }));
-  };
-
-  const handleSaveEditedEntry = async () => {
-    if (!editingEntry) return;
-
-    const teachersList = editTeachers
-      .split(',')
-      .map((teacher) => teacher.trim())
-      .filter(Boolean);
-
-    if (!editDiaryDate) {
-      alert('Selecione a data do registro.');
-      return;
-    }
-
-    if (teachersList.length === 0) {
-      alert('Adicione pelo menos um professor.');
-      return;
-    }
-
-    const unanswered = QUESTION_KEYS.filter((questionId) => !editAnswers[questionId]);
-    if (unanswered.length > 0) {
-      alert('Responda todas as perguntas antes de salvar.');
-      return;
-    }
-
-    try {
-      setEditLoading(true);
-      await diaryAPI.updateEntry(editingEntry.id, {
-        diary_date: editDiaryDate,
-        teachers: teachersList,
-        answers: editAnswers,
-        open_obs: editOpenObs,
-      });
-
-      const data = await diaryAPI.getStudentEntries(selectedStudent.student_name);
-      setStudentEntries(data);
-      handleCloseEditModal();
-      alert('Entrada atualizada com sucesso!');
-    } catch (err) {
-      console.error(err);
-      const backendMessage = err?.response?.data?.error;
-      alert(backendMessage || 'Erro ao atualizar entrada.');
-    } finally {
-      setEditLoading(false);
-    }
+  const closePreview = () => {
+    setPreviewImage(null);
+    setPreviewTitle('');
   };
 
   const formatDate = (dateString, { dateOnly = false } = {}) => {
@@ -636,26 +653,56 @@ const DiaryPage = () => {
                 <div className="entry-info">
                   <p><strong>Professor(es):</strong> {entry.teachers.join(', ')}</p>
                   <p><strong>Registrado em:</strong> {formatDate(entry.created_at)}</p>
+                  <p><strong>Presença:</strong> {entry.attendance === 'falta_justificada'
+                    ? 'Falta Justificada'
+                    : entry.attendance === 'falta_injustificada'
+                      ? 'Falta Injustificada'
+                      : 'Presente'}</p>
+                  {entry.attendance === 'falta_justificada' && entry.absence_explanation && (
+                    <p><strong>Motivo:</strong> {entry.absence_explanation}</p>
+                  )}
                 </div>
-                <div className="entry-answers">
-                  <h4>Atividades:</h4>
-                  <div className="answers-list">
-                    {Object.entries(entry.answers).map(([questionId, answer]) => (
-                      <div key={questionId} className="answer-item">
-                        <span className="question-text">
-                          {QUESTIONS_MAP[questionId] || questionId}
-                        </span>
-                        <span className={`answer-badge ${answer.toLowerCase()}`}>
-                          {answer}
-                        </span>
-                      </div>
-                    ))}
+                {entry.attendance === 'presente' && (
+                  <div className="entry-answers">
+                    <h4>Atividades:</h4>
+                    <div className="answers-list">
+                      {Object.entries(entry.answers || {}).map(([questionId, answer]) => (
+                        <div key={questionId} className="answer-item">
+                          <span className="question-text">
+                            {QUESTIONS_MAP[questionId] || questionId}
+                          </span>
+                          <span className={`answer-badge ${answer.toLowerCase()}`}>
+                            {answer}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
                 {entry.open_obs && (
                   <div className="entry-observations">
                     <h4>Observações:</h4>
                     <p>{entry.open_obs}</p>
+                  </div>
+                )}
+                {Array.isArray(entryImagesById[entry.id]) && entryImagesById[entry.id].length > 0 && (
+                  <div className="entry-images">
+                    <h4>Imagens:</h4>
+                    <div className="entry-images-grid">
+                      {entryImagesById[entry.id].map((image) => {
+                        const viewUrl = buildAuthenticatedUrl(image.view_url);
+                        return (
+                          <button
+                            type="button"
+                            key={image.image_id}
+                            className="entry-image-thumb"
+                            onClick={() => openPreview(viewUrl, image.file_name)}
+                          >
+                            <img src={viewUrl} alt={image.file_name} />
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -663,65 +710,14 @@ const DiaryPage = () => {
           )}
         </div>
 
-        {editingEntry && (
-          <div className="modal-overlay" onClick={handleCloseEditModal}>
-            <div className="modal-content import-modal" onClick={(e) => e.stopPropagation()}>
-              <h2>Editar Entrada do Diário</h2>
-
-              <div className="preview-grid">
-                <div className="form-group">
-                  <label>Data</label>
-                  <input
-                    type="date"
-                    value={editDiaryDate}
-                    onChange={(e) => setEditDiaryDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Professores (separar por vírgula)</label>
-                  <input
-                    type="text"
-                    value={editTeachers}
-                    onChange={(e) => setEditTeachers(e.target.value)}
-                  />
-                </div>
+        {previewImage && (
+          <div className="modal-overlay" onClick={closePreview}>
+            <div className="modal-content image-preview-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="image-preview-modal-header">
+                <h3>{previewTitle}</h3>
+                <button type="button" onClick={closePreview}>✕</button>
               </div>
-
-              <div className="preview-answers">
-                {QUESTION_KEYS.map((questionKey) => (
-                  <div className="preview-answer-item" key={`edit-${questionKey}`}>
-                    <label>{QUESTIONS_MAP[questionKey]}</label>
-                    <select
-                      value={editAnswers?.[questionKey] || ''}
-                      onChange={(e) => handleEditAnswerChange(questionKey, e.target.value)}
-                    >
-                      <option value="">Não definido</option>
-                      {ANSWER_OPTIONS.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-
-              <div className="form-group">
-                <label>Observações</label>
-                <textarea
-                  rows="4"
-                  value={editOpenObs}
-                  onChange={(e) => setEditOpenObs(e.target.value)}
-                />
-              </div>
-
-              <div className="modal-buttons">
-                <button onClick={handleCloseEditModal} className="cancel-button" disabled={editLoading}>
-                  Cancelar
-                </button>
-                <button onClick={handleSaveEditedEntry} className="confirm-button" disabled={editLoading}>
-                  {editLoading ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-              </div>
+              <img src={previewImage} alt={previewTitle} />
             </div>
           </div>
         )}
