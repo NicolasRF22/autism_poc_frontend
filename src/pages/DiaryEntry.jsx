@@ -174,6 +174,11 @@ const DiaryEntry = () => {
     if (value !== 'falta_justificada') {
       setAbsenceReason('');
     }
+
+    if (value !== 'presente') {
+      setImageFiles([]);
+      setExistingImages([]);
+    }
   };
 
   useEffect(() => {
@@ -450,65 +455,67 @@ const DiaryEntry = () => {
           </>
         )}
 
-        <div className="form-section">
-          <h2>Anexar imagens</h2>
-          <div className="image-upload">
-            <label className="image-upload-button">
-              Selecionar imagens
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageSelection}
-                style={{ display: 'none' }}
-              />
-            </label>
-            <span className="image-upload-hint">Formatos aceitos: JPG, PNG, GIF, WEBP.</span>
-          </div>
-
-          {imagePreviews.length > 0 && (
-            <div className="image-preview-grid">
-              {imagePreviews.map((previewUrl, index) => (
-                <div key={previewUrl} className="image-preview-item">
-                  <button
-                    type="button"
-                    className="image-preview-button"
-                    onClick={() => openPreview(previewUrl, `Imagem ${index + 1}`)}
-                  >
-                    <img src={previewUrl} alt={`Imagem ${index + 1}`} />
-                  </button>
-                  <button
-                    type="button"
-                    className="image-remove-button"
-                    onClick={() => handleRemoveImage(index)}
-                  >
-                    Remover
-                  </button>
-                </div>
-              ))}
+        {attendance === 'presente' && (
+          <div className="form-section">
+            <h2>Anexar imagens</h2>
+            <div className="image-upload">
+              <label className="image-upload-button">
+                Selecionar imagens
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelection}
+                  style={{ display: 'none' }}
+                />
+              </label>
+              <span className="image-upload-hint">Formatos aceitos: JPG, PNG, GIF, WEBP.</span>
             </div>
-          )}
 
-          {existingImages.length > 0 && (
-            <div className="image-preview-grid existing-images">
-              {existingImages.map((image) => {
-                const viewUrl = buildAuthenticatedUrl(image.view_url);
-                return (
-                  <div key={image.image_id} className="image-preview-item">
+            {imagePreviews.length > 0 && (
+              <div className="image-preview-grid">
+                {imagePreviews.map((previewUrl, index) => (
+                  <div key={previewUrl} className="image-preview-item">
                     <button
                       type="button"
                       className="image-preview-button"
-                      onClick={() => openPreview(viewUrl, image.file_name)}
+                      onClick={() => openPreview(previewUrl, `Imagem ${index + 1}`)}
                     >
-                      <img src={viewUrl} alt={image.file_name} />
+                      <img src={previewUrl} alt={`Imagem ${index + 1}`} />
                     </button>
-                    <span className="image-file-name">{image.file_name}</span>
+                    <button
+                      type="button"
+                      className="image-remove-button"
+                      onClick={() => handleRemoveImage(index)}
+                    >
+                      Remover
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+
+            {existingImages.length > 0 && (
+              <div className="image-preview-grid existing-images">
+                {existingImages.map((image) => {
+                  const viewUrl = buildAuthenticatedUrl(image.view_url);
+                  return (
+                    <div key={image.image_id} className="image-preview-item">
+                      <button
+                        type="button"
+                        className="image-preview-button"
+                        onClick={() => openPreview(viewUrl, image.file_name)}
+                      >
+                        <img src={viewUrl} alt={image.file_name} />
+                      </button>
+                      <span className="image-file-name">{image.file_name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {attendance === 'presente' && (
           <>
