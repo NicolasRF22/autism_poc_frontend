@@ -16,6 +16,7 @@ import TeachersPage from './pages/TeachersPage';
 import TeacherForm from './pages/TeacherFormNew';
 import TeacherStudentManagementPage from './pages/TeacherStudentManagementPage';
 import TesteRAG from './pages/TesteRAG';
+import ChatPage from './pages/ChatPage';
 import AttachmentsPage from './pages/AttachmentsPage';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
@@ -53,6 +54,7 @@ const SCHOOL_EDIT_ROLES = new Set(['admin', 'secretaria', 'coordenacao']);
 const LEARNING_EDIT_ROLES = new Set(['admin', 'professor']);
 const SCHOOL_REGISTRATION_ROLES = new Set(['admin', 'coordenacao']);
 const TEACHER_STUDENT_LINK_ROLES = new Set(['admin', 'secretaria', 'coordenacao']);
+const CHAT_ONLY_ROLES = new Set(['admin', 'avaliador']);
 
 const hasAnyRole = (user, allowedRoles) => allowedRoles.has(user?.role || '');
 
@@ -142,6 +144,8 @@ function App() {
   const canEditLearning = hasAnyRole(user, LEARNING_EDIT_ROLES);
   const canEditSchoolRegistration = hasAnyRole(user, SCHOOL_REGISTRATION_ROLES);
   const canAccessTeacherStudentLinks = hasAnyRole(user, TEACHER_STUDENT_LINK_ROLES);
+  const canAccessChatOnly = hasAnyRole(user, CHAT_ONLY_ROLES);
+  const canAccessRagAndPei = user?.role === 'admin';
 
   return (
     <Router>
@@ -219,7 +223,8 @@ function App() {
                 path="/teacher-student-management"
                 element={canAccessTeacherStudentLinks ? <TeacherStudentManagementPage user={user} /> : <Navigate to="/inicio" replace />}
               />
-              <Route path="/rag" element={<TesteRAG />} />
+              <Route path="/chat" element={canAccessChatOnly ? <ChatPage /> : <Navigate to="/inicio" replace />} />
+              <Route path="/rag" element={canAccessRagAndPei ? <TesteRAG /> : <Navigate to="/inicio" replace />} />
               <Route path="/anexos" element={<AttachmentsPage />} />
               <Route path="/teste-rag" element={<Navigate to="/rag" replace />} />
               <Route

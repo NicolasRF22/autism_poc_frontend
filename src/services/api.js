@@ -135,6 +135,13 @@ export const authAPI = {
     return response.data;
   },
 
+  updateEvaluatorScope: async (userId, evaluatorScope) => {
+    const response = await api.put(`/auth/users/${userId}/avaliador-scope`, {
+      evaluator_scope: evaluatorScope,
+    });
+    return response.data;
+  },
+
   deleteUser: async (userId) => {
     const response = await api.delete(`/auth/users/${userId}`);
     return response.data;

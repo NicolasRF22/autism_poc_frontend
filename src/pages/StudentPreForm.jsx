@@ -6,12 +6,14 @@ import { GRADES } from '../constants/grades';
 
 const emptyForm = {
   name: '',
+  birth_date: '',
   age: '',
   school_id: '',
   school_name: '',
   grade: '',
   class: '',
   guardians: [],
+  diagnosis: '',
   notes: '',
 };
 
@@ -31,6 +33,19 @@ const StudentPreForm = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [guardianInput, setGuardianInput] = useState('');
+
+  const computeAge = (birthDateStr) => {
+    if (!birthDateStr) return '';
+    // normalize and avoid timezone issues
+    const b = new Date(birthDateStr + 'T00:00:00');
+    if (Number.isNaN(b.getTime())) return '';
+    const today = new Date();
+    let age = today.getFullYear() - b.getFullYear();
+    const m = today.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+    if (age < 0) return '';
+    return String(age);
+  };
 
   useEffect(() => {
     const loadSchools = async () => {
@@ -73,14 +88,20 @@ const StudentPreForm = () => {
         setLoading(true);
         setError('');
         const data = await studentAPI.getStudent(id);
+        const computedAge = data.birth_date
+          ? computeAge(data.birth_date)
+          : (data.age || data.studentAge || '');
+
         setFormData({
           name: data.name || data.studentName || '',
-          age: data.age || data.studentAge || '',
+          birth_date: data.birth_date || data.birthDate || data.date_of_birth || '',
+          age: computedAge,
           school_id: data.school_id || '',
           school_name: data.school_name || data.schoolName || '',
           grade: data.grade || data.schoolYear || '',
           class: data.class || data.className || '',
           guardians: Array.isArray(data.guardians) ? data.guardians : [],
+          diagnosis: data.diagnosis || '',
           notes: data.notes || '',
         });
       } catch (err) {
@@ -96,6 +117,11 @@ const StudentPreForm = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    if (name === 'birth_date') {
+      const newAge = computeAge(value);
+      setFormData((prev) => ({ ...prev, birth_date: value, age: newAge }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -149,6 +175,10 @@ const StudentPreForm = () => {
     }
     if (!formData.name.trim()) {
       setError('Nome do aluno é obrigatório.');
+      return;
+    }
+    if (!formData.birth_date) {
+      setError('Data de nascimento é obrigatória.');
       return;
     }
 
@@ -228,6 +258,18 @@ const StudentPreForm = () => {
             />
           </label>
 
+          <label>
+            Data de nascimento *
+            <input
+              type="date"
+              name="birth_date"
+              value={formData.birth_date}
+              onChange={handleChange}
+              disabled={isViewMode}
+              required
+            />
+          </label>
+
           <div className="student-pre-row">
             <label>
               Idade
@@ -235,7 +277,7 @@ const StudentPreForm = () => {
                 type="text"
                 name="age"
                 value={formData.age}
-                onChange={handleChange}
+                readOnly
                 disabled={isViewMode}
               />
             </label>
@@ -323,6 +365,17 @@ const StudentPreForm = () => {
                 </div>
               )}
             </div>
+          </label>
+
+          <label>
+            Diagnóstico
+            <input
+              type="text"
+              name="diagnosis"
+              value={formData.diagnosis}
+              onChange={handleChange}
+              disabled={isViewMode}
+            />
           </label>
 
           <label>

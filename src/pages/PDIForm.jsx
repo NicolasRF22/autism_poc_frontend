@@ -373,18 +373,6 @@ const PDIForm = () => {
         alert('Pelo menos uma filiação é obrigatória');
         return false;
       }
-      if (!diagnosis.trim()) {
-        alert('Diagnóstico é obrigatório');
-        return false;
-      }
-      if (!className.trim()) {
-        alert('Turma é obrigatória');
-        return false;
-      }
-      if (teachers.length === 0) {
-        alert('Pelo menos um docente é obrigatório');
-        return false;
-      }
     }
     return true;
   };
