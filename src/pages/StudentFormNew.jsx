@@ -12,6 +12,7 @@ const StudentFormNew = () => {
   const isViewMode = location.pathname.includes('/view');
   const isEditMode = location.pathname.includes('/edit');
   const source = new URLSearchParams(location.search).get('source');
+  const isCaseStudySource = source === 'estudo-de-caso';
   const backPath = source === 'estudo-de-caso' ? '/estudo-de-caso' : '/students';
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -617,7 +618,7 @@ const StudentFormNew = () => {
                 type="text"
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
                 required
               />
             </div>
@@ -628,7 +629,7 @@ const StudentFormNew = () => {
                 type="text"
                 value={studentAge}
                 onChange={(e) => setStudentAge(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
                 required
               />
             </div>
@@ -639,7 +640,7 @@ const StudentFormNew = () => {
                 type="text"
                 value={motherName}
                 onChange={(e) => setMotherName(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
               />
             </div>
 
@@ -649,7 +650,7 @@ const StudentFormNew = () => {
                 type="text"
                 value={fatherName}
                 onChange={(e) => setFatherName(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
               />
             </div>
 
@@ -659,7 +660,7 @@ const StudentFormNew = () => {
                 type="text"
                 value={schoolName}
                 onChange={(e) => setSchoolName(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
               />
             </div>
 
@@ -668,7 +669,7 @@ const StudentFormNew = () => {
               <select
                 value={schoolYear}
                 onChange={(e) => setSchoolYear(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
                 required
               >
                 <option value="">Selecione o ano escolar</option>
@@ -684,7 +685,7 @@ const StudentFormNew = () => {
                 type="text"
                 value={className}
                 onChange={(e) => setClassName(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
               />
             </div>
 
@@ -694,7 +695,7 @@ const StudentFormNew = () => {
                 type="text"
                 value={mainTeacher}
                 onChange={(e) => setMainTeacher(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
               />
             </div>
 
@@ -704,7 +705,7 @@ const StudentFormNew = () => {
                 type="text"
                 value={supportTeacher}
                 onChange={(e) => setSupportTeacher(e.target.value)}
-                disabled={isViewMode}
+                disabled={isViewMode || isCaseStudySource}
               />
             </div>
           </div>

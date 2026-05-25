@@ -12,7 +12,7 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
   const isCaseStudyMode = mode === 'case-study';
   const currentRole = getStoredUser()?.role || '';
   const canManagePreRegistration = ['admin', 'secretaria'].includes(currentRole);
-  const canManageCaseStudy = currentRole === 'professor';
+  const canManageCaseStudy = ['admin', 'professor'].includes(currentRole);
   const completedCaseStudies = students.filter((student) => student.case_study_completed);
   const pendingCaseStudyStudents = students.filter((student) => !student.case_study_completed);
 
