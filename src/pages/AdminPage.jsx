@@ -11,8 +11,6 @@ const ROLES = [
   'avaliador',
 ];
 
-const EVALUATOR_CATEGORIES = ['secretaria', 'coordenacao', 'professor'];
-
 const REQUIRES_MUNICIPIO = new Set(['secretaria', 'coordenacao', 'professor']);
 const REQUIRES_SCHOOL = new Set(['coordenacao', 'professor']);
 
@@ -49,10 +47,7 @@ const AdminPage = () => {
   const [newMunicipioId, setNewMunicipioId] = useState('');
   const [newSchoolId, setNewSchoolId] = useState('');
   const [newTeacherId, setNewTeacherId] = useState('');
-  const [newEvaluatorCategory, setNewEvaluatorCategory] = useState('secretaria');
   const [newEvaluatorMunicipioIds, setNewEvaluatorMunicipioIds] = useState([]);
-  const [newEvaluatorSchoolIds, setNewEvaluatorSchoolIds] = useState([]);
-  const [newEvaluatorStudentIds, setNewEvaluatorStudentIds] = useState([]);
   const [editingEvaluatorScopes, setEditingEvaluatorScopes] = useState({});
 
   const [newMunicipalityName, setNewMunicipalityName] = useState('');
@@ -194,26 +189,14 @@ const AdminPage = () => {
 
   const evaluatorSummary = (scope) => {
     const normalized = {
-      category: String(scope?.category || '').trim().toLowerCase(),
       municipio_ids: Array.isArray(scope?.municipio_ids) ? scope.municipio_ids : [],
-      school_ids: Array.isArray(scope?.school_ids) ? scope.school_ids : [],
-      student_ids: Array.isArray(scope?.student_ids) ? scope.student_ids : [],
     };
 
-    if (!normalized.category) {
-      return 'Sem categoria definida';
+    if (normalized.municipio_ids.length === 0) {
+      return 'Sem municípios autorizados';
     }
 
-    if (normalized.category === 'secretaria') {
-      return `Categoria: secretaria | Municípios: ${normalized.municipio_ids.length}`;
-    }
-    if (normalized.category === 'coordenacao') {
-      return `Categoria: coordenacao | Escolas: ${normalized.school_ids.length}`;
-    }
-    if (normalized.category === 'professor') {
-      return `Categoria: professor | Alunos: ${normalized.student_ids.length}`;
-    }
-    return 'Escopo do avaliador sem definição';
+    return `Municípios autorizados: ${normalized.municipio_ids.length}`;
   };
 
   const getSelectedValues = (event) => {
@@ -314,24 +297,9 @@ const AdminPage = () => {
       return;
     }
 
-    const evaluatorScope = {
-      category: newEvaluatorCategory,
-      municipio_ids: newEvaluatorMunicipioIds,
-      school_ids: newEvaluatorSchoolIds,
-      student_ids: newEvaluatorStudentIds,
-    };
-
     if (newRole === 'avaliador') {
-      if (newEvaluatorCategory === 'secretaria' && newEvaluatorMunicipioIds.length === 0) {
-        setError('Avaliador secretaria exige ao menos um município no escopo');
-        return;
-      }
-      if (newEvaluatorCategory === 'coordenacao' && newEvaluatorSchoolIds.length === 0) {
-        setError('Avaliador coordenação exige ao menos uma escola no escopo');
-        return;
-      }
-      if (newEvaluatorCategory === 'professor' && newEvaluatorStudentIds.length === 0) {
-        setError('Avaliador professor exige ao menos um aluno no escopo');
+      if (newEvaluatorMunicipioIds.length === 0) {
+        setError('Avaliador exige ao menos um município no escopo');
         return;
       }
     }
@@ -346,7 +314,9 @@ const AdminPage = () => {
         municipio_id: newMunicipioId.trim(),
         school_id: newSchoolId.trim(),
         teacher_id: newTeacherId.trim(),
-        evaluator_scope: evaluatorScope,
+        evaluator_scope: {
+          municipio_ids: newEvaluatorMunicipioIds,
+        },
       });
 
       setSuccess('Usuário criado com sucesso');
@@ -357,10 +327,7 @@ const AdminPage = () => {
       setNewMunicipioId('');
       setNewSchoolId('');
       setNewTeacherId('');
-      setNewEvaluatorCategory('secretaria');
       setNewEvaluatorMunicipioIds([]);
-      setNewEvaluatorSchoolIds([]);
-      setNewEvaluatorStudentIds([]);
       await loadUsers();
     } catch (err) {
       const message = err?.response?.data?.error || 'Erro ao criar usuário';
@@ -386,10 +353,7 @@ const AdminPage = () => {
   const handleStartEditEvaluatorScope = (user) => {
     const scope = user?.evaluator_scope || {};
     const normalized = {
-      category: EVALUATOR_CATEGORIES.includes(scope.category) ? scope.category : 'secretaria',
       municipio_ids: Array.isArray(scope.municipio_ids) ? scope.municipio_ids : [],
-      school_ids: Array.isArray(scope.school_ids) ? scope.school_ids : [],
-      student_ids: Array.isArray(scope.student_ids) ? scope.student_ids : [],
     };
 
     setEditingEvaluatorScopes((prev) => ({
@@ -409,10 +373,7 @@ const AdminPage = () => {
   const handleChangeEvaluatorScopeField = (userId, field, value) => {
     setEditingEvaluatorScopes((prev) => {
       const current = prev[userId] || {
-        category: 'secretaria',
         municipio_ids: [],
-        school_ids: [],
-        student_ids: [],
       };
       return {
         ...prev,
@@ -428,16 +389,8 @@ const AdminPage = () => {
     const nextScope = editingEvaluatorScopes[userId];
     if (!nextScope) return;
 
-    if (nextScope.category === 'secretaria' && (nextScope.municipio_ids || []).length === 0) {
-      setError('Avaliador secretaria exige ao menos um município no escopo');
-      return;
-    }
-    if (nextScope.category === 'coordenacao' && (nextScope.school_ids || []).length === 0) {
-      setError('Avaliador coordenação exige ao menos uma escola no escopo');
-      return;
-    }
-    if (nextScope.category === 'professor' && (nextScope.student_ids || []).length === 0) {
-      setError('Avaliador professor exige ao menos um aluno no escopo');
+    if ((nextScope.municipio_ids || []).length === 0) {
+      setError('Avaliador exige ao menos um município no escopo');
       return;
     }
 
@@ -633,10 +586,7 @@ const AdminPage = () => {
                 setNewMunicipioId('');
                 setNewSchoolId('');
                 setNewTeacherId('');
-                setNewEvaluatorCategory('secretaria');
                 setNewEvaluatorMunicipioIds([]);
-                setNewEvaluatorSchoolIds([]);
-                setNewEvaluatorStudentIds([]);
               }}
               disabled={savingUser}
             >
@@ -711,76 +661,20 @@ const AdminPage = () => {
 
             {newRole === 'avaliador' && (
               <>
-                <label htmlFor="new-evaluator-category">Categoria do avaliador</label>
+                <label htmlFor="new-evaluator-municipios">Municípios autorizados</label>
                 <select
-                  id="new-evaluator-category"
-                  value={newEvaluatorCategory}
-                  onChange={(event) => setNewEvaluatorCategory(event.target.value)}
-                  disabled={savingUser}
+                  id="new-evaluator-municipios"
+                  multiple
+                  value={newEvaluatorMunicipioIds}
+                  onChange={(event) => setNewEvaluatorMunicipioIds(getSelectedValues(event))}
+                  disabled={savingUser || loadingMunicipalities}
                 >
-                  {EVALUATOR_CATEGORIES.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
+                  {municipalities.map((municipality) => (
+                    <option key={municipality.id} value={municipality.id}>
+                      {municipality.name} ({municipality.id})
                     </option>
                   ))}
                 </select>
-
-                {newEvaluatorCategory === 'secretaria' && (
-                  <>
-                    <label htmlFor="new-evaluator-municipios">Municípios autorizados</label>
-                    <select
-                      id="new-evaluator-municipios"
-                      multiple
-                      value={newEvaluatorMunicipioIds}
-                      onChange={(event) => setNewEvaluatorMunicipioIds(getSelectedValues(event))}
-                      disabled={savingUser || loadingMunicipalities}
-                    >
-                      {municipalities.map((municipality) => (
-                        <option key={municipality.id} value={municipality.id}>
-                          {municipality.name} ({municipality.id})
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                )}
-
-                {newEvaluatorCategory === 'coordenacao' && (
-                  <>
-                    <label htmlFor="new-evaluator-schools">Escolas autorizadas</label>
-                    <select
-                      id="new-evaluator-schools"
-                      multiple
-                      value={newEvaluatorSchoolIds}
-                      onChange={(event) => setNewEvaluatorSchoolIds(getSelectedValues(event))}
-                      disabled={savingUser || loadingSchools}
-                    >
-                      {allSchools.map((school) => (
-                        <option key={school.id} value={school.id}>
-                          {school.name} ({school.id})
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                )}
-
-                {newEvaluatorCategory === 'professor' && (
-                  <>
-                    <label htmlFor="new-evaluator-students">Alunos autorizados</label>
-                    <select
-                      id="new-evaluator-students"
-                      multiple
-                      value={newEvaluatorStudentIds}
-                      onChange={(event) => setNewEvaluatorStudentIds(getSelectedValues(event))}
-                      disabled={savingUser || loadingRelations}
-                    >
-                      {allStudents.map((student) => (
-                        <option key={student.id} value={student.id}>
-                          {(student.name || student.studentName || student.id)} ({student.id})
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                )}
               </>
             )}
 
@@ -1064,74 +958,20 @@ const AdminPage = () => {
                               </button>
                             ) : (
                               <div className="admin-form" style={{ marginTop: '8px' }}>
-                                <label htmlFor={`scope-category-${user.id}`}>Categoria</label>
+                                <label htmlFor={`scope-municipios-${user.id}`}>Municípios</label>
                                 <select
-                                  id={`scope-category-${user.id}`}
-                                  value={editingEvaluatorScopes[user.id].category}
-                                  onChange={(event) => handleChangeEvaluatorScopeField(user.id, 'category', event.target.value)}
+                                  id={`scope-municipios-${user.id}`}
+                                  multiple
+                                  value={editingEvaluatorScopes[user.id].municipio_ids}
+                                  onChange={(event) => handleChangeEvaluatorScopeField(user.id, 'municipio_ids', getSelectedValues(event))}
                                   disabled={savingEvaluatorScopeUserId === user.id}
                                 >
-                                  {EVALUATOR_CATEGORIES.map((category) => (
-                                    <option key={category} value={category}>{category}</option>
+                                  {municipalities.map((municipality) => (
+                                    <option key={municipality.id} value={municipality.id}>
+                                      {municipality.name} ({municipality.id})
+                                    </option>
                                   ))}
                                 </select>
-
-                                {editingEvaluatorScopes[user.id].category === 'secretaria' && (
-                                  <>
-                                    <label htmlFor={`scope-municipios-${user.id}`}>Municípios</label>
-                                    <select
-                                      id={`scope-municipios-${user.id}`}
-                                      multiple
-                                      value={editingEvaluatorScopes[user.id].municipio_ids}
-                                      onChange={(event) => handleChangeEvaluatorScopeField(user.id, 'municipio_ids', getSelectedValues(event))}
-                                      disabled={savingEvaluatorScopeUserId === user.id}
-                                    >
-                                      {municipalities.map((municipality) => (
-                                        <option key={municipality.id} value={municipality.id}>
-                                          {municipality.name} ({municipality.id})
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </>
-                                )}
-
-                                {editingEvaluatorScopes[user.id].category === 'coordenacao' && (
-                                  <>
-                                    <label htmlFor={`scope-schools-${user.id}`}>Escolas</label>
-                                    <select
-                                      id={`scope-schools-${user.id}`}
-                                      multiple
-                                      value={editingEvaluatorScopes[user.id].school_ids}
-                                      onChange={(event) => handleChangeEvaluatorScopeField(user.id, 'school_ids', getSelectedValues(event))}
-                                      disabled={savingEvaluatorScopeUserId === user.id}
-                                    >
-                                      {allSchools.map((school) => (
-                                        <option key={school.id} value={school.id}>
-                                          {school.name} ({school.id})
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </>
-                                )}
-
-                                {editingEvaluatorScopes[user.id].category === 'professor' && (
-                                  <>
-                                    <label htmlFor={`scope-students-${user.id}`}>Alunos</label>
-                                    <select
-                                      id={`scope-students-${user.id}`}
-                                      multiple
-                                      value={editingEvaluatorScopes[user.id].student_ids}
-                                      onChange={(event) => handleChangeEvaluatorScopeField(user.id, 'student_ids', getSelectedValues(event))}
-                                      disabled={savingEvaluatorScopeUserId === user.id}
-                                    >
-                                      {allStudents.map((student) => (
-                                        <option key={student.id} value={student.id}>
-                                          {(student.name || student.studentName || student.id)} ({student.id})
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </>
-                                )}
 
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   <button
