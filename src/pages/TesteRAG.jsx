@@ -153,6 +153,16 @@ const TesteRAG = () => {
   const [chatPromptIsCustom, setChatPromptIsCustom] = useState(false);
   const [chatPromptModalOpen, setChatPromptModalOpen] = useState(false);
   const [chatPromptDraft, setChatPromptDraft] = useState('');
+  const [peiPromptOptions, setPeiPromptOptions] = useState([]);
+  const [chatPromptOptions, setChatPromptOptions] = useState([]);
+  const [peiPromptSelectedId, setPeiPromptSelectedId] = useState('');
+  const [chatPromptSelectedId, setChatPromptSelectedId] = useState('');
+  const [peiPromptName, setPeiPromptName] = useState('');
+  const [chatPromptName, setChatPromptName] = useState('');
+  const [peiPromptDescription, setPeiPromptDescription] = useState('');
+  const [chatPromptDescription, setChatPromptDescription] = useState('');
+  const [peiPromptInitialState, setPeiPromptInitialState] = useState({ id: '', name: '', description: '', content: '' });
+  const [chatPromptInitialState, setChatPromptInitialState] = useState({ id: '', name: '', description: '', content: '' });
 
   useEffect(() => {
     loadStudents();
@@ -249,12 +259,28 @@ const TesteRAG = () => {
     setPeiPromptLoading(true);
     try {
       const data = await ragAPI.getPEIPrompt();
-      const promptText = data?.prompt || '';
+      const prompts = Array.isArray(data?.available_prompts) ? data.available_prompts : [];
+      const selectedPrompt = prompts.find((item) => item.id === data?.current_prompt_id)
+        || prompts.find((item) => item.is_active)
+        || prompts[0]
+        || null;
+      const promptText = selectedPrompt?.content || data?.prompt || '';
+
+      setPeiPromptOptions(prompts);
+      setPeiPromptSelectedId(selectedPrompt?.id || '');
+      setPeiPromptName(selectedPrompt?.name || '');
+      setPeiPromptDescription(selectedPrompt?.description || '');
       setPeiPrompt(promptText);
       setInitialPeiPrompt(promptText);
       setPeiPromptDraft(promptText);
-      setPeiPromptUpdatedAt(data?.updated_at || null);
+      setPeiPromptUpdatedAt(selectedPrompt?.updated_at || data?.updated_at || null);
       setPeiPromptIsCustom(Boolean(data?.is_custom));
+      setPeiPromptInitialState({
+        id: selectedPrompt?.id || '',
+        name: selectedPrompt?.name || '',
+        description: selectedPrompt?.description || '',
+        content: promptText,
+      });
     } catch (err) {
       alert('Erro ao carregar prompt do PEI: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -266,12 +292,28 @@ const TesteRAG = () => {
     setChatPromptLoading(true);
     try {
       const data = await ragAPI.getChatPrompt();
-      const promptText = data?.prompt || '';
+      const prompts = Array.isArray(data?.available_prompts) ? data.available_prompts : [];
+      const selectedPrompt = prompts.find((item) => item.id === data?.current_prompt_id)
+        || prompts.find((item) => item.is_active)
+        || prompts[0]
+        || null;
+      const promptText = selectedPrompt?.content || data?.prompt || '';
+
+      setChatPromptOptions(prompts);
+      setChatPromptSelectedId(selectedPrompt?.id || '');
+      setChatPromptName(selectedPrompt?.name || '');
+      setChatPromptDescription(selectedPrompt?.description || '');
       setChatPrompt(promptText);
       setInitialChatPrompt(promptText);
       setChatPromptDraft(promptText);
-      setChatPromptUpdatedAt(data?.updated_at || null);
+      setChatPromptUpdatedAt(selectedPrompt?.updated_at || data?.updated_at || null);
       setChatPromptIsCustom(Boolean(data?.is_custom));
+      setChatPromptInitialState({
+        id: selectedPrompt?.id || '',
+        name: selectedPrompt?.name || '',
+        description: selectedPrompt?.description || '',
+        content: promptText,
+      });
     } catch (err) {
       alert('Erro ao carregar prompt do Chat: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -638,23 +680,83 @@ const TesteRAG = () => {
     }
   };
 
+  const updatePromptFormFromPrompt = (scope, promptItem) => {
+    const safePrompt = promptItem || {};
+    if (scope === 'pei') {
+      setPeiPromptSelectedId(safePrompt.id || '');
+      setPeiPromptName(safePrompt.name || '');
+      setPeiPromptDescription(safePrompt.description || '');
+      setPeiPromptDraft(safePrompt.content || '');
+      setPeiPromptInitialState({
+        id: safePrompt.id || '',
+        name: safePrompt.name || '',
+        description: safePrompt.description || '',
+        content: safePrompt.content || '',
+      });
+      return;
+    }
+
+    setChatPromptSelectedId(safePrompt.id || '');
+    setChatPromptName(safePrompt.name || '');
+    setChatPromptDescription(safePrompt.description || '');
+    setChatPromptDraft(safePrompt.content || '');
+    setChatPromptInitialState({
+      id: safePrompt.id || '',
+      name: safePrompt.name || '',
+      description: safePrompt.description || '',
+      content: safePrompt.content || '',
+    });
+  };
+
+  const getPromptOptions = (scope) => (scope === 'pei' ? peiPromptOptions : chatPromptOptions);
+
+  const findPromptOption = (scope, promptId) => getPromptOptions(scope).find((item) => item.id === promptId) || null;
+
+  const resetPromptForm = (scope) => {
+    const prompts = getPromptOptions(scope);
+    const selected = prompts.find((item) => item.id === (scope === 'pei' ? peiPromptSelectedId : chatPromptSelectedId))
+      || prompts.find((item) => item.is_active)
+      || prompts[0]
+      || null;
+    updatePromptFormFromPrompt(scope, selected);
+  };
+
+  const persistPrompt = async ({ scope, promptId, name, description, content, activate = false }) => {
+    const payload = {
+      scope,
+      name: name.trim(),
+      description: description.trim(),
+      content: content.trim(),
+      activate,
+    };
+    if (promptId) {
+      return ragAPI.updatePrompt(promptId, payload);
+    }
+    return ragAPI.createPrompt(payload);
+  };
+
   const handleSavePeiPrompt = async () => {
-    const promptTrimmed = peiPromptDraft.trim();
-    if (!promptTrimmed) {
-      alert('O prompt não pode ficar vazio.');
+    if (!peiPromptDraft.trim() || !peiPromptName.trim()) {
+      alert('Nome e prompt são obrigatórios.');
       return;
     }
 
     setPeiPromptSaving(true);
     try {
-      const data = await ragAPI.updatePEIPrompt(promptTrimmed);
-      setPeiPrompt(data.prompt || promptTrimmed);
-      setInitialPeiPrompt(data.prompt || promptTrimmed);
-      setPeiPromptDraft(data.prompt || promptTrimmed);
-      setPeiPromptUpdatedAt(data.updated_at || null);
-      setPeiPromptIsCustom(Boolean(data.is_custom));
+      const prompt = await persistPrompt({
+        scope: 'pei',
+        promptId: peiPromptSelectedId,
+        name: peiPromptName,
+        description: peiPromptDescription,
+        content: peiPromptDraft,
+        activate: false,
+      });
+      await loadPeiPrompt();
+      if (prompt?.id && !prompt?.is_active) {
+        setPeiPromptSelectedId(prompt.id);
+        updatePromptFormFromPrompt('pei', prompt);
+      }
       alert('Prompt do PEI salvo com sucesso.');
-      setPeiPromptModalOpen(false);
     } catch (err) {
       alert('Erro ao salvar prompt do PEI: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -662,13 +764,70 @@ const TesteRAG = () => {
     }
   };
 
+  const handleUsePeiPrompt = async () => {
+    if (!peiPromptDraft.trim() || !peiPromptName.trim()) {
+      alert('Nome e prompt são obrigatórios.');
+      return;
+    }
+
+    setPeiPromptSaving(true);
+    try {
+      const prompt = await persistPrompt({
+        scope: 'pei',
+        promptId: peiPromptSelectedId,
+        name: peiPromptName,
+        description: peiPromptDescription,
+        content: peiPromptDraft,
+        activate: true,
+      });
+      if (prompt?.id) {
+        await ragAPI.activatePrompt(prompt.id);
+      }
+      await loadPeiPrompt();
+      setPeiPromptModalOpen(false);
+      alert('Prompt do PEI ativado com sucesso.');
+    } catch (err) {
+      alert('Erro ao ativar prompt do PEI: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setPeiPromptSaving(false);
+    }
+  };
+
+  const handleNewPeiPrompt = () => {
+    setPeiPromptSelectedId('');
+    setPeiPromptName('');
+    setPeiPromptDescription('');
+    setPeiPromptDraft('');
+    setPeiPromptInitialState({ id: '', name: '', description: '', content: '' });
+  };
+
+  const handleDeletePeiPrompt = async () => {
+    if (!peiPromptSelectedId) return;
+    const selected = findPromptOption('pei', peiPromptSelectedId);
+    if (selected?.is_default) {
+      alert('O prompt base não pode ser removido.');
+      return;
+    }
+    if (!window.confirm('Excluir este prompt?')) return;
+    setPeiPromptResetting(true);
+    try {
+      await ragAPI.deletePrompt(peiPromptSelectedId);
+      await loadPeiPrompt();
+      alert('Prompt excluído com sucesso.');
+    } catch (err) {
+      alert('Erro ao excluir prompt do PEI: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setPeiPromptResetting(false);
+    }
+  };
+
   const handleOpenPeiPromptModal = () => {
-    setPeiPromptDraft(peiPrompt);
+    resetPromptForm('pei');
     setPeiPromptModalOpen(true);
   };
 
   const handleClosePeiPromptModal = () => {
-    setPeiPromptDraft(peiPrompt);
+    resetPromptForm('pei');
     setPeiPromptModalOpen(false);
   };
 
@@ -677,13 +836,8 @@ const TesteRAG = () => {
 
     setPeiPromptResetting(true);
     try {
-      const data = await ragAPI.resetPEIPrompt();
-      const promptText = data?.prompt || '';
-      setPeiPrompt(promptText);
-      setInitialPeiPrompt(promptText);
-      setPeiPromptDraft(promptText);
-      setPeiPromptUpdatedAt(data?.updated_at || null);
-      setPeiPromptIsCustom(Boolean(data?.is_custom));
+      await ragAPI.resetPEIPrompt();
+      await loadPeiPrompt();
       alert('Prompt restaurado para a versão base.');
     } catch (err) {
       alert('Erro ao restaurar prompt: ' + (err.response?.data?.error || err.message));
@@ -693,22 +847,27 @@ const TesteRAG = () => {
   };
 
   const handleSaveChatPrompt = async () => {
-    const promptTrimmed = chatPromptDraft.trim();
-    if (!promptTrimmed) {
-      alert('O prompt não pode ficar vazio.');
+    if (!chatPromptDraft.trim() || !chatPromptName.trim()) {
+      alert('Nome e prompt são obrigatórios.');
       return;
     }
 
     setChatPromptSaving(true);
     try {
-      const data = await ragAPI.updateChatPrompt(promptTrimmed);
-      setChatPrompt(data.prompt || promptTrimmed);
-      setInitialChatPrompt(data.prompt || promptTrimmed);
-      setChatPromptDraft(data.prompt || promptTrimmed);
-      setChatPromptUpdatedAt(data.updated_at || null);
-      setChatPromptIsCustom(Boolean(data.is_custom));
+      const prompt = await persistPrompt({
+        scope: 'chat',
+        promptId: chatPromptSelectedId,
+        name: chatPromptName,
+        description: chatPromptDescription,
+        content: chatPromptDraft,
+        activate: false,
+      });
+      await loadChatPrompt();
+      if (prompt?.id && !prompt?.is_active) {
+        setChatPromptSelectedId(prompt.id);
+        updatePromptFormFromPrompt('chat', prompt);
+      }
       alert('Prompt do Chat salvo com sucesso.');
-      setChatPromptModalOpen(false);
     } catch (err) {
       alert('Erro ao salvar prompt do Chat: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -716,13 +875,70 @@ const TesteRAG = () => {
     }
   };
 
+  const handleUseChatPrompt = async () => {
+    if (!chatPromptDraft.trim() || !chatPromptName.trim()) {
+      alert('Nome e prompt são obrigatórios.');
+      return;
+    }
+
+    setChatPromptSaving(true);
+    try {
+      const prompt = await persistPrompt({
+        scope: 'chat',
+        promptId: chatPromptSelectedId,
+        name: chatPromptName,
+        description: chatPromptDescription,
+        content: chatPromptDraft,
+        activate: true,
+      });
+      if (prompt?.id) {
+        await ragAPI.activatePrompt(prompt.id);
+      }
+      await loadChatPrompt();
+      setChatPromptModalOpen(false);
+      alert('Prompt do Chat ativado com sucesso.');
+    } catch (err) {
+      alert('Erro ao ativar prompt do Chat: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setChatPromptSaving(false);
+    }
+  };
+
+  const handleNewChatPrompt = () => {
+    setChatPromptSelectedId('');
+    setChatPromptName('');
+    setChatPromptDescription('');
+    setChatPromptDraft('');
+    setChatPromptInitialState({ id: '', name: '', description: '', content: '' });
+  };
+
+  const handleDeleteChatPrompt = async () => {
+    if (!chatPromptSelectedId) return;
+    const selected = findPromptOption('chat', chatPromptSelectedId);
+    if (selected?.is_default) {
+      alert('O prompt base não pode ser removido.');
+      return;
+    }
+    if (!window.confirm('Excluir este prompt?')) return;
+    setChatPromptResetting(true);
+    try {
+      await ragAPI.deletePrompt(chatPromptSelectedId);
+      await loadChatPrompt();
+      alert('Prompt excluído com sucesso.');
+    } catch (err) {
+      alert('Erro ao excluir prompt do Chat: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setChatPromptResetting(false);
+    }
+  };
+
   const handleOpenChatPromptModal = () => {
-    setChatPromptDraft(chatPrompt);
+    resetPromptForm('chat');
     setChatPromptModalOpen(true);
   };
 
   const handleCloseChatPromptModal = () => {
-    setChatPromptDraft(chatPrompt);
+    resetPromptForm('chat');
     setChatPromptModalOpen(false);
   };
 
@@ -731,13 +947,8 @@ const TesteRAG = () => {
 
     setChatPromptResetting(true);
     try {
-      const data = await ragAPI.resetChatPrompt();
-      const promptText = data?.prompt || '';
-      setChatPrompt(promptText);
-      setInitialChatPrompt(promptText);
-      setChatPromptDraft(promptText);
-      setChatPromptUpdatedAt(data?.updated_at || null);
-      setChatPromptIsCustom(Boolean(data?.is_custom));
+      await ragAPI.resetChatPrompt();
+      await loadChatPrompt();
       alert('Prompt do Chat restaurado para a versão base.');
     } catch (err) {
       alert('Erro ao restaurar prompt do Chat: ' + (err.response?.data?.error || err.message));
@@ -746,8 +957,18 @@ const TesteRAG = () => {
     }
   };
 
-  const peiPromptDirty = peiPromptDraft.trim() !== initialPeiPrompt.trim();
-  const chatPromptDirty = chatPromptDraft.trim() !== initialChatPrompt.trim();
+  const peiPromptDirty = JSON.stringify(peiPromptInitialState) !== JSON.stringify({
+    id: peiPromptSelectedId,
+    name: peiPromptName,
+    description: peiPromptDescription,
+    content: peiPromptDraft,
+  });
+  const chatPromptDirty = JSON.stringify(chatPromptInitialState) !== JSON.stringify({
+    id: chatPromptSelectedId,
+    name: chatPromptName,
+    description: chatPromptDescription,
+    content: chatPromptDraft,
+  });
 
   const formatPreviewDetail = (baseDetail, excerpt) => {
     const cleanExcerpt = String(excerpt || '').trim();
@@ -1264,14 +1485,78 @@ const TesteRAG = () => {
                 : ''}
             </p>
 
-            <textarea
-              className="pei-prompt-modal-textarea"
-              value={peiPromptDraft}
-              onChange={(e) => setPeiPromptDraft(e.target.value)}
-              rows={22}
-            />
+            <div style={{ display: 'grid', gap: '0.65rem' }}>
+              <label>
+                <div className="pei-prompt-meta">Prompt salvo</div>
+                <select
+                  className="upload-input"
+                  style={{ width: '100%' }}
+                  value={peiPromptSelectedId}
+                  onChange={(e) => {
+                    const selected = findPromptOption('pei', e.target.value);
+                    setPeiPromptSelectedId(e.target.value);
+                    updatePromptFormFromPrompt('pei', selected);
+                  }}
+                >
+                  {peiPromptOptions.length === 0 && <option value="">Nenhum prompt salvo</option>}
+                  {peiPromptOptions.map((promptItem) => (
+                    <option key={promptItem.id} value={promptItem.id}>
+                      {promptItem.name}{promptItem.is_default ? ' [base]' : ''}{promptItem.is_active ? ' [ativo]' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <div className="pei-prompt-meta">Nome</div>
+                <input
+                  className="upload-input"
+                  style={{ width: '100%' }}
+                  value={peiPromptName}
+                  onChange={(e) => setPeiPromptName(e.target.value)}
+                  placeholder="Nome do prompt"
+                />
+              </label>
+
+              <label>
+                <div className="pei-prompt-meta">Descrição</div>
+                <input
+                  className="upload-input"
+                  style={{ width: '100%' }}
+                  value={peiPromptDescription}
+                  onChange={(e) => setPeiPromptDescription(e.target.value)}
+                  placeholder="Descrição opcional"
+                />
+              </label>
+
+              <label>
+                <div className="pei-prompt-meta">Conteúdo</div>
+                <textarea
+                  className="pei-prompt-modal-textarea"
+                  value={peiPromptDraft}
+                  onChange={(e) => setPeiPromptDraft(e.target.value)}
+                  rows={18}
+                />
+              </label>
+            </div>
 
             <div className="pei-prompt-modal-actions">
+              <button
+                type="button"
+                className="pei-prompt-btn secondary"
+                onClick={handleNewPeiPrompt}
+                disabled={peiPromptSaving || peiPromptResetting}
+              >
+                Novo prompt
+              </button>
+              <button
+                type="button"
+                className="pei-prompt-btn secondary"
+                onClick={handleDeletePeiPrompt}
+                disabled={peiPromptSaving || peiPromptResetting || !peiPromptSelectedId}
+              >
+                Excluir
+              </button>
               <button
                 type="button"
                 className="pei-prompt-btn secondary"
@@ -1292,9 +1577,17 @@ const TesteRAG = () => {
                 type="button"
                 className="pei-prompt-btn primary"
                 onClick={handleSavePeiPrompt}
-                disabled={peiPromptSaving || peiPromptResetting || !peiPromptDraft.trim() || !peiPromptDirty}
+                disabled={peiPromptSaving || peiPromptResetting || !peiPromptDraft.trim() || !peiPromptName.trim() || !peiPromptDirty}
               >
-                {peiPromptSaving ? 'Salvando...' : 'Salvar alterações'}
+                {peiPromptSaving ? 'Salvando...' : 'Salvar'}
+              </button>
+              <button
+                type="button"
+                className="pei-prompt-btn primary"
+                onClick={handleUsePeiPrompt}
+                disabled={peiPromptSaving || peiPromptResetting || !peiPromptDraft.trim() || !peiPromptName.trim()}
+              >
+                {peiPromptSaving ? 'Ativando...' : 'Usar este prompt'}
               </button>
             </div>
           </div>
@@ -1316,14 +1609,78 @@ const TesteRAG = () => {
                 : ''}
             </p>
 
-            <textarea
-              className="pei-prompt-modal-textarea"
-              value={chatPromptDraft}
-              onChange={(e) => setChatPromptDraft(e.target.value)}
-              rows={22}
-            />
+            <div style={{ display: 'grid', gap: '0.65rem' }}>
+              <label>
+                <div className="pei-prompt-meta">Prompt salvo</div>
+                <select
+                  className="upload-input"
+                  style={{ width: '100%' }}
+                  value={chatPromptSelectedId}
+                  onChange={(e) => {
+                    const selected = findPromptOption('chat', e.target.value);
+                    setChatPromptSelectedId(e.target.value);
+                    updatePromptFormFromPrompt('chat', selected);
+                  }}
+                >
+                  {chatPromptOptions.length === 0 && <option value="">Nenhum prompt salvo</option>}
+                  {chatPromptOptions.map((promptItem) => (
+                    <option key={promptItem.id} value={promptItem.id}>
+                      {promptItem.name}{promptItem.is_default ? ' [base]' : ''}{promptItem.is_active ? ' [ativo]' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <div className="pei-prompt-meta">Nome</div>
+                <input
+                  className="upload-input"
+                  style={{ width: '100%' }}
+                  value={chatPromptName}
+                  onChange={(e) => setChatPromptName(e.target.value)}
+                  placeholder="Nome do prompt"
+                />
+              </label>
+
+              <label>
+                <div className="pei-prompt-meta">Descrição</div>
+                <input
+                  className="upload-input"
+                  style={{ width: '100%' }}
+                  value={chatPromptDescription}
+                  onChange={(e) => setChatPromptDescription(e.target.value)}
+                  placeholder="Descrição opcional"
+                />
+              </label>
+
+              <label>
+                <div className="pei-prompt-meta">Conteúdo</div>
+                <textarea
+                  className="pei-prompt-modal-textarea"
+                  value={chatPromptDraft}
+                  onChange={(e) => setChatPromptDraft(e.target.value)}
+                  rows={18}
+                />
+              </label>
+            </div>
 
             <div className="pei-prompt-modal-actions">
+              <button
+                type="button"
+                className="pei-prompt-btn secondary"
+                onClick={handleNewChatPrompt}
+                disabled={chatPromptSaving || chatPromptResetting}
+              >
+                Novo prompt
+              </button>
+              <button
+                type="button"
+                className="pei-prompt-btn secondary"
+                onClick={handleDeleteChatPrompt}
+                disabled={chatPromptSaving || chatPromptResetting || !chatPromptSelectedId}
+              >
+                Excluir
+              </button>
               <button
                 type="button"
                 className="pei-prompt-btn secondary"
@@ -1344,9 +1701,17 @@ const TesteRAG = () => {
                 type="button"
                 className="pei-prompt-btn primary"
                 onClick={handleSaveChatPrompt}
-                disabled={chatPromptSaving || chatPromptResetting || !chatPromptDraft.trim() || !chatPromptDirty}
+                disabled={chatPromptSaving || chatPromptResetting || !chatPromptDraft.trim() || !chatPromptName.trim() || !chatPromptDirty}
               >
-                {chatPromptSaving ? 'Salvando...' : 'Salvar alterações'}
+                {chatPromptSaving ? 'Salvando...' : 'Salvar'}
+              </button>
+              <button
+                type="button"
+                className="pei-prompt-btn primary"
+                onClick={handleUseChatPrompt}
+                disabled={chatPromptSaving || chatPromptResetting || !chatPromptDraft.trim() || !chatPromptName.trim()}
+              >
+                {chatPromptSaving ? 'Ativando...' : 'Usar este prompt'}
               </button>
             </div>
           </div>

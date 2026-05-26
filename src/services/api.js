@@ -405,6 +405,44 @@ export const ragAPI = {
     const response = await api.post('/rag/chat-prompt/reset');
     return response.data;
   },
+
+  // Catálogo de prompts
+  listPrompts: async (scope) => {
+    const response = await api.get('/rag/prompts', { params: { scope } });
+    return response.data;
+  },
+
+  createPrompt: async ({ scope, name, description = '', content, activate = false }) => {
+    const response = await api.post('/rag/prompts', {
+      scope,
+      name,
+      description,
+      content,
+      activate,
+    });
+    return response.data;
+  },
+
+  updatePrompt: async (promptId, { scope, name, description, content, activate }) => {
+    const response = await api.put(`/rag/prompts/${promptId}`, {
+      scope,
+      name,
+      description,
+      content,
+      activate,
+    });
+    return response.data;
+  },
+
+  deletePrompt: async (promptId) => {
+    const response = await api.delete(`/rag/prompts/${promptId}`);
+    return response.data;
+  },
+
+  activatePrompt: async (promptId) => {
+    const response = await api.post(`/rag/prompts/${promptId}/activate`);
+    return response.data;
+  },
 };
 
 export const diaryAPI = {
