@@ -109,7 +109,7 @@ const SchoolForm = () => {
       // Section 1
       setName(data.name || '');
       setCnpj(data.cnpj || '');
-      setInstitutionType(data.institution_type || data.institutionType || '');
+      setInstitutionType(data.institutionType || '');
       setOperatingHours(data.operatingHours || '');
       setAddress(data.address || '');
       setPhone(data.phone || '');
@@ -232,7 +232,7 @@ const SchoolForm = () => {
       // Section 1
       name,
       cnpj,
-      institution_type: institutionType,
+      institutionType,
       operatingHours,
       address,
       phone,
@@ -356,9 +356,9 @@ const SchoolForm = () => {
                 disabled={isViewMode}
               >
                 <option value="">Selecione...</option>
-                <option value="Pública">Pública</option>
-                <option value="Privada">Privada</option>
-                <option value="Filantrópica">Filantrópica</option>
+                <option value="publica">Pública</option>
+                <option value="privada">Privada</option>
+                <option value="filantrópica">Filantrópica</option>
               </select>
             </div>
 

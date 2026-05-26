@@ -232,7 +232,7 @@ const SchoolForm = () => {
       // Section 1
       name,
       cnpj,
-      institution_type: institutionType,
+      institutionType,
       operatingHours,
       address,
       phone,
