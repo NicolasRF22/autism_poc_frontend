@@ -11,8 +11,9 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
   const navigate = useNavigate();
   const isSchoolRegistrationMode = mode === 'school-registration';
   const currentRole = getStoredUser()?.role || '';
-  const canManagePreRegistration = ['admin', 'secretaria'].includes(currentRole);
-  const canManageSchoolRegistration = ['admin', 'coordenacao'].includes(currentRole);
+  const canCreatePreRegistration = ['admin', 'secretaria', 'avaliador'].includes(currentRole);
+  const canManagePreRegistration = ['admin', 'secretaria', 'avaliador'].includes(currentRole);
+  const canManageSchoolRegistration = ['admin', 'coordenacao', 'avaliador'].includes(currentRole);
   const completedSchoolRegistrations = schools.filter((school) => school.school_registration_completed);
   const pendingSchoolRegistrations = schools.filter((school) => !school.school_registration_completed);
 
@@ -134,7 +135,7 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
             ? `Cadastro da Escola (${completedSchoolRegistrations.length})`
             : `Pré-cadastro de Escolas (${schools.length})`}
         </h1>
-        {!isSchoolRegistrationMode && canManagePreRegistration && (
+        {!isSchoolRegistrationMode && canCreatePreRegistration && (
           <button className="btn-new-pdi" onClick={handleNew}>
             + Novo Pré-cadastro
           </button>

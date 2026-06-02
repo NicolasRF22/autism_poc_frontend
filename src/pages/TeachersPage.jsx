@@ -8,7 +8,8 @@ const TeachersPage = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const canManageTeachers = ['admin', 'secretaria'].includes(user?.role || '');
+  const canCreateTeachers = ['admin', 'secretaria', 'avaliador'].includes(user?.role || '');
+  const canManageTeachers = ['admin', 'secretaria', 'avaliador'].includes(user?.role || '');
 
   const loadTeachers = async () => {
     try {
@@ -77,7 +78,7 @@ const TeachersPage = ({ user }) => {
     <div className="pdi-page">
       <div className="page-header">
         <h1>Cadastro de Docentes</h1>
-        {canManageTeachers && (
+        {canCreateTeachers && (
           <button className="btn-new-pdi" onClick={() => navigate('/teachers/new')}>
             + Novo Docente
           </button>

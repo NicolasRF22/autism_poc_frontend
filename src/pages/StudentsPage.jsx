@@ -11,8 +11,9 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
   const navigate = useNavigate();
   const isCaseStudyMode = mode === 'case-study';
   const currentRole = getStoredUser()?.role || '';
-  const canManagePreRegistration = ['admin', 'secretaria'].includes(currentRole);
-  const canManageCaseStudy = ['admin', 'professor'].includes(currentRole);
+  const canCreatePreRegistration = ['admin', 'secretaria', 'avaliador'].includes(currentRole);
+  const canManagePreRegistration = ['admin', 'secretaria', 'avaliador'].includes(currentRole);
+  const canManageCaseStudy = ['admin', 'professor', 'avaliador'].includes(currentRole);
   const completedCaseStudies = students.filter((student) => student.case_study_completed);
   const pendingCaseStudyStudents = students.filter((student) => !student.case_study_completed);
 
@@ -134,7 +135,7 @@ const StudentsPage = ({ mode = 'pre-registration' }) => {
             ? `Estudo de Caso (${completedCaseStudies.length})`
             : `Pré-cadastro de Alunos (${students.length})`}
         </h1>
-        {!isCaseStudyMode && canManagePreRegistration && (
+        {!isCaseStudyMode && canCreatePreRegistration && (
           <button className="btn-new-pdi" onClick={handleNew}>
             + Novo Pré-cadastro
           </button>

@@ -14,7 +14,7 @@ const normalizeTeacherIds = (student) => {
 
 const TeacherStudentManagementPage = ({ user }) => {
   const role = user?.role || '';
-  const canEdit = role === 'admin' || role === 'coordenacao';
+  const canEdit = role === 'admin' || role === 'coordenacao' || role === 'avaliador';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -131,7 +131,7 @@ const TeacherStudentManagementPage = ({ user }) => {
 
         <p className="teacher-student-subtitle">
           {canEdit
-            ? 'Coordenação/Admin podem editar vínculos docente-aluno dentro do escopo permitido.'
+            ? 'Coordenação/Admin/Avaliador podem editar vínculos docente-aluno dentro do escopo permitido.'
             : 'Secretaria possui visualização dos vínculos docente-aluno.'}
         </p>
 

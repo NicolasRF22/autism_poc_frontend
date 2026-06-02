@@ -40,11 +40,11 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   };
 
   const role = user?.role || '';
-  const canAccessTeacherManagement = ['admin', 'secretaria', 'viewer'].includes(role);
+  const canAccessTeacherManagement = ['admin', 'secretaria', 'viewer', 'avaliador'].includes(role);
   const canAccessCadastro = ['admin'].includes(role);
-  const canAccessPreRegistrationPages = ['admin', 'secretaria'].includes(role);
-  const canAccessTeacherStudentManagement = ['admin', 'secretaria', 'coordenacao'].includes(role);
-  const canAccessChatOnly = ['admin', 'avaliador'].includes(role);
+  const canAccessPreRegistrationPages = ['admin', 'secretaria', 'avaliador'].includes(role);
+  const canAccessTeacherStudentManagement = ['admin', 'secretaria', 'coordenacao', 'avaliador'].includes(role);
+  const canAccessChatAndPei = ['admin', 'avaliador'].includes(role);
   const menuItems = [
     { path: '/inicio', label: 'Início', icon: '🏠' },
     { path: '/estudo-de-caso', label: 'Estudo de Caso', icon: '📋' },
@@ -54,11 +54,7 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     { path: '/anexos', label: 'Anexos', icon: '📎' },
   ];
 
-  if (canAccessChatOnly) {
-    menuItems.push({ path: '/chat', label: 'Chat', icon: '💬' });
-  }
-
-  if (role === 'admin') {
+  if (canAccessChatAndPei) {
     menuItems.push({ path: '/rag', label: 'Chat e PEI', icon: '🤖' });
   }
 

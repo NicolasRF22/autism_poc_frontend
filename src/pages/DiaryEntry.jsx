@@ -15,6 +15,25 @@ const QUESTIONS = [
 
 const ANSWER_OPTIONS = ['Sim', 'Não', 'Parcialmente'];
 
+const getEntryLoadErrorMessage = (err) => {
+  const status = err?.response?.status;
+  const backendMessage = err?.response?.data?.error;
+
+  if (status === 404) {
+    return backendMessage || 'Entrada não encontrada para edição.';
+  }
+
+  if (status === 403) {
+    return backendMessage || 'Você não tem permissão para editar esta entrada.';
+  }
+
+  if (status >= 500) {
+    return 'Erro interno ao carregar a entrada. Tente novamente em instantes.';
+  }
+
+  return backendMessage || 'Erro ao carregar a entrada para edição.';
+};
+
 const DiaryEntry = () => {
   const { studentName } = useParams();
   const navigate = useNavigate();
@@ -124,7 +143,7 @@ const DiaryEntry = () => {
         setExistingImages(Array.isArray(images) ? images : []);
       } catch (err) {
         console.error('Erro ao carregar entrada:', err);
-        setError('Erro ao carregar a entrada para edição.');
+        setError(getEntryLoadErrorMessage(err));
       } finally {
         setLoading(false);
       }

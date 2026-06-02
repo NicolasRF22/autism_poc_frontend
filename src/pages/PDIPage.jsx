@@ -13,7 +13,7 @@ const PDIPage = () => {
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const navigate = useNavigate();
   const currentRole = getStoredUser()?.role || '';
-  const canEditPdi = ['admin', 'professor'].includes(currentRole);
+  const canEditPdi = ['admin', 'professor', 'avaliador'].includes(currentRole);
 
   const normalizeName = (value) =>
     String(value || '')

@@ -87,7 +87,7 @@ const DiaryPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentRole = getStoredUser()?.role || '';
-  const canEditDiary = ['admin', 'professor'].includes(currentRole);
+  const canEditDiary = ['admin', 'professor', 'avaliador'].includes(currentRole);
 
   const queryParams = new URLSearchParams(location.search);
   const autoStudentName = queryParams.get('student') || '';

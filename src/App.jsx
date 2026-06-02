@@ -16,7 +16,6 @@ import TeachersPage from './pages/TeachersPage';
 import TeacherForm from './pages/TeacherFormNew';
 import TeacherStudentManagementPage from './pages/TeacherStudentManagementPage';
 import TesteRAG from './pages/TesteRAG';
-import ChatPage from './pages/ChatPage';
 import AttachmentsPage from './pages/AttachmentsPage';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
@@ -45,16 +44,16 @@ const getInitialSidebarWidth = () => {
 };
 
 const TEACHER_LIST_ROLES = new Set(['admin', 'secretaria', 'viewer']);
-const TEACHER_MANAGEMENT_ROLES = new Set(['admin', 'secretaria']);
+const TEACHER_MANAGEMENT_ROLES = new Set(['admin', 'secretaria', 'avaliador']);
 const CADASTRO_ROLES = new Set(['admin']);
-const STUDENT_CREATE_ROLES = new Set(['admin', 'secretaria']);
-const STUDENT_EDIT_ROLES = new Set(['admin', 'secretaria', 'coordenacao']);
-const SCHOOL_CREATE_ROLES = new Set(['admin', 'secretaria']);
-const SCHOOL_EDIT_ROLES = new Set(['admin', 'secretaria', 'coordenacao']);
-const LEARNING_EDIT_ROLES = new Set(['admin', 'professor']);
-const SCHOOL_REGISTRATION_ROLES = new Set(['admin', 'coordenacao']);
-const TEACHER_STUDENT_LINK_ROLES = new Set(['admin', 'secretaria', 'coordenacao']);
-const CHAT_ONLY_ROLES = new Set(['admin', 'avaliador']);
+const STUDENT_CREATE_ROLES = new Set(['admin', 'secretaria', 'avaliador']);
+const STUDENT_EDIT_ROLES = new Set(['admin', 'secretaria', 'coordenacao', 'avaliador']);
+const SCHOOL_CREATE_ROLES = new Set(['admin', 'secretaria', 'avaliador']);
+const SCHOOL_EDIT_ROLES = new Set(['admin', 'secretaria', 'coordenacao', 'avaliador']);
+const LEARNING_EDIT_ROLES = new Set(['admin', 'professor', 'avaliador']);
+const SCHOOL_REGISTRATION_ROLES = new Set(['admin', 'coordenacao', 'avaliador']);
+const TEACHER_STUDENT_LINK_ROLES = new Set(['admin', 'secretaria', 'coordenacao', 'avaliador']);
+const CHAT_AND_PEI_ROLES = new Set(['admin', 'avaliador']);
 
 const hasAnyRole = (user, allowedRoles) => allowedRoles.has(user?.role || '');
 
@@ -144,8 +143,7 @@ function App() {
   const canEditLearning = hasAnyRole(user, LEARNING_EDIT_ROLES);
   const canEditSchoolRegistration = hasAnyRole(user, SCHOOL_REGISTRATION_ROLES);
   const canAccessTeacherStudentLinks = hasAnyRole(user, TEACHER_STUDENT_LINK_ROLES);
-  const canAccessChatOnly = hasAnyRole(user, CHAT_ONLY_ROLES);
-  const canAccessRagAndPei = user?.role === 'admin';
+  const canAccessChatAndPei = hasAnyRole(user, CHAT_AND_PEI_ROLES);
 
   return (
     <Router>
@@ -223,8 +221,8 @@ function App() {
                 path="/teacher-student-management"
                 element={canAccessTeacherStudentLinks ? <TeacherStudentManagementPage user={user} /> : <Navigate to="/inicio" replace />}
               />
-              <Route path="/chat" element={canAccessChatOnly ? <ChatPage /> : <Navigate to="/inicio" replace />} />
-              <Route path="/rag" element={canAccessRagAndPei ? <TesteRAG /> : <Navigate to="/inicio" replace />} />
+              <Route path="/chat" element={<Navigate to="/rag" replace />} />
+              <Route path="/rag" element={canAccessChatAndPei ? <TesteRAG /> : <Navigate to="/inicio" replace />} />
               <Route path="/anexos" element={<AttachmentsPage />} />
               <Route path="/teste-rag" element={<Navigate to="/rag" replace />} />
               <Route

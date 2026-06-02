@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ragAPI, schoolAPI, studentAPI } from '../services/api';
+import { getStoredUser, ragAPI, schoolAPI, studentAPI } from '../services/api';
 import './TesteRAG.css';
 
 const TesteRAG = () => {
+  const currentUser = getStoredUser();
+  const isAdmin = currentUser?.role === 'admin';
+
   // --- Estudantes (contexto para chat/PEI) ---
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null); // {student_name, school, documents, ...}
@@ -1408,13 +1411,15 @@ const TesteRAG = () => {
                       >
                         ⬇️
                       </button>
-                      <button
-                        className="pei-action-btn delete"
-                        title="Remover"
-                        onClick={() => handleDeletePEI(p.id)}
-                      >
-                        🗑️
-                      </button>
+                      {isAdmin && (
+                        <button
+                          className="pei-action-btn delete"
+                          title="Remover"
+                          onClick={() => handleDeletePEI(p.id)}
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1422,55 +1427,59 @@ const TesteRAG = () => {
             )}
           </div>
 
-          <div className="rag-panel pei-prompt-panel">
-            <h2>🧠 Prompt do PEI</h2>
-            {peiPromptLoading ? (
-              <p className="pei-prompt-loading">Carregando prompt...</p>
-            ) : (
-              <>
-                <p className="pei-prompt-meta">
-                  {peiPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
-                  {peiPromptUpdatedAt
-                    ? ` · Atualizado em ${new Date(peiPromptUpdatedAt).toLocaleString('pt-BR')}`
-                    : ''}
-                </p>
-                <button
-                  type="button"
-                  className="save-prompt-btn"
-                  onClick={handleOpenPeiPromptModal}
-                >
-                  Visualizar / Editar Prompt
-                </button>
-              </>
-            )}
-          </div>
+          {isAdmin && (
+            <>
+              <div className="rag-panel pei-prompt-panel">
+                <h2>🧠 Prompt do PEI</h2>
+                {peiPromptLoading ? (
+                  <p className="pei-prompt-loading">Carregando prompt...</p>
+                ) : (
+                  <>
+                    <p className="pei-prompt-meta">
+                      {peiPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
+                      {peiPromptUpdatedAt
+                        ? ` · Atualizado em ${new Date(peiPromptUpdatedAt).toLocaleString('pt-BR')}`
+                        : ''}
+                    </p>
+                    <button
+                      type="button"
+                      className="save-prompt-btn"
+                      onClick={handleOpenPeiPromptModal}
+                    >
+                      Visualizar / Editar Prompt
+                    </button>
+                  </>
+                )}
+              </div>
 
-          <div className="rag-panel pei-prompt-panel">
-            <h2>💬 Prompt do Chat</h2>
-            {chatPromptLoading ? (
-              <p className="pei-prompt-loading">Carregando prompt...</p>
-            ) : (
-              <>
-                <p className="pei-prompt-meta">
-                  {chatPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
-                  {chatPromptUpdatedAt
-                    ? ` · Atualizado em ${new Date(chatPromptUpdatedAt).toLocaleString('pt-BR')}`
-                    : ''}
-                </p>
-                <button
-                  type="button"
-                  className="save-prompt-btn"
-                  onClick={handleOpenChatPromptModal}
-                >
-                  Visualizar / Editar Prompt
-                </button>
-              </>
-            )}
-          </div>
+              <div className="rag-panel pei-prompt-panel">
+                <h2>💬 Prompt do Chat</h2>
+                {chatPromptLoading ? (
+                  <p className="pei-prompt-loading">Carregando prompt...</p>
+                ) : (
+                  <>
+                    <p className="pei-prompt-meta">
+                      {chatPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
+                      {chatPromptUpdatedAt
+                        ? ` · Atualizado em ${new Date(chatPromptUpdatedAt).toLocaleString('pt-BR')}`
+                        : ''}
+                    </p>
+                    <button
+                      type="button"
+                      className="save-prompt-btn"
+                      onClick={handleOpenChatPromptModal}
+                    >
+                      Visualizar / Editar Prompt
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {peiPromptModalOpen && (
+      {isAdmin && peiPromptModalOpen && (
         <div className="pei-prompt-modal-overlay" onClick={handleClosePeiPromptModal}>
           <div className="pei-prompt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pei-prompt-modal-header">
@@ -1594,7 +1603,7 @@ const TesteRAG = () => {
         </div>
       )}
 
-      {chatPromptModalOpen && (
+      {isAdmin && chatPromptModalOpen && (
         <div className="pei-prompt-modal-overlay" onClick={handleCloseChatPromptModal}>
           <div className="pei-prompt-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pei-prompt-modal-header">
