@@ -67,6 +67,22 @@
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
 }
 
+.admin-usage-table-wrapper-scrollable {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 400px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+}
+
+.admin-usage-table-wrapper-scrollable .admin-usage-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+}
+
 .admin-usage-sections {
   display: flex;
   flex-direction: column;

@@ -53,6 +53,33 @@ const AdminPage = () => {
   const [newMunicipalityName, setNewMunicipalityName] = useState('');
   const [newMunicipalityId, setNewMunicipalityId] = useState('');
 
+  // Estados de edição inline de Escola
+  const [editingSchoolId, setEditingSchoolId] = useState('');
+  const [editingSchoolMunicipioId, setEditingSchoolMunicipioId] = useState('');
+  const [savingSchoolId, setSavingSchoolId] = useState('');
+
+  // Estados de edição inline de Professor
+  const [editingTeacherIdState, setEditingTeacherIdState] = useState('');
+  const [editingTeacherSchoolId, setEditingTeacherSchoolId] = useState('');
+  const [editingTeacherStudentIds, setEditingTeacherStudentIds] = useState([]);
+  const [savingTeacherIdState, setSavingTeacherIdState] = useState('');
+
+  // Estados de edição inline de Aluno
+  const [editingStudentIdState, setEditingStudentIdState] = useState('');
+  const [editingStudentMunicipioId, setEditingStudentMunicipioId] = useState('');
+  const [editingStudentSchoolId, setEditingStudentSchoolId] = useState('');
+  const [editingStudentTeacherIds, setEditingStudentTeacherIds] = useState([]);
+  const [savingStudentIdState, setSavingStudentIdState] = useState('');
+
+  // Estados de edição inline de Usuário
+  const [editingUserIdState, setEditingUserIdState] = useState('');
+  const [editingUserName, setEditingUserName] = useState('');
+  const [editingUserRole, setEditingUserRole] = useState('');
+  const [editingUserMunicipioId, setEditingUserMunicipioId] = useState('');
+  const [editingUserSchoolId, setEditingUserSchoolId] = useState('');
+  const [editingUserTeacherId, setEditingUserTeacherId] = useState('');
+  const [savingUserIdState, setSavingUserIdState] = useState('');
+
   const loadUsers = async () => {
     try {
       setLoadingUsers(true);
@@ -220,9 +247,11 @@ const AdminPage = () => {
       return {
         id: teacher.id,
         name: teacher.name || '-',
+        schoolId: teacher.school_id || '',
         schoolName: school?.name || teacher.school_name || '-',
         municipioName: municipalityNameById.get(school?.municipio_id || '') || school?.municipio_id || '-',
         students: linkedStudents.map((student) => student.name || student.studentName || '-'),
+        studentIds: linkedStudents.map((student) => student.id),
       };
     });
   }, [allTeachers, schoolById, studentsByTeacherId, municipalityNameById]);
@@ -247,12 +276,197 @@ const AdminPage = () => {
       return {
         id: student.id,
         name: student.name || student.studentName || '-',
+        schoolId: student.school_id || '',
         schoolName: school?.name || student.school_name || '-',
         municipioName: municipalityNameById.get(school?.municipio_id || '') || school?.municipio_id || '-',
         teacherNames,
+        teacherIds,
+        originalStudent: student,
       };
     });
   }, [allStudents, schoolById, teacherById, municipalityNameById]);
+
+  // Handlers para edição inline de Escolas
+  const handleStartEditSchool = (school) => {
+    setEditingSchoolId(school.id);
+    setEditingSchoolMunicipioId(school.municipioId || '');
+  };
+
+  const handleCancelEditSchool = () => {
+    setEditingSchoolId('');
+    setEditingSchoolMunicipioId('');
+  };
+
+  const handleSaveSchool = async (schoolId, schoolName) => {
+    setError('');
+    setSuccess('');
+    try {
+      setSavingSchoolId(schoolId);
+      await schoolAPI.updateSchool(schoolId, {
+        name: schoolName,
+        municipio_id: editingSchoolMunicipioId,
+      });
+      setSuccess('Escola atualizada com sucesso');
+      handleCancelEditSchool();
+      await Promise.all([loadSchools(), loadPreRegistrationData()]);
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Erro ao atualizar escola';
+      setError(message);
+    } finally {
+      setSavingSchoolId('');
+    }
+  };
+
+  // Handlers para edição inline de Professores
+  const handleStartEditTeacher = (row) => {
+    setEditingTeacherIdState(row.id);
+    setEditingTeacherSchoolId(row.schoolId || '');
+    setEditingTeacherStudentIds(row.studentIds || []);
+  };
+
+  const handleCancelEditTeacher = () => {
+    setEditingTeacherIdState('');
+    setEditingTeacherSchoolId('');
+    setEditingTeacherStudentIds([]);
+  };
+
+  const handleSaveTeacher = async (teacherId, teacherName) => {
+    setError('');
+    setSuccess('');
+    if (!editingTeacherSchoolId) {
+      setError('Escolha uma escola para o professor');
+      return;
+    }
+    try {
+      setSavingTeacherIdState(teacherId);
+
+      const original = allTeachers.find(t => t.id === teacherId) || {};
+
+      await teacherAPI.updateTeacher(teacherId, {
+        ...original,
+        name: teacherName,
+        school_id: editingTeacherSchoolId,
+        student_ids: editingTeacherStudentIds,
+      });
+      setSuccess('Professor atualizado com sucesso');
+      handleCancelEditTeacher();
+      await Promise.all([loadPreRegistrationData()]);
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Erro ao atualizar professor';
+      setError(message);
+    } finally {
+      setSavingTeacherIdState('');
+    }
+  };
+
+  const handleToggleTeacherStudent = (studentId) => {
+    setEditingTeacherStudentIds((prev) =>
+      prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId]
+    );
+  };
+
+  // Handlers para edição inline de Alunos
+  const handleStartEditStudent = (row) => {
+    setEditingStudentIdState(row.id);
+    setEditingStudentMunicipioId(row.originalStudent?.school_id ? (schoolById.get(row.originalStudent.school_id)?.municipio_id || '') : '');
+    setEditingStudentSchoolId(row.schoolId || '');
+    setEditingStudentTeacherIds(row.teacherIds || []);
+  };
+
+  const handleCancelEditStudent = () => {
+    setEditingStudentIdState('');
+    setEditingStudentMunicipioId('');
+    setEditingStudentSchoolId('');
+    setEditingStudentTeacherIds([]);
+  };
+
+  const handleSaveStudent = async (studentId, originalStudent) => {
+    setError('');
+    setSuccess('');
+    if (!editingStudentSchoolId) {
+      setError('Escolha uma escola para o aluno');
+      return;
+    }
+    if (editingStudentTeacherIds.length === 0) {
+      setError('Selecione ao menos um professor para o aluno');
+      return;
+    }
+    try {
+      setSavingStudentIdState(studentId);
+      await studentAPI.updateStudent(studentId, {
+        ...originalStudent,
+        school_id: editingStudentSchoolId,
+        teacher_ids: editingStudentTeacherIds,
+      });
+      setSuccess('Aluno atualizado com sucesso');
+      handleCancelEditStudent();
+      await loadPreRegistrationData();
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Erro ao atualizar aluno';
+      setError(message);
+    } finally {
+      setSavingStudentIdState('');
+    }
+  };
+
+  const handleToggleStudentTeacher = (teacherId) => {
+    setEditingStudentTeacherIds((prev) =>
+      prev.includes(teacherId) ? prev.filter((id) => id !== teacherId) : [...prev, teacherId]
+    );
+  };
+
+  // Handlers para edição inline de Usuários
+  const handleStartEditUser = (user) => {
+    setEditingUserIdState(user.id);
+    setEditingUserName(user.name || '');
+    setEditingUserRole(user.role || '');
+    setEditingUserMunicipioId(user.municipio_id || '');
+    setEditingUserSchoolId(user.school_id || '');
+    setEditingUserTeacherId(user.teacher_id || '');
+  };
+
+  const handleCancelEditUser = () => {
+    setEditingUserIdState('');
+    setEditingUserName('');
+    setEditingUserRole('');
+    setEditingUserMunicipioId('');
+    setEditingUserSchoolId('');
+    setEditingUserTeacherId('');
+  };
+
+  const handleSaveUser = async (userId, username) => {
+    setError('');
+    setSuccess('');
+
+    if (REQUIRES_MUNICIPIO.has(editingUserRole) && !editingUserMunicipioId) {
+      setError('Informe o município para este perfil');
+      return;
+    }
+
+    if (REQUIRES_SCHOOL.has(editingUserRole) && !editingUserSchoolId) {
+      setError('Informe a escola para este perfil');
+      return;
+    }
+
+    try {
+      setSavingUserIdState(userId);
+      await authAPI.updateUser(userId, {
+        name: editingUserName,
+        role: editingUserRole,
+        municipio_id: editingUserMunicipioId || '',
+        school_id: editingUserSchoolId || '',
+        teacher_id: editingUserTeacherId || '',
+      });
+      setSuccess('Usuário atualizado com sucesso');
+      handleCancelEditUser();
+      await loadUsers();
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Erro ao atualizar usuário';
+      setError(message);
+    } finally {
+      setSavingUserIdState('');
+    }
+  };
 
   const handleCreateUser = async (event) => {
     event.preventDefault();
@@ -790,16 +1004,63 @@ const AdminPage = () => {
                         {schoolRows.map((row) => (
                           <tr key={row.id}>
                             <td>{row.name}</td>
-                            <td>{row.municipioName} ({row.municipioId})</td>
                             <td>
-                              <button
-                                type="button"
-                                className="admin-delete-small-btn"
-                                disabled={deletingSchoolId === row.id}
-                                onClick={() => handleDeleteSchool(row.id, row.name)}
-                              >
-                                {deletingSchoolId === row.id ? 'Apagando...' : 'Apagar'}
-                              </button>
+                              {editingSchoolId === row.id ? (
+                                <select
+                                  value={editingSchoolMunicipioId}
+                                  onChange={(e) => setEditingSchoolMunicipioId(e.target.value)}
+                                  disabled={savingSchoolId === row.id}
+                                >
+                                  <option value="">Selecione um município</option>
+                                  {municipalities.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.name} ({m.id})
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                `${row.municipioName} (${row.municipioId})`
+                              )}
+                            </td>
+                            <td>
+                              {editingSchoolId === row.id ? (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    type="button"
+                                    className="admin-save-small-btn"
+                                    onClick={() => handleSaveSchool(row.id, row.name)}
+                                    disabled={savingSchoolId === row.id}
+                                  >
+                                    {savingSchoolId === row.id ? 'Salvando...' : 'Salvar'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="admin-cancel-small-btn"
+                                    onClick={handleCancelEditSchool}
+                                    disabled={savingSchoolId === row.id}
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    type="button"
+                                    className="admin-edit-small-btn"
+                                    onClick={() => handleStartEditSchool(row)}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="admin-delete-small-btn"
+                                    disabled={deletingSchoolId === row.id}
+                                    onClick={() => handleDeleteSchool(row.id, row.name)}
+                                  >
+                                    {deletingSchoolId === row.id ? 'Apagando...' : 'Apagar'}
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -826,24 +1087,108 @@ const AdminPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {teacherRows.map((row) => (
-                          <tr key={row.id}>
-                            <td>{row.name}</td>
-                            <td>{row.schoolName}</td>
-                            <td>{row.municipioName}</td>
-                            <td>{row.students.length ? row.students.join(', ') : '-'}</td>
-                            <td>
-                              <button
-                                type="button"
-                                className="admin-delete-small-btn"
-                                disabled={deletingTeacherId === row.id}
-                                onClick={() => handleDeleteTeacher(row.id, row.name)}
-                              >
-                                {deletingTeacherId === row.id ? 'Apagando...' : 'Apagar'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {teacherRows.map((row) => {
+                          const selectedSchool = allSchools.find(s => s.id === editingTeacherSchoolId);
+                          const selectedSchoolMunicipioName = selectedSchool ? (municipalityNameById.get(selectedSchool.municipio_id) || selectedSchool.municipio_id) : '-';
+                          const availableStudentsForSchool = allStudents.filter(s => s.school_id === editingTeacherSchoolId);
+
+                          return (
+                            <tr key={row.id}>
+                              <td>{row.name}</td>
+                              <td>
+                                {editingTeacherIdState === row.id ? (
+                                  <select
+                                    value={editingTeacherSchoolId}
+                                    onChange={(e) => {
+                                      setEditingTeacherSchoolId(e.target.value);
+                                      setEditingTeacherStudentIds([]);
+                                    }}
+                                    disabled={savingTeacherIdState === row.id}
+                                  >
+                                    <option value="">Selecione uma escola</option>
+                                    {allSchools.map((s) => (
+                                      <option key={s.id} value={s.id}>
+                                        {s.name} ({s.id})
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  row.schoolName
+                                )}
+                              </td>
+                              <td>
+                                {editingTeacherIdState === row.id ? (
+                                  selectedSchoolMunicipioName
+                                ) : (
+                                  row.municipioName
+                                )}
+                              </td>
+                              <td>
+                                {editingTeacherIdState === row.id ? (
+                                  <div className="admin-checkbox-list">
+                                    {availableStudentsForSchool.length === 0 ? (
+                                      <small style={{ color: '#888' }}>Nenhum aluno cadastrado nesta escola</small>
+                                    ) : (
+                                      availableStudentsForSchool.map(student => (
+                                        <label key={student.id} className="admin-checkbox-item">
+                                          <input
+                                            type="checkbox"
+                                            checked={editingTeacherStudentIds.includes(student.id)}
+                                            onChange={() => handleToggleTeacherStudent(student.id)}
+                                            disabled={savingTeacherIdState === row.id}
+                                          />
+                                          {student.name || student.studentName}
+                                        </label>
+                                      ))
+                                    )}
+                                  </div>
+                                ) : (
+                                  row.students.length ? row.students.join(', ') : '-'
+                                )}
+                              </td>
+                              <td>
+                                {editingTeacherIdState === row.id ? (
+                                  <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                      type="button"
+                                      className="admin-save-small-btn"
+                                      onClick={() => handleSaveTeacher(row.id, row.name)}
+                                      disabled={savingTeacherIdState === row.id}
+                                    >
+                                      {savingTeacherIdState === row.id ? 'Salvando...' : 'Salvar'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-cancel-small-btn"
+                                      onClick={handleCancelEditTeacher}
+                                      disabled={savingTeacherIdState === row.id}
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                      type="button"
+                                      className="admin-edit-small-btn"
+                                      onClick={() => handleStartEditTeacher(row)}
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-delete-small-btn"
+                                      disabled={deletingTeacherId === row.id}
+                                      onClick={() => handleDeleteTeacher(row.id, row.name)}
+                                    >
+                                      {deletingTeacherId === row.id ? 'Apagando...' : 'Apagar'}
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -867,24 +1212,122 @@ const AdminPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {studentRows.map((row) => (
-                          <tr key={row.id}>
-                            <td>{row.name}</td>
-                            <td>{row.municipioName}</td>
-                            <td>{row.schoolName}</td>
-                            <td>{row.teacherNames.length ? row.teacherNames.join(', ') : '-'}</td>
-                            <td>
-                              <button
-                                type="button"
-                                className="admin-delete-small-btn"
-                                disabled={deletingStudentId === row.id}
-                                onClick={() => handleDeleteStudent(row.id, row.name)}
-                              >
-                                {deletingStudentId === row.id ? 'Apagando...' : 'Apagar'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {studentRows.map((row) => {
+                          const filteredSchools = allSchools.filter(s => s.municipio_id === editingStudentMunicipioId);
+                          const filteredTeachers = allTeachers.filter(t => t.school_id === editingStudentSchoolId);
+
+                          return (
+                            <tr key={row.id}>
+                              <td>{row.name}</td>
+                              <td>
+                                {editingStudentIdState === row.id ? (
+                                  <select
+                                    value={editingStudentMunicipioId}
+                                    onChange={(e) => {
+                                      setEditingStudentMunicipioId(e.target.value);
+                                      setEditingStudentSchoolId('');
+                                      setEditingStudentTeacherIds([]);
+                                    }}
+                                    disabled={savingStudentIdState === row.id}
+                                  >
+                                    <option value="">Selecione um município</option>
+                                    {municipalities.map((m) => (
+                                      <option key={m.id} value={m.id}>
+                                        {m.name} ({m.id})
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  row.municipioName
+                                )}
+                              </td>
+                              <td>
+                                {editingStudentIdState === row.id ? (
+                                  <select
+                                    value={editingStudentSchoolId}
+                                    onChange={(e) => {
+                                      setEditingStudentSchoolId(e.target.value);
+                                      setEditingStudentTeacherIds([]);
+                                    }}
+                                    disabled={savingStudentIdState === row.id || !editingStudentMunicipioId}
+                                  >
+                                    <option value="">Selecione uma escola</option>
+                                    {filteredSchools.map((s) => (
+                                      <option key={s.id} value={s.id}>
+                                        {s.name} ({s.id})
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  row.schoolName
+                                )}
+                              </td>
+                              <td>
+                                {editingStudentIdState === row.id ? (
+                                  <div className="admin-checkbox-list">
+                                    {filteredTeachers.length === 0 ? (
+                                      <small style={{ color: '#888' }}>Nenhum professor nesta escola</small>
+                                    ) : (
+                                      filteredTeachers.map(teacher => (
+                                        <label key={teacher.id} className="admin-checkbox-item">
+                                          <input
+                                            type="checkbox"
+                                            checked={editingStudentTeacherIds.includes(teacher.id)}
+                                            onChange={() => handleToggleStudentTeacher(teacher.id)}
+                                            disabled={savingStudentIdState === row.id}
+                                          />
+                                          {teacher.name}
+                                        </label>
+                                      ))
+                                    )}
+                                  </div>
+                                ) : (
+                                  row.teacherNames.length ? row.teacherNames.join(', ') : '-'
+                                )}
+                              </td>
+                              <td>
+                                {editingStudentIdState === row.id ? (
+                                  <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                      type="button"
+                                      className="admin-save-small-btn"
+                                      onClick={() => handleSaveStudent(row.id, row.originalStudent)}
+                                      disabled={savingStudentIdState === row.id}
+                                    >
+                                      {savingStudentIdState === row.id ? 'Salvando...' : 'Salvar'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-cancel-small-btn"
+                                      onClick={handleCancelEditStudent}
+                                      disabled={savingStudentIdState === row.id}
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                      type="button"
+                                      className="admin-edit-small-btn"
+                                      onClick={() => handleStartEditStudent(row)}
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-delete-small-btn"
+                                      disabled={deletingStudentId === row.id}
+                                      onClick={() => handleDeleteStudent(row.id, row.name)}
+                                    >
+                                      {deletingStudentId === row.id ? 'Apagando...' : 'Apagar'}
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -918,96 +1361,222 @@ const AdminPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.username}</td>
-                      <td>{user.name || '-'}</td>
-                      <td>
-                        <select
-                          value={user.role}
-                          onChange={(event) => handleRoleChange(user.id, event.target.value)}
-                        >
-                          {ROLES.map((role) => (
-                            <option key={role} value={role}>
-                              {role}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        {user.role !== 'avaliador' && (
-                          <>
-                            {user.municipio_id ? `Município: ${municipalityNameById.get(user.municipio_id) || user.municipio_id}` : ''}
-                            {user.school_id ? `${user.municipio_id ? ' | ' : ''}Escola: ${schoolById.get(user.school_id)?.name || user.school_id}` : ''}
-                            {user.teacher_id ? `${user.municipio_id || user.school_id ? ' | ' : ''}Professor: ${teacherById.get(user.teacher_id)?.name || user.teacher_id}` : ''}
-                            {!user.municipio_id && !user.school_id && !user.teacher_id ? '-' : ''}
-                          </>
-                        )}
+                  {users.map((user) => {
+                    const filteredSchools = allSchools.filter((s) => s.municipio_id === editingUserMunicipioId);
+                    const filteredTeachers = allTeachers.filter((t) => t.school_id === editingUserSchoolId);
 
-                        {user.role === 'avaliador' && (
-                          <div>
-                            <div>{evaluatorSummary(user.evaluator_scope || {})}</div>
-
-                            {!editingEvaluatorScopes[user.id] ? (
-                              <button
-                                type="button"
-                                className="admin-refresh-btn"
-                                onClick={() => handleStartEditEvaluatorScope(user)}
-                              >
-                                Editar escopo
-                              </button>
-                            ) : (
-                              <div className="admin-form" style={{ marginTop: '8px' }}>
-                                <label htmlFor={`scope-municipios-${user.id}`}>Municípios</label>
+                    return (
+                      <tr key={user.id}>
+                        <td>{user.username}</td>
+                        <td>
+                          {editingUserIdState === user.id ? (
+                            <input
+                              type="text"
+                              value={editingUserName}
+                              onChange={(e) => setEditingUserName(e.target.value)}
+                              disabled={savingUserIdState === user.id}
+                              style={{ width: '100%', maxWidth: '180px' }}
+                            />
+                          ) : (
+                            user.name || '-'
+                          )}
+                        </td>
+                        <td>
+                          {editingUserIdState === user.id ? (
+                            <select
+                              value={editingUserRole}
+                              onChange={(e) => {
+                                setEditingUserRole(e.target.value);
+                                setEditingUserMunicipioId('');
+                                setEditingUserSchoolId('');
+                                setEditingUserTeacherId('');
+                              }}
+                              disabled={savingUserIdState === user.id}
+                            >
+                              {ROLES.map((role) => (
+                                <option key={role} value={role}>
+                                  {role}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            user.role
+                          )}
+                        </td>
+                        <td>
+                          {editingUserIdState === user.id ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {(REQUIRES_MUNICIPIO.has(editingUserRole) || editingUserRole === 'viewer') && (
                                 <select
-                                  id={`scope-municipios-${user.id}`}
-                                  multiple
-                                  value={editingEvaluatorScopes[user.id].municipio_ids}
-                                  onChange={(event) => handleChangeEvaluatorScopeField(user.id, 'municipio_ids', getSelectedValues(event))}
-                                  disabled={savingEvaluatorScopeUserId === user.id}
+                                  value={editingUserMunicipioId}
+                                  onChange={(e) => {
+                                    setEditingUserMunicipioId(e.target.value);
+                                    setEditingUserSchoolId('');
+                                    setEditingUserTeacherId('');
+                                  }}
+                                  disabled={savingUserIdState === user.id}
                                 >
-                                  {municipalities.map((municipality) => (
-                                    <option key={municipality.id} value={municipality.id}>
-                                      {municipality.name} ({municipality.id})
+                                  <option value="">Selecione o município</option>
+                                  {municipalities.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.name} ({m.id})
                                     </option>
                                   ))}
                                 </select>
+                              )}
 
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveEvaluatorScope(user.id)}
-                                    disabled={savingEvaluatorScopeUserId === user.id}
-                                  >
-                                    {savingEvaluatorScopeUserId === user.id ? 'Salvando...' : 'Salvar'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="admin-refresh-btn"
-                                    onClick={() => handleCancelEditEvaluatorScope(user.id)}
-                                    disabled={savingEvaluatorScopeUserId === user.id}
-                                  >
-                                    Cancelar
-                                  </button>
+                              {(REQUIRES_SCHOOL.has(editingUserRole) || editingUserRole === 'viewer') && (
+                                <select
+                                  value={editingUserSchoolId}
+                                  onChange={(e) => {
+                                    setEditingUserSchoolId(e.target.value);
+                                    setEditingUserTeacherId('');
+                                  }}
+                                  disabled={savingUserIdState === user.id || !editingUserMunicipioId}
+                                >
+                                  <option value="">Selecione a escola</option>
+                                  {filteredSchools.map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                      {s.name} ({s.id})
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+
+                              {editingUserRole === 'professor' && (
+                                <select
+                                  value={editingUserTeacherId}
+                                  onChange={(e) => setEditingUserTeacherId(e.target.value)}
+                                  disabled={savingUserIdState === user.id || !editingUserSchoolId}
+                                >
+                                  <option value="">Selecione o professor (opcional)</option>
+                                  {filteredTeachers.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.name} ({t.id})
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+
+                              {!REQUIRES_MUNICIPIO.has(editingUserRole) &&
+                                !REQUIRES_SCHOOL.has(editingUserRole) &&
+                                editingUserRole !== 'viewer' &&
+                                editingUserRole !== 'avaliador' && (
+                                  <span>-</span>
+                                )}
+
+                              {editingUserRole === 'avaliador' && (
+                                <span>Edição de escopo do avaliador disponível após salvar.</span>
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              {user.role !== 'avaliador' && (
+                                <>
+                                  {user.municipio_id ? `Município: ${municipalityNameById.get(user.municipio_id) || user.municipio_id}` : ''}
+                                  {user.school_id ? `${user.municipio_id ? ' | ' : ''}Escola: ${schoolById.get(user.school_id)?.name || user.school_id}` : ''}
+                                  {user.teacher_id ? `${user.municipio_id || user.school_id ? ' | ' : ''}Professor: ${teacherById.get(user.teacher_id)?.name || user.teacher_id}` : ''}
+                                  {!user.municipio_id && !user.school_id && !user.teacher_id ? '-' : ''}
+                                </>
+                              )}
+
+                              {user.role === 'avaliador' && (
+                                <div>
+                                  <div>{evaluatorSummary(user.evaluator_scope || {})}</div>
+
+                                  {!editingEvaluatorScopes[user.id] ? (
+                                    <button
+                                      type="button"
+                                      className="admin-refresh-btn"
+                                      onClick={() => handleStartEditEvaluatorScope(user)}
+                                    >
+                                      Editar escopo
+                                    </button>
+                                  ) : (
+                                    <div className="admin-form" style={{ marginTop: '8px' }}>
+                                      <label htmlFor={`scope-municipios-${user.id}`}>Municípios</label>
+                                      <select
+                                        id={`scope-municipios-${user.id}`}
+                                        multiple
+                                        value={editingEvaluatorScopes[user.id].municipio_ids}
+                                        onChange={(event) => handleChangeEvaluatorScopeField(user.id, 'municipio_ids', getSelectedValues(event))}
+                                        disabled={savingEvaluatorScopeUserId === user.id}
+                                      >
+                                        {municipalities.map((municipality) => (
+                                          <option key={municipality.id} value={municipality.id}>
+                                            {municipality.name} ({municipality.id})
+                                          </option>
+                                        ))}
+                                      </select>
+
+                                      <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSaveEvaluatorScope(user.id)}
+                                          disabled={savingEvaluatorScopeUserId === user.id}
+                                        >
+                                          {savingEvaluatorScopeUserId === user.id ? 'Salvando...' : 'Salvar'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="admin-refresh-btn"
+                                          onClick={() => handleCancelEditEvaluatorScope(user.id)}
+                                          disabled={savingEvaluatorScopeUserId === user.id}
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td>{user.is_active ? 'Ativo' : 'Inativo'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="admin-delete-btn"
-                          disabled={deletingUserId === user.id}
-                          onClick={() => handleDeleteUser(user)}
-                        >
-                          {deletingUserId === user.id ? 'Apagando...' : 'Apagar'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                              )}
+                            </>
+                          )}
+                        </td>
+                        <td>{user.is_active ? 'Ativo' : 'Inativo'}</td>
+                        <td>
+                          {editingUserIdState === user.id ? (
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className="admin-save-small-btn"
+                                onClick={() => handleSaveUser(user.id, user.username)}
+                                disabled={savingUserIdState === user.id}
+                              >
+                                {savingUserIdState === user.id ? 'Salvando...' : 'Salvar'}
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-cancel-small-btn"
+                                onClick={handleCancelEditUser}
+                                disabled={savingUserIdState === user.id}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className="admin-edit-small-btn"
+                                onClick={() => handleStartEditUser(user)}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-delete-btn"
+                                disabled={deletingUserId === user.id}
+                                onClick={() => handleDeleteUser(user)}
+                              >
+                                {deletingUserId === user.id ? 'Apagando...' : 'Apagar'}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

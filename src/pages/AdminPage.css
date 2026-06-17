@@ -179,6 +179,18 @@
   margin-bottom: 24px;
 }
 
+.admin-audit-card .admin-table-wrapper {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.admin-audit-card .admin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+}
+
 .admin-relations-content {
   display: flex;
   flex-direction: column;
@@ -189,4 +201,79 @@
   margin: 0 0 8px;
   font-size: 15px;
   color: #334155;
+}
+
+/* Estilos para edição inline nas tabelas */
+.admin-edit-small-btn,
+.admin-save-small-btn,
+.admin-cancel-small-btn,
+.admin-delete-small-btn {
+  border: none;
+  border-radius: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-edit-small-btn {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.admin-save-small-btn {
+  background: #10b981;
+  color: white;
+}
+
+.admin-cancel-small-btn {
+  background: #64748b;
+  color: white;
+}
+
+.admin-delete-small-btn {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-checkbox-list {
+  max-height: 100px;
+  overflow-y: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.admin-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-checkbox-item input {
+  cursor: pointer;
+  height: auto !important;
+  width: auto !important;
+}
+
+.admin-table select,
+.admin-table input[type="text"] {
+  height: 32px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  padding: 0 8px;
+  width: 100%;
+  max-width: 200px;
 }

@@ -231,7 +231,7 @@ const AdminUsagePage = () => {
           {!usageHistory.length ? (
             <p>Nenhum log de uso registrado ainda.</p>
           ) : (
-            <div className="admin-usage-table-wrapper">
+            <div className="admin-usage-table-wrapper-scrollable">
               <table className="admin-usage-table admin-usage-table-operations">
                 <thead>
                   <tr>
