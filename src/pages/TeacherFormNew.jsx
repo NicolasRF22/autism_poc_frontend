@@ -8,8 +8,6 @@ const emptyForm = {
   school_id: '',
   school_name: '',
   specialization: '',
-  email: '',
-  phone: '',
   notes: '',
 };
 
@@ -58,8 +56,6 @@ const TeacherFormNew = () => {
           school_id: data.school_id || '',
           school_name: data.school_name || '',
           specialization: data.specialization || '',
-          email: data.email || '',
-          phone: data.phone || '',
           notes: data.notes || '',
         });
       } catch (err) {
@@ -213,30 +209,6 @@ const TeacherFormNew = () => {
               disabled={isViewMode}
             />
           </label>
-
-          <div className="teacher-form-row">
-            <label>
-              E-mail
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={isViewMode}
-              />
-            </label>
-
-            <label>
-              Telefone
-              <input
-                type="text"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                disabled={isViewMode}
-              />
-            </label>
-          </div>
 
           <label>
             Observações

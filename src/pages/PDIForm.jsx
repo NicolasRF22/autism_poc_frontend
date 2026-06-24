@@ -44,8 +44,6 @@ const PDIForm = () => {
   const [studentName, setStudentName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [studentGrade, setStudentGrade] = useState('');
-  const [guardians, setGuardians] = useState([]);
-  const [guardianInput, setGuardianInput] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
   const [className, setClassName] = useState('');
   const [teachers, setTeachers] = useState([]);
@@ -120,21 +118,6 @@ const PDIForm = () => {
     return [];
   };
 
-  const extractGuardiansFromStudent = (student) => {
-    const direct = normalizeArrayField(
-      student.guardians || student.filiacoes || student.filiations || student.responsibles,
-    );
-
-    if (direct.length > 0) return direct;
-
-    const fallback = [student.guardian1, student.guardian2, student.responsavel1, student.responsavel2]
-      .map((item) => String(item || '').trim())
-      .filter(Boolean);
-
-    return fallback;
-  };
-
-
   const extractTeachersFromStudent = (student) => {
     const direct = normalizeArrayField(student.teachers || student.docentes);
     if (direct.length > 0) return direct;
@@ -183,11 +166,9 @@ const PDIForm = () => {
     setStudentName(student.name || student.studentName || '');
     setBirthDate(student.birth_date || student.birthDate || student.date_of_birth || '');
     setStudentGrade(student.grade || student.schoolYear || '');
-    setGuardians(extractGuardiansFromStudent(student));
     setDiagnosis(student.diagnosis || student.diagnostic || '');
     setClassName(student.class || student.className || '');
     setTeachers(extractTeachersFromStudent(student));
-    setGuardianInput('');
   };
 
   const handleSelectRegisteredStudent = async (event) => {
@@ -218,7 +199,6 @@ const PDIForm = () => {
       setStudentName(data.student_name);
       setBirthDate(data.birth_date);
       let resolvedStudentGrade = data.student_grade || data.grade || '';
-      setGuardians(data.guardians || []);
       setDiagnosis(data.diagnosis);
       setClassName(data.class);
       setTeachers(data.teachers || []);
@@ -293,18 +273,6 @@ const PDIForm = () => {
     }
   };
 
-  const handleAddGuardian = (e) => {
-    e.preventDefault();
-    if (guardianInput.trim() && !guardians.includes(guardianInput.trim())) {
-      setGuardians([...guardians, guardianInput.trim()]);
-      setGuardianInput('');
-    }
-  };
-
-  const handleRemoveGuardian = (guardianToRemove) => {
-    setGuardians(guardians.filter(g => g !== guardianToRemove));
-  };
-
   const updateSubjectRow = (trimesterNum, subjectId, rowIndex, field, value) => {
     setTrimesters(prev => {
       const newTrimesters = { ...prev };
@@ -369,10 +337,6 @@ const PDIForm = () => {
         alert('Data de nascimento é obrigatória');
         return false;
       }
-      if (guardians.length === 0) {
-        alert('Pelo menos uma filiação é obrigatória');
-        return false;
-      }
     }
     return true;
   };
@@ -413,19 +377,6 @@ const PDIForm = () => {
   };
 
   const handleSubmit = async (skipValidation = false) => {
-    const normalizedGuardians = Array.isArray(guardians)
-      ? guardians.map((guardian) => String(guardian || '').trim()).filter(Boolean)
-      : [];
-    const pendingGuardian = guardianInput.trim();
-    const finalGuardians = pendingGuardian && !normalizedGuardians.includes(pendingGuardian)
-      ? [...normalizedGuardians, pendingGuardian]
-      : normalizedGuardians;
-
-    if (finalGuardians.length !== guardians.length) {
-      setGuardians(finalGuardians);
-      setGuardianInput('');
-    }
-
     if (!skipValidation) {
       const isHeaderValid = validateStep(0);
       if (!isHeaderValid) {
@@ -436,17 +387,11 @@ const PDIForm = () => {
           !className.trim() ||
           teachers.length === 0;
 
-        if (hasOtherHeaderIssues || finalGuardians.length === 0) {
+        if (hasOtherHeaderIssues) {
           setCurrentStep(1);
           return;
         }
       }
-    }
-
-    if (finalGuardians.length === 0) {
-      alert('Pelo menos uma filiação é obrigatória');
-      setCurrentStep(1);
-      return;
     }
 
     if (!selectedStudentId) {
@@ -479,7 +424,6 @@ const PDIForm = () => {
       student_name: studentName.trim(),
       birth_date: birthDate,
       student_grade: studentGrade,
-      guardians: finalGuardians,
       diagnosis: diagnosis.trim(),
       class: className.trim(),
       teachers: teachers,
@@ -573,42 +517,6 @@ const PDIForm = () => {
           onChange={(e) => setBirthDate(e.target.value)}
           disabled={isViewMode}
         />
-      </div>
-
-      <div className="form-group">
-        <label>Filiação(ões) *</label>
-        <div className="multi-tag-container">
-          <div className="tags-display">
-            {guardians.map((guardian, idx) => (
-              <span key={idx} className="tag">
-                {guardian}
-                {!isViewMode && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveGuardian(guardian)}
-                    className="tag-remove"
-                  >
-                    ×
-                  </button>
-                )}
-              </span>
-            ))}
-          </div>
-          {!isViewMode && (
-            <div className="tag-input-group">
-              <input
-                type="text"
-                value={guardianInput}
-                onChange={(e) => setGuardianInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddGuardian(e)}
-                placeholder="Nome do responsável"
-              />
-              <button type="button" onClick={handleAddGuardian} className="btn-add-tag">
-                + Adicionar
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="form-group">
@@ -804,9 +712,6 @@ const PDIForm = () => {
           </div>
           <div className="review-item">
             <strong>Turma:</strong> {className}
-          </div>
-          <div className="review-item">
-            <strong>Filiações:</strong> {guardians.join(', ')}
           </div>
           <div className="review-item">
             <strong>Docentes:</strong> {teachers.join(', ')}

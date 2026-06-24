@@ -97,7 +97,6 @@ const TeachersPage = ({ user }) => {
               <tr>
                 <th>Nome</th>
                 <th>Escola</th>
-                <th>Especialidade</th>
                 <th>Última Atualização</th>
                 <th>Ações</th>
               </tr>
@@ -107,7 +106,6 @@ const TeachersPage = ({ user }) => {
                 <tr key={teacher.id}>
                   <td>{teacher.name}</td>
                   <td>{teacher.school_name || '-'}</td>
-                  <td>{teacher.specialization || '-'}</td>
                   <td>{formatDate(teacher.updated_at)}</td>
                   <td className="actions-cell">
                     <button

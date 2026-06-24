@@ -21,8 +21,6 @@ const StudentFormNew = () => {
   // Seção 1: Cadastral
   const [studentName, setStudentName] = useState('');
   const [studentAge, setStudentAge] = useState('');
-  const [motherName, setMotherName] = useState('');
-  const [fatherName, setFatherName] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [schoolYear, setSchoolYear] = useState('');
   const [className, setClassName] = useState('');
@@ -153,9 +151,6 @@ const StudentFormNew = () => {
       if (!response.ok) throw new Error('Erro ao carregar aluno');
       const data = await response.json();
 
-      const guardiansFromArray = Array.isArray(data.guardians) ? data.guardians : [];
-      const firstGuardian = guardiansFromArray[0] || '';
-      const secondGuardian = guardiansFromArray[1] || '';
       const teachersFromArray = Array.isArray(data.teachers) ? data.teachers : [];
       const firstTeacher = teachersFromArray[0] || '';
       const secondTeacher = teachersFromArray[1] || '';
@@ -163,8 +158,6 @@ const StudentFormNew = () => {
       // Seção 1
       setStudentName(data.studentName || data.name || '');
       setStudentAge(data.studentAge || data.age || '');
-      setMotherName(data.motherName || firstGuardian);
-      setFatherName(data.fatherName || secondGuardian);
       setSchoolName(data.schoolName || data.school_name || '');
       setSchoolYear(data.schoolYear || data.grade || '');
       setClassName(data.className || data.class || '');
@@ -291,18 +284,16 @@ const StudentFormNew = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const guardians = [motherName, fatherName].map((value) => value.trim()).filter(Boolean);
     const teachers = [mainTeacher, supportTeacher].map((value) => value.trim()).filter(Boolean);
 
     const studentData = {
-      studentName, studentAge, motherName, fatherName, schoolName, schoolYear,
+      studentName, studentAge, schoolName, schoolYear,
       className, mainTeacher, supportTeacher,
       name: studentName,
       age: studentAge,
       school_name: schoolName,
       grade: schoolYear,
       class: className,
-      guardians,
       teachers,
       likesSchool, likesSchoolObs, hasFriends, friendsNames, hasFavoriteColleague,
       favoriteColleagueName, favoriteActivities, difficultTasks, expressNeeds,
@@ -423,8 +414,6 @@ const StudentFormNew = () => {
           <div className="review-content">
             <p><strong>Nome do Aluno:</strong> {studentName || '(não informado)'}</p>
             <p><strong>Idade:</strong> {studentAge || '(não informado)'}</p>
-            <p><strong>Nome da Mãe:</strong> {motherName || '(não informado)'}</p>
-            <p><strong>Nome do Pai:</strong> {fatherName || '(não informado)'}</p>
             <p><strong>Escola:</strong> {schoolName || '(não informado)'}</p>
             <p><strong>Ano:</strong> {schoolYear || '(não informado)'}</p>
             <p><strong>Turma:</strong> {className || '(não informado)'}</p>
@@ -634,25 +623,6 @@ const StudentFormNew = () => {
               />
             </div>
 
-            <div className="form-group">
-              <label>Nome da Mãe</label>
-              <input
-                type="text"
-                value={motherName}
-                onChange={(e) => setMotherName(e.target.value)}
-                disabled={isViewMode || isCaseStudySource}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Nome do Pai</label>
-              <input
-                type="text"
-                value={fatherName}
-                onChange={(e) => setFatherName(e.target.value)}
-                disabled={isViewMode || isCaseStudySource}
-              />
-            </div>
 
             <div className="form-group">
               <label>Nome da escola em que estuda</label>

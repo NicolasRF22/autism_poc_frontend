@@ -78,6 +78,7 @@ const AdminPage = () => {
   const [editingUserMunicipioId, setEditingUserMunicipioId] = useState('');
   const [editingUserSchoolId, setEditingUserSchoolId] = useState('');
   const [editingUserTeacherId, setEditingUserTeacherId] = useState('');
+  const [editingUserPassword, setEditingUserPassword] = useState('');
   const [savingUserIdState, setSavingUserIdState] = useState('');
 
   const loadUsers = async () => {
@@ -423,6 +424,7 @@ const AdminPage = () => {
     setEditingUserMunicipioId(user.municipio_id || '');
     setEditingUserSchoolId(user.school_id || '');
     setEditingUserTeacherId(user.teacher_id || '');
+    setEditingUserPassword('');
   };
 
   const handleCancelEditUser = () => {
@@ -432,6 +434,7 @@ const AdminPage = () => {
     setEditingUserMunicipioId('');
     setEditingUserSchoolId('');
     setEditingUserTeacherId('');
+    setEditingUserPassword('');
   };
 
   const handleSaveUser = async (userId, username) => {
@@ -457,6 +460,9 @@ const AdminPage = () => {
         school_id: editingUserSchoolId || '',
         teacher_id: editingUserTeacherId || '',
       });
+      if (editingUserPassword.trim()) {
+        await authAPI.changePassword(userId, editingUserPassword.trim());
+      }
       setSuccess('Usuário atualizado com sucesso');
       handleCancelEditUser();
       await loadUsers();
@@ -1356,6 +1362,7 @@ const AdminPage = () => {
                     <th>Nome</th>
                     <th>Perfil</th>
                     <th>Escopo</th>
+                    <th>Senha</th>
                     <th>Status</th>
                     <th>Ação</th>
                   </tr>
@@ -1531,6 +1538,21 @@ const AdminPage = () => {
                                 </div>
                               )}
                             </>
+                          )}
+                        </td>
+                        <td>
+                          {editingUserIdState === user.id ? (
+                            <input
+                              type="password"
+                              value={editingUserPassword}
+                              onChange={(e) => setEditingUserPassword(e.target.value)}
+                              placeholder="Nova senha (opcional)"
+                              disabled={savingUserIdState === user.id}
+                              style={{ width: '100%', maxWidth: '180px' }}
+                              autoComplete="new-password"
+                            />
+                          ) : (
+                            <span style={{ color: '#aaa', letterSpacing: '2px' }}>••••••</span>
                           )}
                         </td>
                         <td>{user.is_active ? 'Ativo' : 'Inativo'}</td>

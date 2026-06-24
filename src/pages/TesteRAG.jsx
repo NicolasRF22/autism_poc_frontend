@@ -1487,66 +1487,68 @@ const TesteRAG = () => {
               <button className="pei-prompt-modal-close" onClick={handleClosePeiPromptModal}>✕</button>
             </div>
 
-            <p className="pei-prompt-meta">
-              {peiPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
-              {peiPromptUpdatedAt
-                ? ` · Atualizado em ${new Date(peiPromptUpdatedAt).toLocaleString('pt-BR')}`
-                : ''}
-            </p>
+            <div className="pei-prompt-modal-body">
+              <p className="pei-prompt-meta">
+                {peiPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
+                {peiPromptUpdatedAt
+                  ? ` · Atualizado em ${new Date(peiPromptUpdatedAt).toLocaleString('pt-BR')}`
+                  : ''}
+              </p>
 
-            <div style={{ display: 'grid', gap: '0.65rem' }}>
-              <label>
-                <div className="pei-prompt-meta">Prompt salvo</div>
-                <select
-                  className="upload-input"
-                  style={{ width: '100%' }}
-                  value={peiPromptSelectedId}
-                  onChange={(e) => {
-                    const selected = findPromptOption('pei', e.target.value);
-                    setPeiPromptSelectedId(e.target.value);
-                    updatePromptFormFromPrompt('pei', selected);
-                  }}
-                >
-                  {peiPromptOptions.length === 0 && <option value="">Nenhum prompt salvo</option>}
-                  {peiPromptOptions.map((promptItem) => (
-                    <option key={promptItem.id} value={promptItem.id}>
-                      {promptItem.name}{promptItem.is_default ? ' [base]' : ''}{promptItem.is_active ? ' [ativo]' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div style={{ display: 'grid', gap: '0.65rem' }}>
+                <label>
+                  <div className="pei-prompt-meta">Prompt salvo</div>
+                  <select
+                    className="upload-input"
+                    style={{ width: '100%' }}
+                    value={peiPromptSelectedId}
+                    onChange={(e) => {
+                      const selected = findPromptOption('pei', e.target.value);
+                      setPeiPromptSelectedId(e.target.value);
+                      updatePromptFormFromPrompt('pei', selected);
+                    }}
+                  >
+                    {peiPromptOptions.length === 0 && <option value="">Nenhum prompt salvo</option>}
+                    {peiPromptOptions.map((promptItem) => (
+                      <option key={promptItem.id} value={promptItem.id}>
+                        {promptItem.name}{promptItem.is_default ? ' [base]' : ''}{promptItem.is_active ? ' [ativo]' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label>
-                <div className="pei-prompt-meta">Nome</div>
-                <input
-                  className="upload-input"
-                  style={{ width: '100%' }}
-                  value={peiPromptName}
-                  onChange={(e) => setPeiPromptName(e.target.value)}
-                  placeholder="Nome do prompt"
-                />
-              </label>
+                <label>
+                  <div className="pei-prompt-meta">Nome</div>
+                  <input
+                    className="upload-input"
+                    style={{ width: '100%' }}
+                    value={peiPromptName}
+                    onChange={(e) => setPeiPromptName(e.target.value)}
+                    placeholder="Nome do prompt"
+                  />
+                </label>
 
-              <label>
-                <div className="pei-prompt-meta">Descrição</div>
-                <input
-                  className="upload-input"
-                  style={{ width: '100%' }}
-                  value={peiPromptDescription}
-                  onChange={(e) => setPeiPromptDescription(e.target.value)}
-                  placeholder="Descrição opcional"
-                />
-              </label>
+                <label>
+                  <div className="pei-prompt-meta">Descrição</div>
+                  <input
+                    className="upload-input"
+                    style={{ width: '100%' }}
+                    value={peiPromptDescription}
+                    onChange={(e) => setPeiPromptDescription(e.target.value)}
+                    placeholder="Descrição opcional"
+                  />
+                </label>
 
-              <label>
-                <div className="pei-prompt-meta">Conteúdo</div>
-                <textarea
-                  className="pei-prompt-modal-textarea"
-                  value={peiPromptDraft}
-                  onChange={(e) => setPeiPromptDraft(e.target.value)}
-                  rows={18}
-                />
-              </label>
+                <label>
+                  <div className="pei-prompt-meta">Conteúdo</div>
+                  <textarea
+                    className="pei-prompt-modal-textarea"
+                    value={peiPromptDraft}
+                    onChange={(e) => setPeiPromptDraft(e.target.value)}
+                    rows={18}
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="pei-prompt-modal-actions">
@@ -1611,66 +1613,68 @@ const TesteRAG = () => {
               <button className="pei-prompt-modal-close" onClick={handleCloseChatPromptModal}>✕</button>
             </div>
 
-            <p className="pei-prompt-meta">
-              {chatPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
-              {chatPromptUpdatedAt
-                ? ` · Atualizado em ${new Date(chatPromptUpdatedAt).toLocaleString('pt-BR')}`
-                : ''}
-            </p>
+            <div className="pei-prompt-modal-body">
+              <p className="pei-prompt-meta">
+                {chatPromptIsCustom ? 'Prompt personalizado ativo' : 'Prompt padrão ativo'}
+                {chatPromptUpdatedAt
+                  ? ` · Atualizado em ${new Date(chatPromptUpdatedAt).toLocaleString('pt-BR')}`
+                  : ''}
+              </p>
 
-            <div style={{ display: 'grid', gap: '0.65rem' }}>
-              <label>
-                <div className="pei-prompt-meta">Prompt salvo</div>
-                <select
-                  className="upload-input"
-                  style={{ width: '100%' }}
-                  value={chatPromptSelectedId}
-                  onChange={(e) => {
-                    const selected = findPromptOption('chat', e.target.value);
-                    setChatPromptSelectedId(e.target.value);
-                    updatePromptFormFromPrompt('chat', selected);
-                  }}
-                >
-                  {chatPromptOptions.length === 0 && <option value="">Nenhum prompt salvo</option>}
-                  {chatPromptOptions.map((promptItem) => (
-                    <option key={promptItem.id} value={promptItem.id}>
-                      {promptItem.name}{promptItem.is_default ? ' [base]' : ''}{promptItem.is_active ? ' [ativo]' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div style={{ display: 'grid', gap: '0.65rem' }}>
+                <label>
+                  <div className="pei-prompt-meta">Prompt salvo</div>
+                  <select
+                    className="upload-input"
+                    style={{ width: '100%' }}
+                    value={chatPromptSelectedId}
+                    onChange={(e) => {
+                      const selected = findPromptOption('chat', e.target.value);
+                      setChatPromptSelectedId(e.target.value);
+                      updatePromptFormFromPrompt('chat', selected);
+                    }}
+                  >
+                    {chatPromptOptions.length === 0 && <option value="">Nenhum prompt salvo</option>}
+                    {chatPromptOptions.map((promptItem) => (
+                      <option key={promptItem.id} value={promptItem.id}>
+                        {promptItem.name}{promptItem.is_default ? ' [base]' : ''}{promptItem.is_active ? ' [ativo]' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label>
-                <div className="pei-prompt-meta">Nome</div>
-                <input
-                  className="upload-input"
-                  style={{ width: '100%' }}
-                  value={chatPromptName}
-                  onChange={(e) => setChatPromptName(e.target.value)}
-                  placeholder="Nome do prompt"
-                />
-              </label>
+                <label>
+                  <div className="pei-prompt-meta">Nome</div>
+                  <input
+                    className="upload-input"
+                    style={{ width: '100%' }}
+                    value={chatPromptName}
+                    onChange={(e) => setChatPromptName(e.target.value)}
+                    placeholder="Nome do prompt"
+                  />
+                </label>
 
-              <label>
-                <div className="pei-prompt-meta">Descrição</div>
-                <input
-                  className="upload-input"
-                  style={{ width: '100%' }}
-                  value={chatPromptDescription}
-                  onChange={(e) => setChatPromptDescription(e.target.value)}
-                  placeholder="Descrição opcional"
-                />
-              </label>
+                <label>
+                  <div className="pei-prompt-meta">Descrição</div>
+                  <input
+                    className="upload-input"
+                    style={{ width: '100%' }}
+                    value={chatPromptDescription}
+                    onChange={(e) => setChatPromptDescription(e.target.value)}
+                    placeholder="Descrição opcional"
+                  />
+                </label>
 
-              <label>
-                <div className="pei-prompt-meta">Conteúdo</div>
-                <textarea
-                  className="pei-prompt-modal-textarea"
-                  value={chatPromptDraft}
-                  onChange={(e) => setChatPromptDraft(e.target.value)}
-                  rows={18}
-                />
-              </label>
+                <label>
+                  <div className="pei-prompt-meta">Conteúdo</div>
+                  <textarea
+                    className="pei-prompt-modal-textarea"
+                    value={chatPromptDraft}
+                    onChange={(e) => setChatPromptDraft(e.target.value)}
+                    rows={18}
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="pei-prompt-modal-actions">

@@ -726,6 +726,16 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  overflow: hidden;
+}
+
+.pei-prompt-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
 .pei-prompt-modal-header {
@@ -757,8 +767,8 @@
 
 .pei-prompt-modal-textarea {
   width: 100%;
-  min-height: 420px;
-  max-height: 58vh;
+  min-height: 180px;
+  max-height: none;
   padding: 0.8rem 0.9rem;
   border: 1px solid #d1d5db;
   border-radius: 10px;
@@ -767,6 +777,7 @@
   line-height: 1.45;
   resize: vertical;
   outline: none;
+  box-sizing: border-box;
 }
 
 .pei-prompt-modal-textarea:focus {
@@ -1191,7 +1202,6 @@
   }
 
   .pei-prompt-modal-textarea {
-    min-height: 300px;
-    max-height: 60vh;
+    min-height: 150px;
   }
 }

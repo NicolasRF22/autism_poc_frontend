@@ -12,7 +12,6 @@ const emptyForm = {
   school_name: '',
   grade: '',
   class: '',
-  guardians: [],
   diagnosis: '',
   notes: '',
 };
@@ -32,7 +31,6 @@ const StudentPreForm = () => {
   const [loading, setLoading] = useState(!isNewMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [guardianInput, setGuardianInput] = useState('');
 
   const computeAge = (birthDateStr) => {
     if (!birthDateStr) return '';
@@ -100,7 +98,6 @@ const StudentPreForm = () => {
           school_name: data.school_name || data.schoolName || '',
           grade: data.grade || data.schoolYear || '',
           class: data.class || data.className || '',
-          guardians: Array.isArray(data.guardians) ? data.guardians : [],
           diagnosis: data.diagnosis || '',
           notes: data.notes || '',
         });
@@ -136,38 +133,10 @@ const StudentPreForm = () => {
     }));
   };
 
-  const handleAddGuardian = (event) => {
-    event.preventDefault();
-    const trimmed = guardianInput.trim();
-    if (!trimmed) return;
-
-    setFormData((prev) => {
-      if (prev.guardians.includes(trimmed)) return prev;
-      return { ...prev, guardians: [...prev.guardians, trimmed] };
-    });
-    setGuardianInput('');
-  };
-
-  const handleRemoveGuardian = (guardianToRemove) => {
-    setFormData((prev) => ({
-      ...prev,
-      guardians: prev.guardians.filter((guardian) => guardian !== guardianToRemove),
-    }));
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (isViewMode) return;
-
-    const normalizedGuardians = Array.isArray(formData.guardians)
-      ? formData.guardians.map((guardian) => String(guardian || '').trim()).filter(Boolean)
-      : [];
-    const pendingGuardian = guardianInput.trim();
-    const finalGuardians = pendingGuardian && !normalizedGuardians.includes(pendingGuardian)
-      ? [...normalizedGuardians, pendingGuardian]
-      : normalizedGuardians;
-
 
     if (!formData.grade || !String(formData.grade).trim()) {
       setError('Selecione o ano escolar do aluno.');
@@ -182,11 +151,6 @@ const StudentPreForm = () => {
       return;
     }
 
-    if (finalGuardians.length === 0) {
-      setError('Informe pelo menos uma filiação para o aluno.');
-      return;
-    }
-
     if (!formData.school_id) {
       setError('Selecione uma escola cadastrada para o aluno.');
       return;
@@ -196,10 +160,7 @@ const StudentPreForm = () => {
       setSaving(true);
       setError('');
 
-      const payload = {
-        ...formData,
-        guardians: finalGuardians,
-      };
+      const payload = { ...formData };
 
       if (isEditMode) {
         await studentAPI.updateStudent(id, payload);
@@ -329,43 +290,6 @@ const StudentPreForm = () => {
               />
             </label>
           </div>
-
-          <label>
-            Filiação(ões)
-            <div className="student-pre-guardians-box">
-              <div className="student-pre-guardians-list">
-                {(formData.guardians || []).map((guardian, idx) => (
-                  <span key={`${guardian}-${idx}`} className="student-pre-guardian-tag">
-                    {guardian}
-                    {!isViewMode && (
-                      <button
-                        type="button"
-                        className="student-pre-guardian-remove"
-                        onClick={() => handleRemoveGuardian(guardian)}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-
-              {!isViewMode && (
-                <div className="student-pre-guardians-input">
-                  <input
-                    type="text"
-                    value={guardianInput}
-                    onChange={(event) => setGuardianInput(event.target.value)}
-                    onKeyDown={(event) => event.key === 'Enter' && handleAddGuardian(event)}
-                    placeholder="Nome do responsável"
-                  />
-                  <button type="button" onClick={handleAddGuardian}>
-                    + Adicionar
-                  </button>
-                </div>
-              )}
-            </div>
-          </label>
 
           <label>
             Diagnóstico

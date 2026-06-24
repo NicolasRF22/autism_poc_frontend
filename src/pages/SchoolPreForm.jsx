@@ -5,8 +5,6 @@ import './SchoolPreForm.css';
 
 const emptyForm = {
   name: '',
-  cnpj: '',
-  institution_type: '',
   municipio_id: '',
   notes: '',
 };
@@ -68,8 +66,6 @@ const SchoolPreForm = () => {
         const data = await schoolAPI.getSchool(id);
         setFormData({
           name: data.name || '',
-          cnpj: data.cnpj || '',
-          institution_type: data.institution_type || '',
           municipio_id: data.municipio_id || '',
           notes: data.notes || '',
         });
@@ -109,8 +105,6 @@ const SchoolPreForm = () => {
 
     const payload = {
       name: formData.name,
-      cnpj: formData.cnpj,
-      institution_type: formData.institution_type,
       municipio_id: formData.municipio_id,
       address: {
         city: municipalityLabel,
@@ -178,30 +172,6 @@ const SchoolPreForm = () => {
               required
             />
           </label>
-
-          <div className="school-pre-row">
-            <label>
-              CNPJ
-              <input
-                type="text"
-                name="cnpj"
-                value={formData.cnpj}
-                onChange={handleChange}
-                disabled={isViewMode}
-              />
-            </label>
-
-            <label>
-              Tipo de instituição
-              <input
-                type="text"
-                name="institution_type"
-                value={formData.institution_type}
-                onChange={handleChange}
-                disabled={isViewMode}
-              />
-            </label>
-          </div>
 
           <label>
             Município *

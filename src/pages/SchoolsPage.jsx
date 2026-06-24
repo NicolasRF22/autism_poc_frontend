@@ -185,8 +185,6 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>CNPJ</th>
-                <th>Tipo</th>
                 <th>Cidade</th>
                 <th>Última Atualização</th>
                 <th>Ações</th>
@@ -196,8 +194,6 @@ const SchoolsPage = ({ mode = 'pre-registration' }) => {
               {(isSchoolRegistrationMode ? completedSchoolRegistrations : schools).map((school) => (
                 <tr key={school.id}>
                   <td>{school.name}</td>
-                  <td>{school.cnpj || '-'}</td>
-                  <td>{school.institution_type || '-'}</td>
                   <td>{school.city || '-'}</td>
                   <td>{formatDate(school.updated_at)}</td>
                   <td className="actions-cell">

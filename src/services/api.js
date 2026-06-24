@@ -152,6 +152,11 @@ export const authAPI = {
     return response.data;
   },
 
+  changePassword: async (userId, password) => {
+    const response = await api.put(`/auth/users/${userId}/password`, { password });
+    return response.data;
+  },
+
   getAuditEvents: async (limit = 200) => {
     const response = await api.get('/audit/events', { params: { limit } });
     return response.data;

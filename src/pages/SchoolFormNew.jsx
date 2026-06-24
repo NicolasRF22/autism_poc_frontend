@@ -21,16 +21,10 @@ const SchoolFormNew = () => {
   
   // Seção 1: Dados Cadastrais
   const [name, setName] = useState('');
-  const [cnpj, setCnpj] = useState('');
-  const [institutionType, setInstitutionType] = useState('');
   const [operatingHours, setOperatingHours] = useState('');
-  const [address, setAddress] = useState('');
   const [municipioId, setMunicipioId] = useState('');
   const [municipalities, setMunicipalities] = useState([]);
   const [municipalitiesLoading, setMunicipalitiesLoading] = useState(true);
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [website, setWebsite] = useState('');
 
   // Seção 2: Estrutura e Capacidade
   const [educationLevels, setEducationLevels] = useState([]);
@@ -130,9 +124,7 @@ const SchoolFormNew = () => {
     const userMunicipioId = String(currentUser?.municipio_id || '').trim();
     if (!userMunicipioId) return;
 
-    const matchedMunicipality = municipalities.find((item) => item.id === userMunicipioId);
     setMunicipioId(userMunicipioId);
-    setAddress(matchedMunicipality?.name || userMunicipioId);
   }, [isSecretariaScoped, id, currentUser?.municipio_id, municipalities]);
 
   const loadSchool = async () => {
@@ -141,20 +133,11 @@ const SchoolFormNew = () => {
       const response = await fetch(`${API_BASE_URL}/schools/${id}`);
       if (!response.ok) throw new Error('Erro ao carregar escola');
       const data = await response.json();
-      const addressValue = typeof data.address === 'object'
-        ? (data.address?.city || '')
-        : (data.address || data.city || '');
-      
+
       // Seção 1
       setName(data.name || '');
-      setCnpj(data.cnpj || '');
-      setInstitutionType(data.institutionType || data.institution_type || '');
       setOperatingHours(data.operatingHours || '');
       setMunicipioId(data.municipio_id || '');
-      setAddress(addressValue);
-      setPhone(data.phone || '');
-      setEmail(data.email || '');
-      setWebsite(data.website || '');
       
       // Seção 2
       setEducationLevels(data.educationLevels || []);
@@ -235,7 +218,7 @@ const SchoolFormNew = () => {
   const validateStep = (step) => {
     switch (step) {
       case 0:
-        return name.trim() !== '' && cnpj.trim() !== '';
+        return name.trim() !== '';
       case 1:
         return educationLevels.length > 0;
       default:
@@ -265,15 +248,9 @@ const SchoolFormNew = () => {
       return;
     }
 
-    const normalizedAddress = {
-      city: String(address || '').trim(),
-    };
-
     const schoolData = {
-      name, cnpj, institutionType, operatingHours, phone, email, website,
-      institution_type: institutionType,
+      name, operatingHours,
       municipio_id: String(municipioId || '').trim(),
-      address: normalizedAddress,
       educationLevels, totalStudents, teaStudents, maxTeaCapacity, classrooms,
       multifunctionalRooms, sensorySpaces, accessibility,
       totalTeachers, specialEdTeachers, teaTrainedTeachers, multidisciplinaryTeam,
@@ -346,14 +323,8 @@ const SchoolFormNew = () => {
           </div>
           <div className="review-content">
             <p><strong>Nome:</strong> {name || '(não informado)'}</p>
-            <p><strong>CNPJ:</strong> {cnpj || '(não informado)'}</p>
-            <p><strong>Tipo:</strong> {institutionType || '(não informado)'}</p>
             <p><strong>Horário:</strong> {operatingHours || '(não informado)'}</p>
             <p><strong>Município:</strong> {municipioId || '(não informado)'}</p>
-            <p><strong>Endereço:</strong> {address || '(não informado)'}</p>
-            <p><strong>Telefone:</strong> {phone || '(não informado)'}</p>
-            <p><strong>E-mail:</strong> {email || '(não informado)'}</p>
-            <p><strong>Site:</strong> {website || '(não informado)'}</p>
           </div>
         </div>
 
@@ -534,32 +505,6 @@ const SchoolFormNew = () => {
             </div>
 
             <div className="form-group">
-              <label>CNPJ *</label>
-              <input
-                type="text"
-                value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
-                placeholder="00.000.000/0000-00"
-                disabled={isViewMode}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Tipo de Instituição</label>
-              <select
-                value={institutionType}
-                onChange={(e) => setInstitutionType(e.target.value)}
-                disabled={isViewMode}
-              >
-                <option value="">Selecione...</option>
-                <option value="Pública">Pública</option>
-                <option value="Privada">Privada</option>
-                <option value="Filantrópica">Filantrópica</option>
-              </select>
-            </div>
-
-            <div className="form-group">
               <label>Horário de Funcionamento</label>
               <input
                 type="text"
@@ -577,12 +522,6 @@ const SchoolFormNew = () => {
                 onChange={(e) => {
                   const nextMunicipioId = e.target.value;
                   setMunicipioId(nextMunicipioId);
-                  if (!isSecretariaScoped) {
-                    const matchedMunicipality = municipalities.find((item) => item.id === nextMunicipioId);
-                    if (matchedMunicipality?.name) {
-                      setAddress(matchedMunicipality.name);
-                    }
-                  }
                 }}
                 disabled={isViewMode || isSecretariaScoped || municipalitiesLoading}
                 required
@@ -596,51 +535,6 @@ const SchoolFormNew = () => {
               </select>
             </div>
 
-            <div className="form-group">
-              <label>Endereço completo</label>
-              <textarea
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Rua, Número, Bairro, Cidade - Estado, CEP"
-                rows="3"
-                disabled={isViewMode || isSecretariaScoped}
-              />
-              {isSecretariaScoped && (
-                <small>Campo definido automaticamente pelo município da secretaria.</small>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>Telefone para contato</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(XX) 9XXXX-XXXX"
-                disabled={isViewMode}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>E-mail institucional</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isViewMode}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Site</label>
-              <input
-                type="text"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="https://www.exemplo.com.br"
-                disabled={isViewMode}
-              />
-            </div>
           </div>
         );
 
