@@ -156,7 +156,7 @@ const DiaryEntry = () => {
     try {
       if (!resolvedStudentId) {
         setAvailableTeachers([]);
-        setTeachers([]);
+        if (!isEditMode) setTeachers([]);
         return;
       }
 
@@ -164,15 +164,17 @@ const DiaryEntry = () => {
       const linkedTeachers = extractTeachersFromStudent(student);
       setAvailableTeachers(linkedTeachers);
 
-      if (linkedTeachers.length > 0) {
-        setTeachers([linkedTeachers[0]]);
-      } else {
-        setTeachers([]);
+      if (!isEditMode) {
+        if (linkedTeachers.length > 0) {
+          setTeachers([linkedTeachers[0]]);
+        } else {
+          setTeachers([]);
+        }
       }
     } catch (err) {
       console.error('Erro ao carregar docentes vinculados:', err);
       setAvailableTeachers([]);
-      setTeachers([]);
+      if (!isEditMode) setTeachers([]);
     }
   };
 
