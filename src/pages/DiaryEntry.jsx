@@ -3,6 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './DiaryEntry.css';
 import { buildAuthenticatedUrl, diaryAPI, studentAPI } from '../services/api';
 
+const _studentCache = new Map(); // { id: { data, expiresAt } }
+const STUDENT_CACHE_TTL_MS = 5 * 60 * 1000;
+
 const QUESTIONS = [
   { id: 'lanchou', text: 'Lanchou?' },
   { id: 'participou_brincadeira', text: 'Participou da brincadeira/atividade coletiva?' },
@@ -153,6 +156,13 @@ const DiaryEntry = () => {
   }, [entryIdParam, isEditMode, initialStudentId, studentName]);
 
   const loadLinkedTeachers = async () => {
+    const stateTeachers = location.state?.linkedTeachers;
+    if (Array.isArray(stateTeachers) && stateTeachers.length > 0) {
+      setAvailableTeachers(stateTeachers);
+      if (!isEditMode) setTeachers([stateTeachers[0]]);
+      return;
+    }
+
     try {
       if (!resolvedStudentId) {
         setAvailableTeachers([]);
@@ -160,7 +170,15 @@ const DiaryEntry = () => {
         return;
       }
 
-      const student = await studentAPI.getStudent(resolvedStudentId);
+      let student;
+      const cached = _studentCache.get(resolvedStudentId);
+      if (cached && Date.now() < cached.expiresAt) {
+        student = cached.data;
+      } else {
+        student = await studentAPI.getStudent(resolvedStudentId);
+        _studentCache.set(resolvedStudentId, { data: student, expiresAt: Date.now() + STUDENT_CACHE_TTL_MS });
+      }
+
       const linkedTeachers = extractTeachersFromStudent(student);
       setAvailableTeachers(linkedTeachers);
 

@@ -177,6 +177,12 @@
   border-color: #667eea;
 }
 
+.date-range-separator {
+  font-size: 0.85rem;
+  color: #666;
+  white-space: nowrap;
+}
+
 .filter-results {
   background: #e8f4f8;
   color: #2c3e50;

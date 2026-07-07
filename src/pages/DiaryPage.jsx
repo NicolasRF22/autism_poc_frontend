@@ -65,8 +65,9 @@ const DiaryPage = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentEntries, setStudentEntries] = useState([]);
   const [filteredEntries, setFilteredEntries] = useState([]);
-  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'today', 'week', 'month', 'custom'
+  const [dateFilter, setDateFilter] = useState('week'); // 'all', 'today', 'week', 'month', 'custom'
   const [customDate, setCustomDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importStudentName, setImportStudentName] = useState('');
@@ -88,55 +89,24 @@ const DiaryPage = () => {
   const location = useLocation();
   const currentRole = getStoredUser()?.role || '';
   const canEditDiary = ['admin', 'professor', 'avaliador'].includes(currentRole);
+  const canDeleteDiary = currentRole === 'admin';
 
   const queryParams = new URLSearchParams(location.search);
   const autoStudentName = queryParams.get('student') || '';
   const autoStudentId = queryParams.get('studentId') || '';
 
   useEffect(() => {
-    loadStudents();
-  }, []);
-
-  useEffect(() => {
-    if (!autoStudentName || selectedStudent || students.length === 0) return;
-
-    const normalizedAutoName = normalizeName(autoStudentName);
-    const normalizedAutoId = String(autoStudentId || '').trim();
-    const match = students.find((student) => {
-      const studentId = String(student?.student_id || '').trim();
-      if (normalizedAutoId && studentId) {
-        return studentId === normalizedAutoId;
-      }
-      return normalizeName(student?.student_name) === normalizedAutoName;
-    });
-
-    if (match) {
-      handleStudentClick(match);
-      return;
+    if (autoStudentName) {
+      loadStudentDirect(autoStudentName, autoStudentId);
+      loadStudentsSilent();
+    } else {
+      loadStudents();
     }
-
-    const loadFallback = async () => {
-      try {
-        const data = await diaryAPI.getStudentEntries(autoStudentName);
-        setStudentEntries(data);
-        setSelectedStudent({
-          student_name: autoStudentName,
-          student_id: normalizedAutoId || null,
-          last_teachers: data?.[0]?.teachers || [],
-          last_date: data?.[0]?.diary_date || null,
-          total_entries: data.length,
-        });
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    loadFallback();
-  }, [autoStudentName, autoStudentId, selectedStudent, students]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     applyDateFilter();
-  }, [studentEntries, dateFilter, customDate]);
+  }, [studentEntries, dateFilter, customDate, customEndDate]);
 
   useEffect(() => {
     if (!selectedStudent || studentEntries.length === 0) {
@@ -201,13 +171,20 @@ const DiaryPage = () => {
         });
         break;
       
-      case 'custom':
-        if (customDate) {
-          filtered = studentEntries.filter(entry => 
-            entry.diary_date === customDate
-          );
+      case 'custom': {
+        const start = customDate ? parseLocalDate(customDate) : null;
+        const end = customEndDate ? parseLocalDate(customEndDate) : null;
+        if (start || end) {
+          filtered = studentEntries.filter(entry => {
+            const entryDate = parseLocalDate(entry.diary_date);
+            if (!entryDate) return false;
+            if (start && entryDate < start) return false;
+            if (end && entryDate > end) return false;
+            return true;
+          });
         }
         break;
+      }
       
       case 'all':
       default:
@@ -216,6 +193,35 @@ const DiaryPage = () => {
     }
 
     setFilteredEntries(filtered);
+  };
+
+  const loadStudentDirect = async (studentName, studentId) => {
+    try {
+      setLoading(true);
+      const data = await diaryAPI.getStudentEntries(studentName);
+      setStudentEntries(data);
+      setSelectedStudent({
+        student_name: studentName,
+        student_id: studentId || null,
+        last_teachers: data?.[0]?.teachers || [],
+        last_date: data?.[0]?.diary_date || null,
+        total_entries: data.length,
+      });
+    } catch (err) {
+      console.error(err);
+      setError('Erro ao carregar diário do aluno.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStudentsSilent = async () => {
+    try {
+      const data = await diaryAPI.getStudents();
+      setStudents(data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const loadStudents = async () => {
@@ -303,8 +309,12 @@ const DiaryPage = () => {
     setSelectedStudent(null);
     setStudentEntries([]);
     setFilteredEntries([]);
-    setDateFilter('all');
+    setDateFilter('week');
     setCustomDate('');
+    setCustomEndDate('');
+    if (students.length === 0) {
+      loadStudents();
+    }
   };
 
   const handleNewEntry = () => {
@@ -313,18 +323,26 @@ const DiaryPage = () => {
     const query = selectedStudent.student_id
       ? `?studentId=${encodeURIComponent(selectedStudent.student_id)}`
       : '';
-    navigate(`/diario/${encodeURIComponent(selectedStudent.student_name)}/novo${query}`);
+    navigate(`/diario/${encodeURIComponent(selectedStudent.student_name)}/novo${query}`, {
+      state: { linkedTeachers: selectedStudent.linked_teachers || [] },
+    });
   };
 
   const handleFilterChange = (filter) => {
     setDateFilter(filter);
     if (filter !== 'custom') {
       setCustomDate('');
+      setCustomEndDate('');
     }
   };
 
   const handleCustomDateChange = (date) => {
     setCustomDate(date);
+    setDateFilter('custom');
+  };
+
+  const handleCustomEndDateChange = (date) => {
+    setCustomEndDate(date);
     setDateFilter('custom');
   };
 
@@ -403,7 +421,9 @@ const DiaryPage = () => {
       params.set('studentId', selectedStudent.student_id);
     }
     params.set('entryId', entry.id);
-    navigate(`/diario/${encodeURIComponent(selectedStudent.student_name)}/novo?${params.toString()}`);
+    navigate(`/diario/${encodeURIComponent(selectedStudent.student_name)}/novo?${params.toString()}`, {
+      state: { linkedTeachers: selectedStudent.linked_teachers || [] },
+    });
   };
 
   const openPreview = (url, title = 'Imagem') => {
@@ -560,7 +580,7 @@ const DiaryPage = () => {
                 + Nova Entrada
               </button>
             )}
-            {canEditDiary && (
+            {canDeleteDiary && (
               <button
                 onClick={() => handleDeleteDiary(selectedStudent)}
                 className="danger-diary-button"
@@ -600,12 +620,20 @@ const DiaryPage = () => {
             </button>
           </div>
           <div className="custom-date-filter">
-            <label htmlFor="customDate">Data específica:</label>
+            <label>Período:</label>
             <input
               type="date"
-              id="customDate"
+              id="customDateStart"
               value={customDate}
               onChange={(e) => handleCustomDateChange(e.target.value)}
+            />
+            <span className="date-range-separator">até</span>
+            <input
+              type="date"
+              id="customDateEnd"
+              value={customEndDate}
+              min={customDate || undefined}
+              onChange={(e) => handleCustomEndDateChange(e.target.value)}
             />
           </div>
         </div>
@@ -691,6 +719,7 @@ const DiaryPage = () => {
                     <div className="entry-images-grid">
                       {entryImagesById[entry.id].map((image) => {
                         const viewUrl = buildAuthenticatedUrl(image.view_url);
+                        const thumbUrl = buildAuthenticatedUrl(image.thumb_url || image.view_url);
                         return (
                           <button
                             type="button"
@@ -698,7 +727,7 @@ const DiaryPage = () => {
                             className="entry-image-thumb"
                             onClick={() => openPreview(viewUrl, image.file_name)}
                           >
-                            <img src={viewUrl} alt={image.file_name} />
+                            <img src={thumbUrl} alt={image.file_name} loading="lazy" />
                           </button>
                         );
                       })}
@@ -765,7 +794,7 @@ const DiaryPage = () => {
                 <p><strong>Professor(es):</strong> {student.last_teachers.join(', ')}</p>
                 <p><strong>Total de registros:</strong> {student.total_entries}</p>
               </div>
-              {canEditDiary && (
+              {canDeleteDiary && (
                 <button
                   className="danger-diary-button card-delete-diary"
                   onClick={(e) => {
