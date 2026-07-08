@@ -97,7 +97,7 @@
 .admin-usage-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1120px;
+  min-width: 1260px;
 }
 
 .admin-usage-table th,
@@ -232,4 +232,82 @@
 .status-sem_limite_configurado {
   background: #e5e7eb;
   color: #374151;
+}
+
+.admin-usage-totals-row td {
+  font-weight: 700;
+  background: #f1f5f9;
+  border-top: 2px solid #cbd5e1;
+  color: #1f2937;
+  position: sticky;
+  bottom: 0;
+}
+
+.admin-usage-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.admin-usage-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-usage-filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.admin-usage-filter-group input[type="date"],
+.admin-usage-filter-group select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1f2937;
+  background: #fff;
+  min-width: 140px;
+}
+
+.admin-usage-filter-group select {
+  min-width: 200px;
+}
+
+.admin-usage-filter-clear {
+  align-self: flex-end;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-usage-filter-clear:hover {
+  background: #fee2e2;
+}
+
+.admin-usage-empty-filter {
+  text-align: center;
+  color: #6b7280;
+  padding: 24px !important;
+  font-style: italic;
+}
+
+.admin-usage-cost-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #166534;
 }

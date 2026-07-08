@@ -32,7 +32,7 @@ const SchoolFormNew = () => {
   const [educationLevels, setEducationLevels] = useState([]);
   const [totalStudents, setTotalStudents] = useState('');
   const [teaStudents, setTeaStudents] = useState('');
-  const [maxTeaCapacity, setMaxTeaCapacity] = useState('');
+
   const [classrooms, setClassrooms] = useState('');
   const [multifunctionalRooms, setMultifunctionalRooms] = useState('');
   const [sensorySpaces, setSensorySpaces] = useState('');
@@ -105,7 +105,7 @@ const SchoolFormNew = () => {
         savedAt: new Date().toISOString(),
         currentStep,
         name, operatingHours, municipioId,
-        educationLevels, totalStudents, teaStudents, maxTeaCapacity, classrooms,
+        educationLevels, totalStudents, teaStudents, classrooms,
         multifunctionalRooms, sensorySpaces, accessibility,
         totalTeachers, specialEdTeachers, teaTrainedTeachers, multidisciplinaryTeam,
         trainingFrequency, methodologies, mediators, studentMediatorRatio,
@@ -132,7 +132,7 @@ const SchoolFormNew = () => {
     setEducationLevels(draft.educationLevels || []);
     setTotalStudents(draft.totalStudents || '');
     setTeaStudents(draft.teaStudents || '');
-    setMaxTeaCapacity(draft.maxTeaCapacity || '');
+
     setClassrooms(draft.classrooms || '');
     setMultifunctionalRooms(draft.multifunctionalRooms || '');
     setSensorySpaces(draft.sensorySpaces || '');
@@ -228,7 +228,7 @@ const SchoolFormNew = () => {
       setEducationLevels(data.educationLevels || []);
       setTotalStudents(data.totalStudents || '');
       setTeaStudents(data.teaStudents || '');
-      setMaxTeaCapacity(data.maxTeaCapacity || '');
+
       setClassrooms(data.classrooms || '');
       setMultifunctionalRooms(data.multifunctionalRooms || '');
       setSensorySpaces(data.sensorySpaces || '');
@@ -347,7 +347,7 @@ const SchoolFormNew = () => {
     const schoolData = {
       name, operatingHours,
       municipio_id: String(municipioId || '').trim(),
-      educationLevels, totalStudents, teaStudents, maxTeaCapacity, classrooms,
+      educationLevels, totalStudents, teaStudents, classrooms,
       multifunctionalRooms, sensorySpaces, accessibility,
       totalTeachers, specialEdTeachers, teaTrainedTeachers, multidisciplinaryTeam,
       trainingFrequency, methodologies, mediators, studentMediatorRatio,
@@ -439,7 +439,7 @@ const SchoolFormNew = () => {
             <p><strong>Níveis de ensino:</strong> {educationLevels.length > 0 ? educationLevels.join(', ') : '(não informado)'}</p>
             <p><strong>Total de alunos:</strong> {totalStudents || '(não informado)'}</p>
             <p><strong>Alunos com TEA:</strong> {teaStudents || '(não informado)'}</p>
-            <p><strong>Capacidade máxima TEA:</strong> {maxTeaCapacity || '(não informado)'}</p>
+
             <p><strong>Salas de aula:</strong> {classrooms || '(não informado)'}</p>
             <p><strong>Salas multifuncionais:</strong> {multifunctionalRooms || '(não informado)'}</p>
             <p><strong>Espaços sensoriais:</strong> {sensorySpaces || '(não informado)'}</p>
@@ -673,16 +673,6 @@ const SchoolFormNew = () => {
                 type="number"
                 value={teaStudents}
                 onChange={(e) => setTeaStudents(e.target.value)}
-                disabled={isViewMode}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Capacidade máxima para alunos com TEA</label>
-              <input
-                type="number"
-                value={maxTeaCapacity}
-                onChange={(e) => setMaxTeaCapacity(e.target.value)}
                 disabled={isViewMode}
               />
             </div>

@@ -7,6 +7,21 @@ const formatValue = (value) => (value === null || value === undefined ? 'Não co
 const formatPercent = (value) => (value === null || value === undefined ? '—' : `${value.toFixed(2)}%`);
 const formatNullableValue = (value) => (value === null || value === undefined ? '—' : value.toLocaleString('pt-BR'));
 
+const formatCost = (usd) => {
+  if (usd === null || usd === undefined || Number.isNaN(usd)) return '—';
+  return `$${usd.toFixed(6)}`;
+};
+
+const computeCost = (item, modelPricing) => {
+  if (!modelPricing) return null;
+  const pricing = modelPricing[item.model];
+  if (!pricing) return null;
+  return (
+    ((item.input_tokens || 0) / 1_000_000) * pricing.input_per_1m +
+    ((item.output_tokens || 0) / 1_000_000) * pricing.output_per_1m
+  );
+};
+
 const clampPercent = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
   const numeric = Number(value);
@@ -41,9 +56,11 @@ const formatOperationLabel = (operation) => {
     rag_chat_query_embedding: 'Chat RAG (embedding da pergunta)',
     pei_query_embedding: 'PEI (embedding da busca)',
     rag_upload_document_embedding: 'Upload RAG (embeddings dos chunks)',
-    rag_reindex_document_embedding: 'Reindexação RAG (embeddings dos chunks)',
+    rag_reindex_document_embedding: 'Reindexação RAG (reindexação de chunks)',
   };
-  return labels[operation] || operation;
+  // Logs antigos gravavam "operacao:task_type" — extraímos apenas a base
+  const base = (operation || '').split(':')[0];
+  return labels[base] || operation;
 };
 
 const statusLabel = {
@@ -66,6 +83,10 @@ const AdminUsagePage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterOperation, setFilterOperation] = useState('');
+  const [filterModel, setFilterModel] = useState('');
 
   const loadData = async () => {
     try {
@@ -86,6 +107,33 @@ const AdminUsagePage = () => {
   }, []);
 
   const usageHistory = Array.isArray(data?.history) ? data.history : [];
+
+  const uniqueOperations = [...new Set(usageHistory.map((item) => (item.operation || '').split(':')[0]).filter(Boolean))].sort();
+  const uniqueModels = [...new Set(usageHistory.map((item) => item.model).filter(Boolean))].sort();
+
+  const filteredHistory = usageHistory.filter((item) => {
+    if (filterOperation) {
+      const base = (item.operation || '').split(':')[0];
+      if (base !== filterOperation) return false;
+    }
+    if (filterModel && item.model !== filterModel) return false;
+    if (filterDateFrom || filterDateTo) {
+      if (!item.timestamp) return false;
+      const ts = new Date(item.timestamp);
+      if (filterDateFrom && ts < new Date(`${filterDateFrom}T00:00:00`)) return false;
+      if (filterDateTo && ts > new Date(`${filterDateTo}T23:59:59`)) return false;
+    }
+    return true;
+  });
+
+  const hasActiveFilter = filterDateFrom || filterDateTo || filterOperation || filterModel;
+
+  const clearFilters = () => {
+    setFilterDateFrom('');
+    setFilterDateTo('');
+    setFilterOperation('');
+    setFilterModel('');
+  };
 
   return (
     <div className="admin-usage-page">
@@ -231,36 +279,113 @@ const AdminUsagePage = () => {
           {!usageHistory.length ? (
             <p>Nenhum log de uso registrado ainda.</p>
           ) : (
-            <div className="admin-usage-table-wrapper-scrollable">
-              <table className="admin-usage-table admin-usage-table-operations">
-                <thead>
-                  <tr>
-                    <th>Data/Hora</th>
-                    <th>Modelo</th>
-                    <th>Operação</th>
-                    <th>Requisições</th>
-                    <th>Duração (ms)</th>
-                    <th>Tokens entrada</th>
-                    <th>Tokens saída</th>
-                    <th>Tokens total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usageHistory.map((item, index) => (
-                    <tr key={`${item.timestamp || 'ts'}-${item.model || 'model'}-${item.operation || 'op'}-${index}`}>
-                      <td>{item.timestamp ? new Date(item.timestamp).toLocaleString('pt-BR') : '—'}</td>
-                      <td>{item.model || '—'}</td>
-                      <td>{formatOperationLabel(item.operation)}</td>
-                      <td>{formatValue(1)}</td>
-                      <td>{formatNullableValue(item.duration_ms)}</td>
-                      <td>{formatValue(item.input_tokens)}</td>
-                      <td>{formatValue(item.output_tokens)}</td>
-                      <td>{formatValue(item.total_tokens)}</td>
+            <>
+              <div className="admin-usage-filters">
+                <div className="admin-usage-filter-group">
+                  <label htmlFor="filter-date-from">De</label>
+                  <input
+                    id="filter-date-from"
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={(e) => setFilterDateFrom(e.target.value)}
+                  />
+                </div>
+                <div className="admin-usage-filter-group">
+                  <label htmlFor="filter-date-to">Até</label>
+                  <input
+                    id="filter-date-to"
+                    type="date"
+                    value={filterDateTo}
+                    onChange={(e) => setFilterDateTo(e.target.value)}
+                  />
+                </div>
+                <div className="admin-usage-filter-group">
+                  <label htmlFor="filter-operation">Operação</label>
+                  <select id="filter-operation" value={filterOperation} onChange={(e) => setFilterOperation(e.target.value)}>
+                    <option value="">Todas</option>
+                    {uniqueOperations.map((op) => (
+                      <option key={op} value={op}>{formatOperationLabel(op)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="admin-usage-filter-group">
+                  <label htmlFor="filter-model">Modelo</label>
+                  <select id="filter-model" value={filterModel} onChange={(e) => setFilterModel(e.target.value)}>
+                    <option value="">Todos</option>
+                    {uniqueModels.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                {hasActiveFilter && (
+                  <button type="button" className="admin-usage-filter-clear" onClick={clearFilters}>
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
+
+              <div className="admin-usage-table-wrapper-scrollable">
+                <table className="admin-usage-table admin-usage-table-operations">
+                  <thead>
+                    <tr>
+                      <th>Data/Hora</th>
+                      <th>Modelo</th>
+                      <th>Operação</th>
+                      <th>Usuário</th>
+                      <th>Duração (ms)</th>
+                      <th>Tokens entrada</th>
+                      <th>Tokens saída</th>
+                      <th>Tokens total</th>
+                      <th>
+                        <HeaderWithTooltip
+                          label="Custo (USD)"
+                          tooltip="Estimativa de custo em dólares com base nos preços do Gemini API (verificados em 07/2026)."
+                        />
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredHistory.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="admin-usage-empty-filter">Nenhum resultado para os filtros aplicados.</td>
+                      </tr>
+                    ) : (
+                      filteredHistory.map((item, index) => (
+                        <tr key={`${item.timestamp || 'ts'}-${item.model || 'model'}-${item.operation || 'op'}-${index}`}>
+                          <td>{item.timestamp ? new Date(item.timestamp).toLocaleString('pt-BR') : '—'}</td>
+                          <td>{item.model || '—'}</td>
+                          <td>{formatOperationLabel(item.operation)}</td>
+                          <td>{item.username || item.user_id || '—'}</td>
+                          <td>{formatNullableValue(item.duration_ms)}</td>
+                          <td>{formatValue(item.input_tokens)}</td>
+                          <td>{formatValue(item.output_tokens)}</td>
+                          <td>{formatValue(item.total_tokens)}</td>
+                          <td className="admin-usage-cost-cell">{formatCost(computeCost(item, data?.model_pricing))}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr className="admin-usage-totals-row">
+                      <td colSpan={5}>
+                        Total ({filteredHistory.length.toLocaleString('pt-BR')}
+                        {hasActiveFilter && usageHistory.length !== filteredHistory.length
+                          ? ` de ${usageHistory.length.toLocaleString('pt-BR')}` : ''} operações)
+                      </td>
+                      <td>{formatValue(filteredHistory.reduce((acc, item) => acc + (item.input_tokens || 0), 0))}</td>
+                      <td>{formatValue(filteredHistory.reduce((acc, item) => acc + (item.output_tokens || 0), 0))}</td>
+                      <td>{formatValue(filteredHistory.reduce((acc, item) => acc + (item.total_tokens || 0), 0))}</td>
+                      <td className="admin-usage-cost-cell">
+                        {formatCost(filteredHistory.reduce((acc, item) => {
+                          const c = computeCost(item, data?.model_pricing);
+                          return acc + (c ?? 0);
+                        }, 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}

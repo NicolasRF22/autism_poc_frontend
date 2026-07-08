@@ -462,6 +462,64 @@ const DiaryPage = () => {
     setPreviewTitle(image.file_name);
   };
 
+  const handleDownloadEntry = (entry) => {
+    const attendanceLabel =
+      entry.attendance === 'falta_justificada' ? 'Falta Justificada'
+      : entry.attendance === 'falta_injustificada' ? 'Falta Injustificada'
+      : 'Presente';
+
+    const lines = [
+      'DIÁRIO DE ACOMPANHAMENTO INDIVIDUAL',
+      '='.repeat(40),
+      '',
+      `Aluno:       ${selectedStudent?.student_name || ''}`,
+      `Data:        ${formatDate(entry.diary_date, { dateOnly: true })}`,
+      `Professor(es): ${(entry.teachers || []).join(', ')}`,
+      `Registrado:  ${formatDate(entry.created_at)}`,
+      entry.last_edited_by
+        ? `Editado por: ${entry.last_edited_by} em ${formatDateTime(entry.last_edited_at)}`
+        : '',
+      `Presença:    ${attendanceLabel}`,
+      entry.attendance === 'falta_justificada' && entry.absence_explanation
+        ? `Motivo:      ${entry.absence_explanation}`
+        : '',
+    ].filter((l) => l !== '');
+
+    if (entry.attendance === 'presente') {
+      lines.push('', '-'.repeat(40), 'ATIVIDADES', '-'.repeat(40));
+      Object.entries(entry.answers || {}).forEach(([key, value]) => {
+        const label = QUESTIONS_MAP[key] || key;
+        lines.push(`${label}: ${value}`);
+      });
+    }
+
+    if (entry.open_obs) {
+      lines.push('', '-'.repeat(40), 'OBSERVAÇÕES', '-'.repeat(40));
+      lines.push(entry.open_obs);
+    }
+
+    const images = entryImagesById[entry.id] || [];
+    if (images.length > 0) {
+      lines.push('', '-'.repeat(40), 'IMAGENS', '-'.repeat(40));
+      images.forEach((img, i) => {
+        const caption = img.caption ? ` — ${img.caption}` : '';
+        lines.push(`${i + 1}. ${img.file_name}${caption}`);
+      });
+    }
+
+    lines.push('', '='.repeat(40));
+
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (selectedStudent?.student_name || 'aluno').replace(/\s+/g, '_');
+    const safeDate = (entry.diary_date || 'sem_data').replace(/\//g, '-');
+    a.href = url;
+    a.download = `diario_${safeName}_${safeDate}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const formatDateTime = (isoString) => {
     if (!isoString) return '—';
@@ -693,24 +751,35 @@ const DiaryPage = () => {
               <div key={entry.id} className="entry-card">
                 <div className="entry-header">
                   <h3>📅 {formatDate(entry.diary_date, { dateOnly: true })}</h3>
-                  {canEditDiary && (
-                    <div className="entry-actions">
+                  <div className="entry-actions">
+                    {canDeleteDiary && (
                       <button
-                        onClick={() => handleEditEntry(entry)}
-                        className="edit-button"
-                        title="Editar entrada"
+                        onClick={() => handleDownloadEntry(entry)}
+                        className="download-entry-button"
+                        title="Baixar entrada como texto"
                       >
-                        ✏️
+                        ⬇️
                       </button>
-                      <button
-                        onClick={() => handleDeleteEntry(entry.id)}
-                        className="delete-button"
-                        title="Excluir entrada"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  )}
+                    )}
+                    {canEditDiary && (
+                      <>
+                        <button
+                          onClick={() => handleEditEntry(entry)}
+                          className="edit-button"
+                          title="Editar entrada"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          className="delete-button"
+                          title="Excluir entrada"
+                        >
+                          🗑️
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="entry-info">
                   <p><strong>Professor(es):</strong> {entry.teachers.join(', ')}</p>
