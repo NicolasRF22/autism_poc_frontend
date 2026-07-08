@@ -481,10 +481,13 @@ export const diaryAPI = {
   },
 
   // Upload de imagens para uma entrada de diário
-  uploadEntryImages: async (entryId, files) => {
+  uploadEntryImages: async (entryId, files, captions = []) => {
     const formData = new FormData();
     (files || []).forEach((file) => {
       formData.append('files', file);
+    });
+    (captions || []).forEach((caption) => {
+      formData.append('captions', caption || '');
     });
     const response = await api.post(`/diary/entries/${entryId}/images`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -509,6 +512,12 @@ export const diaryAPI = {
   // Remover imagem anexada
   deleteEntryImage: async (imageId) => {
     const response = await api.delete(`/diary/images/${imageId}`);
+    return response.data;
+  },
+
+  // Atualizar legenda de uma imagem
+  updateImageCaption: async (imageId, caption) => {
+    const response = await api.patch(`/diary/images/${imageId}/caption`, { caption });
     return response.data;
   },
 

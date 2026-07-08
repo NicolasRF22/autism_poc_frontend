@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './DiaryEntry.css';
-import { buildAuthenticatedUrl, diaryAPI, studentAPI } from '../services/api';
+import { buildAuthenticatedUrl, diaryAPI, getStoredUser, studentAPI } from '../services/api';
 
 const _studentCache = new Map(); // { id: { data, expiresAt } }
 const STUDENT_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -55,13 +55,18 @@ const DiaryEntry = () => {
   const [absenceReason, setAbsenceReason] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [imageCaptions, setImageCaptions] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
+  const [existingImageCaptions, setExistingImageCaptions] = useState({});
   const [previewImage, setPreviewImage] = useState(null);
   const [previewTitle, setPreviewTitle] = useState('');
   const [resolvedStudentId, setResolvedStudentId] = useState(initialStudentId);
   const [resolvedStudentName, setResolvedStudentName] = useState(studentName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const currentRole = getStoredUser()?.role || '';
+  const isProfessor = currentRole === 'professor';
 
   const normalizeAnswerValue = (value) => {
     const raw = String(value || '').trim();
@@ -143,7 +148,11 @@ const DiaryEntry = () => {
         setAbsenceReason(entry?.absence_explanation || '');
 
         const images = await diaryAPI.listEntryImages(entryIdParam);
-        setExistingImages(Array.isArray(images) ? images : []);
+        const imgList = Array.isArray(images) ? images : [];
+        setExistingImages(imgList);
+        const captionMap = {};
+        imgList.forEach((img) => { captionMap[img.image_id] = img.caption || ''; });
+        setExistingImageCaptions(captionMap);
       } catch (err) {
         console.error('Erro ao carregar entrada:', err);
         setError(getEntryLoadErrorMessage(err));
@@ -240,6 +249,7 @@ const DiaryEntry = () => {
 
     if (validFiles.length > 0) {
       setImageFiles((prev) => [...prev, ...validFiles]);
+      setImageCaptions((prev) => [...prev, ...validFiles.map(() => '')]);
     }
   };
 
@@ -254,7 +264,31 @@ const DiaryEntry = () => {
   };
 
   const handleRemoveImage = (index) => {
-    setImageFiles((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImageCaptions((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCaptionChange = (index, value) => {
+    setImageCaptions((prev) => prev.map((c, i) => (i === index ? value : c)));
+  };
+
+  const handleExistingCaptionChange = (imageId, value) => {
+    setExistingImageCaptions((prev) => ({ ...prev, [imageId]: value }));
+  };
+
+  const handleDeleteExistingImage = async (imageId) => {
+    if (!window.confirm('Remover esta imagem da entrada?')) return;
+    try {
+      await diaryAPI.deleteEntryImage(imageId);
+      setExistingImages((prev) => prev.filter((img) => img.image_id !== imageId));
+      setExistingImageCaptions((prev) => {
+        const next = { ...prev };
+        delete next[imageId];
+        return next;
+      });
+    } catch (err) {
+      alert('Erro ao remover imagem. Tente novamente.');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -265,13 +299,12 @@ const DiaryEntry = () => {
       return;
     }
 
-    if (availableTeachers.length === 0) {
+    if (!isProfessor && availableTeachers.length === 0) {
       alert('Este aluno não possui docentes vinculados no pré-cadastro. Atualize o pré-cadastro do aluno para continuar.');
       return;
     }
-    
-    // Validação
-    if (teachers.length === 0) {
+
+    if (!isProfessor && teachers.length === 0) {
       alert('Selecione pelo menos um docente vinculado');
       return;
     }
@@ -333,9 +366,25 @@ const DiaryEntry = () => {
 
       if (entryId && imageFiles.length > 0) {
         try {
-          await diaryAPI.uploadEntryImages(entryId, imageFiles);
+          await diaryAPI.uploadEntryImages(entryId, imageFiles, imageCaptions);
         } catch (uploadErr) {
           alert('Entrada salva, mas houve erro ao enviar as imagens.');
+        }
+      }
+
+      if (isEditMode && entryId) {
+        const captionUpdates = existingImages
+          .filter((img) => {
+            const newCaption = existingImageCaptions[img.image_id] ?? '';
+            return newCaption !== (img.caption || '');
+          })
+          .map((img) => diaryAPI.updateImageCaption(img.image_id, existingImageCaptions[img.image_id] ?? ''));
+        if (captionUpdates.length > 0) {
+          try {
+            await Promise.all(captionUpdates);
+          } catch {
+            alert('Entrada salva, mas houve erro ao atualizar legendas.');
+          }
         }
       }
 
@@ -378,33 +427,35 @@ const DiaryEntry = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label>Docente(s) vinculado(s):</label>
-            <div className="teachers-container">
-              {availableTeachers.length > 0 ? (
-                <>
-                  <select
-                    multiple
-                    value={teachers}
-                    onChange={handleTeacherSelectionChange}
-                    className="teachers-select"
-                    size={Math.min(Math.max(availableTeachers.length, 3), 6)}
-                  >
-                    {availableTeachers.map((teacher) => (
-                      <option key={teacher} value={teacher}>
-                        {teacher}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="teachers-help">Segure Ctrl (Windows) para selecionar mais de um docente.</small>
-                </>
-              ) : (
-                <div className="no-teachers-warning">
-                  ⚠️ Nenhum docente vinculado ao aluno no pré-cadastro.
-                </div>
-              )}
+          {!isProfessor && (
+            <div className="form-group">
+              <label>Docente(s) vinculado(s):</label>
+              <div className="teachers-container">
+                {availableTeachers.length > 0 ? (
+                  <>
+                    <select
+                      multiple
+                      value={teachers}
+                      onChange={handleTeacherSelectionChange}
+                      className="teachers-select"
+                      size={Math.min(Math.max(availableTeachers.length, 3), 6)}
+                    >
+                      {availableTeachers.map((teacher) => (
+                        <option key={teacher} value={teacher}>
+                          {teacher}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="teachers-help">Segure Ctrl (Windows) para selecionar mais de um docente.</small>
+                  </>
+                ) : (
+                  <div className="no-teachers-warning">
+                    ⚠️ Nenhum docente vinculado ao aluno no pré-cadastro.
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="form-group">
             <label>Dia Letivo:</label>
@@ -522,6 +573,13 @@ const DiaryEntry = () => {
                     >
                       <img src={previewUrl} alt={`Imagem ${index + 1}`} />
                     </button>
+                    <input
+                      type="text"
+                      className="image-caption-input"
+                      placeholder="Legenda (opcional)"
+                      value={imageCaptions[index] || ''}
+                      onChange={(e) => handleCaptionChange(index, e.target.value)}
+                    />
                     <button
                       type="button"
                       className="image-remove-button"
@@ -547,7 +605,20 @@ const DiaryEntry = () => {
                       >
                         <img src={viewUrl} alt={image.file_name} />
                       </button>
-                      <span className="image-file-name">{image.file_name}</span>
+                      <input
+                        type="text"
+                        className="image-caption-input"
+                        placeholder="Legenda (opcional)"
+                        value={existingImageCaptions[image.image_id] ?? (image.caption || '')}
+                        onChange={(e) => handleExistingCaptionChange(image.image_id, e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="image-remove-button"
+                        onClick={() => handleDeleteExistingImage(image.image_id)}
+                      >
+                        Remover
+                      </button>
                     </div>
                   );
                 })}

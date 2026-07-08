@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { buildAuthenticatedUrl, diaryAPI, getStoredUser, studentAPI } from '../services/api';
 import './DiaryPage.css';
@@ -85,6 +85,9 @@ const DiaryPage = () => {
   const [entryImagesById, setEntryImagesById] = useState({});
   const [previewImage, setPreviewImage] = useState(null);
   const [previewTitle, setPreviewTitle] = useState('');
+  const [previewImages, setPreviewImages] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const _preloadCache = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
   const currentRole = getStoredUser()?.role || '';
@@ -426,14 +429,45 @@ const DiaryPage = () => {
     });
   };
 
-  const openPreview = (url, title = 'Imagem') => {
-    setPreviewImage(url);
-    setPreviewTitle(title);
+  const openPreview = (images, index) => {
+    const image = images[index];
+    setPreviewImages(images);
+    setPreviewIndex(index);
+    setPreviewImage(buildAuthenticatedUrl(image.view_url));
+    setPreviewTitle(image.file_name);
+
+    // Pré-carrega todas as imagens da entrada e mantém referências no ref
+    // para evitar garbage collection cancelar os requests
+    _preloadCache.current = images.map((img) => {
+      const el = new window.Image();
+      el.src = buildAuthenticatedUrl(img.view_url);
+      return el;
+    });
   };
 
   const closePreview = () => {
     setPreviewImage(null);
     setPreviewTitle('');
+    setPreviewImages([]);
+    setPreviewIndex(0);
+    _preloadCache.current = [];
+  };
+
+  const navigatePreview = (direction) => {
+    const newIndex = previewIndex + direction;
+    if (newIndex < 0 || newIndex >= previewImages.length) return;
+    const image = previewImages[newIndex];
+    setPreviewIndex(newIndex);
+    setPreviewImage(buildAuthenticatedUrl(image.view_url));
+    setPreviewTitle(image.file_name);
+  };
+
+
+  const formatDateTime = (isoString) => {
+    if (!isoString) return '—';
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '—';
+    return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
   };
 
   const formatDate = (dateString, { dateOnly = false } = {}) => {
@@ -681,6 +715,11 @@ const DiaryPage = () => {
                 <div className="entry-info">
                   <p><strong>Professor(es):</strong> {entry.teachers.join(', ')}</p>
                   <p><strong>Registrado em:</strong> {formatDate(entry.created_at)}</p>
+                  {entry.last_edited_by && (
+                    <p className="entry-edited-info">
+                      <em>Editado por: {entry.last_edited_by} em {formatDateTime(entry.last_edited_at)}</em>
+                    </p>
+                  )}
                   <p><strong>Presença:</strong> {entry.attendance === 'falta_justificada'
                     ? 'Falta Justificada'
                     : entry.attendance === 'falta_injustificada'
@@ -717,18 +756,21 @@ const DiaryPage = () => {
                   <div className="entry-images">
                     <h4>Imagens:</h4>
                     <div className="entry-images-grid">
-                      {entryImagesById[entry.id].map((image) => {
-                        const viewUrl = buildAuthenticatedUrl(image.view_url);
+                      {entryImagesById[entry.id].map((image, imgIndex) => {
                         const thumbUrl = buildAuthenticatedUrl(image.thumb_url || image.view_url);
                         return (
-                          <button
-                            type="button"
-                            key={image.image_id}
-                            className="entry-image-thumb"
-                            onClick={() => openPreview(viewUrl, image.file_name)}
-                          >
-                            <img src={thumbUrl} alt={image.file_name} loading="lazy" />
-                          </button>
+                          <div key={image.image_id} className="entry-image-thumb-wrapper">
+                            <button
+                              type="button"
+                              className="entry-image-thumb"
+                              onClick={() => openPreview(entryImagesById[entry.id], imgIndex)}
+                            >
+                              <img src={thumbUrl} alt={image.file_name} loading="lazy" />
+                            </button>
+                            {image.caption && (
+                              <span className="entry-image-caption">{image.caption}</span>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -740,13 +782,41 @@ const DiaryPage = () => {
         </div>
 
         {previewImage && (
-          <div className="modal-overlay" onClick={closePreview}>
-            <div className="modal-content image-preview-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="image-preview-overlay" onClick={closePreview}>
+            <div className="image-preview-modal" onClick={(e) => e.stopPropagation()}>
               <div className="image-preview-modal-header">
                 <h3>{previewTitle}</h3>
+                {previewImages.length > 1 && (
+                  <span className="preview-counter">{previewIndex + 1} / {previewImages.length}</span>
+                )}
                 <button type="button" onClick={closePreview}>✕</button>
               </div>
-              <img src={previewImage} alt={previewTitle} />
+              <div className="image-preview-body">
+                {previewImages.length > 1 && (
+                  <button
+                    type="button"
+                    className="preview-nav-btn preview-nav-prev"
+                    onClick={() => navigatePreview(-1)}
+                    disabled={previewIndex === 0}
+                  >
+                    ‹
+                  </button>
+                )}
+                <img src={previewImage} alt={previewTitle} />
+                {previewImages.length > 1 && (
+                  <button
+                    type="button"
+                    className="preview-nav-btn preview-nav-next"
+                    onClick={() => navigatePreview(1)}
+                    disabled={previewIndex === previewImages.length - 1}
+                  >
+                    ›
+                  </button>
+                )}
+              </div>
+              {previewImages[previewIndex]?.caption && (
+                <div className="preview-caption">{previewImages[previewIndex].caption}</div>
+              )}
             </div>
           </div>
         )}

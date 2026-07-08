@@ -17,6 +17,8 @@ const StudentFormNew = () => {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState(null);
+  const draftKey = id ? `smartpei_draft_student_${id}` : null;
 
   // Seção 1: Cadastral
   const [studentName, setStudentName] = useState('');
@@ -132,6 +134,127 @@ const StudentFormNew = () => {
     'Questões Pedagógicas',
     'Revisão e Confirmação'
   ];
+
+  const saveDraft = () => {
+    if (!draftKey || isViewMode) return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        currentStep,
+        studentName, studentAge, schoolName, schoolYear, className, mainTeacher, supportTeacher,
+        likesSchool, likesSchoolObs, hasFriends, friendsNames, hasFavoriteColleague,
+        favoriteColleagueName, favoriteActivities, difficultTasks, expressNeeds,
+        asksForHelp, opinionTeachers, opinionSchoolImportance, schoolSupports,
+        satisfiedSupports, desiredSupports, specialInterests,
+        participatesActivities, activitiesFacilityDifficulty, participationLevel,
+        specificNeeds, receivesSupport, teacherExpectations, performanceEvaluation,
+        teacherConcerns, communityPerception, teacherSchoolExpectations, studentSkills,
+        aeeReason, accessibilityResources, resourcesEvaluation, classInvolvement, schoolOpinion,
+        familyOpinion, familyInvolvement, familyAwareness, familyIdentifies, familyExpectations,
+        socialInteracts, socialInitiates, socialParticipates, socialWaitsTurn, socialShares, socialObs,
+        affectiveDemonstrates, affectiveReacts, affectiveSeeksSupport, affectiveRoutineChanges, affectiveCalmDown, affectiveObs,
+        cognitiveInterest, cognitiveInstructions, cognitiveAttention, cognitiveProblems, cognitiveVisual, cognitiveObs,
+        motorFine, motorGross, motorSelfCare, motorPhysical, motorRepetitive, motorObs,
+        feedingRestricted, feedingNeedsHelp, feedingMixedFoods, feedingQuietPlace, feedingChallenging, feedingObs,
+        familyParticipates, familyCommunication, familySupport, familyCollaboration, familyOpenness, familyObs,
+        pedagogicalAdaptations, pedagogicalDevelopment,
+      }));
+    } catch (e) {
+      console.warn('Erro ao salvar rascunho:', e);
+    }
+  };
+
+  const applyDraft = (draft) => {
+    setCurrentStep(draft.currentStep || 0);
+    setStudentName(draft.studentName || '');
+    setStudentAge(draft.studentAge || '');
+    setSchoolName(draft.schoolName || '');
+    setSchoolYear(draft.schoolYear || '');
+    setClassName(draft.className || '');
+    setMainTeacher(draft.mainTeacher || '');
+    setSupportTeacher(draft.supportTeacher || '');
+    setLikesSchool(draft.likesSchool || '');
+    setLikesSchoolObs(draft.likesSchoolObs || '');
+    setHasFriends(draft.hasFriends || '');
+    setFriendsNames(draft.friendsNames || '');
+    setHasFavoriteColleague(draft.hasFavoriteColleague || '');
+    setFavoriteColleagueName(draft.favoriteColleagueName || '');
+    setFavoriteActivities(draft.favoriteActivities || '');
+    setDifficultTasks(draft.difficultTasks || '');
+    setExpressNeeds(draft.expressNeeds || '');
+    setAsksForHelp(draft.asksForHelp || '');
+    setOpinionTeachers(draft.opinionTeachers || '');
+    setOpinionSchoolImportance(draft.opinionSchoolImportance || '');
+    setSchoolSupports(draft.schoolSupports || '');
+    setSatisfiedSupports(draft.satisfiedSupports || '');
+    setDesiredSupports(draft.desiredSupports || '');
+    setSpecialInterests(draft.specialInterests || '');
+    setParticipatesActivities(draft.participatesActivities || '');
+    setActivitiesFacilityDifficulty(draft.activitiesFacilityDifficulty || '');
+    setParticipationLevel(draft.participationLevel || '');
+    setSpecificNeeds(draft.specificNeeds || '');
+    setReceivesSupport(draft.receivesSupport || '');
+    setTeacherExpectations(draft.teacherExpectations || '');
+    setPerformanceEvaluation(draft.performanceEvaluation || '');
+    setTeacherConcerns(draft.teacherConcerns || '');
+    setCommunityPerception(draft.communityPerception || '');
+    setTeacherSchoolExpectations(draft.teacherSchoolExpectations || '');
+    setStudentSkills(draft.studentSkills || '');
+    setAeeReason(draft.aeeReason || '');
+    setAccessibilityResources(draft.accessibilityResources || '');
+    setResourcesEvaluation(draft.resourcesEvaluation || '');
+    setClassInvolvement(draft.classInvolvement || '');
+    setSchoolOpinion(draft.schoolOpinion || '');
+    setFamilyOpinion(draft.familyOpinion || '');
+    setFamilyInvolvement(draft.familyInvolvement || '');
+    setFamilyAwareness(draft.familyAwareness || '');
+    setFamilyIdentifies(draft.familyIdentifies || '');
+    setFamilyExpectations(draft.familyExpectations || '');
+    setSocialInteracts(draft.socialInteracts || '');
+    setSocialInitiates(draft.socialInitiates || '');
+    setSocialParticipates(draft.socialParticipates || '');
+    setSocialWaitsTurn(draft.socialWaitsTurn || '');
+    setSocialShares(draft.socialShares || '');
+    setSocialObs(draft.socialObs || '');
+    setAffectiveDemonstrates(draft.affectiveDemonstrates || '');
+    setAffectiveReacts(draft.affectiveReacts || '');
+    setAffectiveSeeksSupport(draft.affectiveSeeksSupport || '');
+    setAffectiveRoutineChanges(draft.affectiveRoutineChanges || '');
+    setAffectiveCalmDown(draft.affectiveCalmDown || '');
+    setAffectiveObs(draft.affectiveObs || '');
+    setCognitiveInterest(draft.cognitiveInterest || '');
+    setCognitiveInstructions(draft.cognitiveInstructions || '');
+    setCognitiveAttention(draft.cognitiveAttention || '');
+    setCognitiveProblems(draft.cognitiveProblems || '');
+    setCognitiveVisual(draft.cognitiveVisual || '');
+    setCognitiveObs(draft.cognitiveObs || '');
+    setMotorFine(draft.motorFine || '');
+    setMotorGross(draft.motorGross || '');
+    setMotorSelfCare(draft.motorSelfCare || '');
+    setMotorPhysical(draft.motorPhysical || '');
+    setMotorRepetitive(draft.motorRepetitive || '');
+    setMotorObs(draft.motorObs || '');
+    setFeedingRestricted(draft.feedingRestricted || '');
+    setFeedingNeedsHelp(draft.feedingNeedsHelp || '');
+    setFeedingMixedFoods(draft.feedingMixedFoods || '');
+    setFeedingQuietPlace(draft.feedingQuietPlace || '');
+    setFeedingChallenging(draft.feedingChallenging || '');
+    setFeedingObs(draft.feedingObs || '');
+    setFamilyParticipates(draft.familyParticipates || '');
+    setFamilyCommunication(draft.familyCommunication || '');
+    setFamilySupport(draft.familySupport || '');
+    setFamilyCollaboration(draft.familyCollaboration || '');
+    setFamilyOpenness(draft.familyOpenness || '');
+    setFamilyObs(draft.familyObs || '');
+    setPedagogicalAdaptations(draft.pedagogicalAdaptations || '');
+    setPedagogicalDevelopment(draft.pedagogicalDevelopment || '');
+    setPendingDraft(null);
+  };
+
+  const discardDraft = () => {
+    if (draftKey) localStorage.removeItem(draftKey);
+    setPendingDraft(null);
+  };
 
   useEffect(() => {
     if (id) {
@@ -249,6 +372,15 @@ const StudentFormNew = () => {
       setPedagogicalAdaptations(data.pedagogicalAdaptations || '');
       setPedagogicalDevelopment(data.pedagogicalDevelopment || '');
 
+      if (!isViewMode && draftKey) {
+        try {
+          const saved = localStorage.getItem(draftKey);
+          if (saved) setPendingDraft(JSON.parse(saved));
+        } catch (e) {
+          console.warn('Erro ao ler rascunho:', e);
+        }
+      }
+
     } catch (err) {
       console.error(err);
       alert('Erro ao carregar dados do aluno');
@@ -269,6 +401,7 @@ const StudentFormNew = () => {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
+      saveDraft();
       setCurrentStep(currentStep + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -277,6 +410,7 @@ const StudentFormNew = () => {
   };
 
   const handlePrevious = () => {
+    saveDraft();
     setCurrentStep(currentStep - 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -362,6 +496,7 @@ const StudentFormNew = () => {
         });
       }
 
+      if (draftKey) localStorage.removeItem(draftKey);
       alert(isEditMode ? 'Cadastro atualizado com sucesso!' : 'Aluno cadastrado com sucesso!');
       navigate(backPath);
     } catch (err) {
@@ -1363,6 +1498,23 @@ const StudentFormNew = () => {
           Voltar
         </button>
       </div>
+
+      {pendingDraft && !isViewMode && (
+        <div className="draft-banner">
+          <span>
+            Rascunho salvo em {new Date(pendingDraft.savedAt).toLocaleString('pt-BR')} —
+            deseja continuar de onde parou?
+          </span>
+          <div className="draft-banner-actions">
+            <button type="button" className="btn-draft-restore" onClick={() => applyDraft(pendingDraft)}>
+              Continuar rascunho
+            </button>
+            <button type="button" className="btn-draft-discard" onClick={discardDraft}>
+              Descartar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Progress indicator */}
       <div className="step-indicator">

@@ -18,6 +18,8 @@ const SchoolFormNew = () => {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState(null);
+  const draftKey = id ? `smartpei_draft_school_${id}` : null;
   
   // Seção 1: Dados Cadastrais
   const [name, setName] = useState('');
@@ -95,6 +97,89 @@ const SchoolFormNew = () => {
     'Documentação',
     'Revisão e Confirmação'
   ];
+
+  const saveDraft = () => {
+    if (!draftKey || isViewMode) return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        currentStep,
+        name, operatingHours, municipioId,
+        educationLevels, totalStudents, teaStudents, maxTeaCapacity, classrooms,
+        multifunctionalRooms, sensorySpaces, accessibility,
+        totalTeachers, specialEdTeachers, teaTrainedTeachers, multidisciplinaryTeam,
+        trainingFrequency, methodologies, mediators, studentMediatorRatio,
+        curricularAdaptation, teachingMethodologies, peiProcess, evaluationProcess,
+        alternativeCommunication, visualResources, studentIntegration,
+        sensoryControl, adaptedMaterials, crisisSpaces, breakAdaptations,
+        techResources, weightedMaterials,
+        familyCommunication, meetingFrequency, homeGuidance, supportGroup, familyEvents,
+        externalTherapists, clinicPartnerships, pedagogicalTherapeuticIntegration,
+        supportNetworks, medicationProtocol,
+        certification, enrollmentDocuments, developmentReports, publicAgreements,
+        progressTracking,
+      }));
+    } catch (e) {
+      console.warn('Erro ao salvar rascunho:', e);
+    }
+  };
+
+  const applyDraft = (draft) => {
+    setCurrentStep(draft.currentStep || 0);
+    setName(draft.name || '');
+    setOperatingHours(draft.operatingHours || '');
+    setMunicipioId(draft.municipioId || '');
+    setEducationLevels(draft.educationLevels || []);
+    setTotalStudents(draft.totalStudents || '');
+    setTeaStudents(draft.teaStudents || '');
+    setMaxTeaCapacity(draft.maxTeaCapacity || '');
+    setClassrooms(draft.classrooms || '');
+    setMultifunctionalRooms(draft.multifunctionalRooms || '');
+    setSensorySpaces(draft.sensorySpaces || '');
+    setAccessibility(draft.accessibility || '');
+    setTotalTeachers(draft.totalTeachers || '');
+    setSpecialEdTeachers(draft.specialEdTeachers || '');
+    setTeaTrainedTeachers(draft.teaTrainedTeachers || '');
+    setMultidisciplinaryTeam(draft.multidisciplinaryTeam || '');
+    setTrainingFrequency(draft.trainingFrequency || '');
+    setMethodologies(draft.methodologies || '');
+    setMediators(draft.mediators || '');
+    setStudentMediatorRatio(draft.studentMediatorRatio || '');
+    setCurricularAdaptation(draft.curricularAdaptation || '');
+    setTeachingMethodologies(draft.teachingMethodologies || '');
+    setPeiProcess(draft.peiProcess || '');
+    setEvaluationProcess(draft.evaluationProcess || '');
+    setAlternativeCommunication(draft.alternativeCommunication || '');
+    setVisualResources(draft.visualResources || '');
+    setStudentIntegration(draft.studentIntegration || '');
+    setSensoryControl(draft.sensoryControl || '');
+    setAdaptedMaterials(draft.adaptedMaterials || '');
+    setCrisisSpaces(draft.crisisSpaces || '');
+    setBreakAdaptations(draft.breakAdaptations || '');
+    setTechResources(draft.techResources || '');
+    setWeightedMaterials(draft.weightedMaterials || '');
+    setFamilyCommunication(draft.familyCommunication || '');
+    setMeetingFrequency(draft.meetingFrequency || '');
+    setHomeGuidance(draft.homeGuidance || '');
+    setSupportGroup(draft.supportGroup || '');
+    setFamilyEvents(draft.familyEvents || '');
+    setExternalTherapists(draft.externalTherapists || '');
+    setClinicPartnerships(draft.clinicPartnerships || '');
+    setPedagogicalTherapeuticIntegration(draft.pedagogicalTherapeuticIntegration || '');
+    setSupportNetworks(draft.supportNetworks || '');
+    setMedicationProtocol(draft.medicationProtocol || '');
+    setCertification(draft.certification || '');
+    setEnrollmentDocuments(draft.enrollmentDocuments || '');
+    setDevelopmentReports(draft.developmentReports || '');
+    setPublicAgreements(draft.publicAgreements || '');
+    setProgressTracking(draft.progressTracking || '');
+    setPendingDraft(null);
+  };
+
+  const discardDraft = () => {
+    if (draftKey) localStorage.removeItem(draftKey);
+    setPendingDraft(null);
+  };
 
   useEffect(() => {
     if (id) {
@@ -196,7 +281,16 @@ const SchoolFormNew = () => {
       setDevelopmentReports(data.developmentReports || '');
       setPublicAgreements(data.publicAgreements || '');
       setProgressTracking(data.progressTracking || '');
-      
+
+      if (!isViewMode && draftKey) {
+        try {
+          const saved = localStorage.getItem(draftKey);
+          if (saved) setPendingDraft(JSON.parse(saved));
+        } catch (e) {
+          console.warn('Erro ao ler rascunho:', e);
+        }
+      }
+
     } catch (err) {
       console.error(err);
       alert('Erro ao carregar dados da escola');
@@ -228,6 +322,7 @@ const SchoolFormNew = () => {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
+      saveDraft();
       setCurrentStep(currentStep + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -236,6 +331,7 @@ const SchoolFormNew = () => {
   };
 
   const handlePrevious = () => {
+    saveDraft();
     setCurrentStep(currentStep - 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -291,6 +387,7 @@ const SchoolFormNew = () => {
         });
       }
 
+      if (draftKey) localStorage.removeItem(draftKey);
       alert(isEditMode ? 'Escola atualizada com sucesso!' : 'Escola cadastrada com sucesso!');
       navigate(backPath);
     } catch (err) {
@@ -1060,6 +1157,23 @@ const SchoolFormNew = () => {
           Voltar
         </button>
       </div>
+
+      {pendingDraft && !isViewMode && (
+        <div className="draft-banner">
+          <span>
+            Rascunho salvo em {new Date(pendingDraft.savedAt).toLocaleString('pt-BR')} —
+            deseja continuar de onde parou?
+          </span>
+          <div className="draft-banner-actions">
+            <button type="button" className="btn-draft-restore" onClick={() => applyDraft(pendingDraft)}>
+              Continuar rascunho
+            </button>
+            <button type="button" className="btn-draft-discard" onClick={discardDraft}>
+              Descartar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Progress indicator */}
       <div className="step-indicator">
