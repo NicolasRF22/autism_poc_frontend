@@ -28,6 +28,7 @@ const TesteRAG = () => {
   const [chatSelectedSources, setChatSelectedSources] = useState({
     vector_documents: false,
     diary: false,
+    family_diary: false,
     pdi: false,
     student_pre_registration: false,
     teachers_pre_registration: false,
@@ -37,6 +38,7 @@ const TesteRAG = () => {
   const [chatSelectedDocumentIds, setChatSelectedDocumentIds] = useState([]);
   const [chatSelectedPeiIds, setChatSelectedPeiIds] = useState([]);
   const [chatDiaryPeriod, setChatDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [chatFamilyDiaryPeriod, setChatFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const messagesEndRef = useRef(null);
   const chatLoadRequestRef = useRef(0);
 
@@ -168,6 +170,7 @@ const TesteRAG = () => {
   const [peiSelectedSources, setPeiSelectedSources] = useState({
     vector_documents: false,
     diary: false,
+    family_diary: false,
     pdi: false,
     student_pre_registration: false,
     teachers_pre_registration: false,
@@ -177,6 +180,7 @@ const TesteRAG = () => {
   const [peiSelectedDocumentIds, setPeiSelectedDocumentIds] = useState([]);
   const [peiSelectedPeiIds, setPeiSelectedPeiIds] = useState([]);
   const [peiDiaryPeriod, setPeiDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [peiFamilyDiaryPeriod, setPeiFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const [peiPrompt, setPeiPrompt] = useState('');
   const [initialPeiPrompt, setInitialPeiPrompt] = useState('');
   const [peiPromptLoading, setPeiPromptLoading] = useState(true);
@@ -518,12 +522,15 @@ const TesteRAG = () => {
     setPeiSourcesLoading(true);
     try {
       const diaryRange = computeDiaryDateRange(peiDiaryPeriod);
+      const familyDiaryRange = computeDiaryDateRange(peiFamilyDiaryPeriod);
       const data = await ragAPI.getPEISourcesPreview({
         studentId,
         studentName: selectedStudentName,
         school: selectedSchool,
         diaryStartDate: diaryRange.start,
         diaryEndDate: diaryRange.end,
+        familyDiaryStartDate: familyDiaryRange.start,
+        familyDiaryEndDate: familyDiaryRange.end,
       });
       const nextSources = data?.sources || null;
       setPeiSourcesPreview(nextSources);
@@ -538,6 +545,7 @@ const TesteRAG = () => {
           setPeiSelectedSources({
             vector_documents: false,
             diary: false,
+            family_diary: false,
             pdi: false,
             student_pre_registration: false,
             teachers_pre_registration: false,
@@ -570,12 +578,15 @@ const TesteRAG = () => {
     setChatSourcesLoading(true);
     try {
       const diaryRange = computeDiaryDateRange(chatDiaryPeriod);
+      const familyDiaryRange = computeDiaryDateRange(chatFamilyDiaryPeriod);
       const data = await ragAPI.getPEISourcesPreview({
         studentId,
         studentName: selectedStudentName,
         school: selectedSchool,
         diaryStartDate: diaryRange.start,
         diaryEndDate: diaryRange.end,
+        familyDiaryStartDate: familyDiaryRange.start,
+        familyDiaryEndDate: familyDiaryRange.end,
       });
 
       const nextSources = data?.sources || null;
@@ -591,6 +602,7 @@ const TesteRAG = () => {
           setChatSelectedSources({
             vector_documents: false,
             diary: false,
+            family_diary: false,
             pdi: false,
             student_pre_registration: false,
             teachers_pre_registration: false,
@@ -635,6 +647,8 @@ const TesteRAG = () => {
         selectedPeiIds: chatSelectedPeiIds,
         diaryStartDate: computeDiaryDateRange(chatDiaryPeriod).start,
         diaryEndDate: computeDiaryDateRange(chatDiaryPeriod).end,
+        familyDiaryStartDate: computeDiaryDateRange(chatFamilyDiaryPeriod).start,
+        familyDiaryEndDate: computeDiaryDateRange(chatFamilyDiaryPeriod).end,
       });
 
       if (data?.session_id && studentKey) {
@@ -754,6 +768,7 @@ const TesteRAG = () => {
 
     try {
       const peiDiaryRange = computeDiaryDateRange(peiDiaryPeriod);
+      const peiFamilyDiaryRange = computeDiaryDateRange(peiFamilyDiaryPeriod);
       const data = await ragAPI.generatePEI({
         student_id: peiSelectedStudentId,
         student_name: studentName.trim(),
@@ -763,6 +778,8 @@ const TesteRAG = () => {
         selected_pei_ids: peiSelectedPeiIds,
         diary_start_date: peiDiaryRange.start,
         diary_end_date: peiDiaryRange.end,
+        family_diary_start_date: peiFamilyDiaryRange.start,
+        family_diary_end_date: peiFamilyDiaryRange.end,
       });
       const clientDurationMs = Math.max(0, Math.round(performance.now() - startedAt));
       clearInterval(timer);
@@ -1180,6 +1197,17 @@ const TesteRAG = () => {
       available: Boolean(chatSourcesPreview?.diary?.included),
     },
     {
+      key: 'family_diary',
+      label: 'Diário Familiar',
+      detail: chatSourcesPreview?.family_diary?.included
+        ? formatPreviewDetail(
+            `${chatSourcesPreview.family_diary.entries_count} entrada(s)`,
+            chatSourcesPreview?.family_diary?.excerpt,
+          )
+        : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.family_diary?.included),
+    },
+    {
       key: 'pdi',
       label: 'PDI',
       detail: chatSourcesPreview?.pdi?.included
@@ -1242,6 +1270,17 @@ const TesteRAG = () => {
           )
         : 'não encontrado',
       available: Boolean(peiSourcesPreview?.diary?.included),
+    },
+    {
+      key: 'family_diary',
+      label: 'Diário Familiar',
+      detail: peiSourcesPreview?.family_diary?.included
+        ? formatPreviewDetail(
+            `${peiSourcesPreview.family_diary.entries_count} entrada(s)`,
+            peiSourcesPreview?.family_diary?.excerpt,
+          )
+        : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.family_diary?.included),
     },
     {
       key: 'pdi',
@@ -1393,6 +1432,9 @@ const TesteRAG = () => {
                         )}
                         {source.key === 'diary' && chatSelectedSources.diary && (
                           renderDiaryPeriodPicker(chatDiaryPeriod, setChatDiaryPeriod)
+                        )}
+                        {source.key === 'family_diary' && chatSelectedSources.family_diary && (
+                          renderDiaryPeriodPicker(chatFamilyDiaryPeriod, setChatFamilyDiaryPeriod)
                         )}
                         {source.key === 'linked_peis'
                           && chatSelectedSources.linked_peis
@@ -1576,6 +1618,9 @@ const TesteRAG = () => {
                           )}
                           {source.key === 'diary' && peiSelectedSources.diary && (
                             renderDiaryPeriodPicker(peiDiaryPeriod, setPeiDiaryPeriod)
+                          )}
+                          {source.key === 'family_diary' && peiSelectedSources.family_diary && (
+                            renderDiaryPeriodPicker(peiFamilyDiaryPeriod, setPeiFamilyDiaryPeriod)
                           )}
                           {source.key === 'linked_peis'
                             && peiSelectedSources.linked_peis

@@ -305,6 +305,8 @@ export const ragAPI = {
     selectedPeiIds = null,
     diaryStartDate = '',
     diaryEndDate = '',
+    familyDiaryStartDate = '',
+    familyDiaryEndDate = '',
     newSession = false,
   }) => {
     const payload = {
@@ -318,6 +320,8 @@ export const ragAPI = {
       ...(Array.isArray(selectedPeiIds) ? { selected_pei_ids: selectedPeiIds } : {}),
       ...(diaryStartDate ? { diary_start_date: diaryStartDate } : {}),
       ...(diaryEndDate ? { diary_end_date: diaryEndDate } : {}),
+      ...(familyDiaryStartDate ? { family_diary_start_date: familyDiaryStartDate } : {}),
+      ...(familyDiaryEndDate ? { family_diary_end_date: familyDiaryEndDate } : {}),
       ...(newSession ? { new_session: true } : {}),
     };
     const response = await api.post('/rag/chat', payload);
@@ -364,13 +368,23 @@ export const ragAPI = {
   },
 
   // Prévia das fontes para geração de PEI
-  getPEISourcesPreview: async ({ studentId, studentName, school, diaryStartDate = '', diaryEndDate = '' }) => {
+  getPEISourcesPreview: async ({
+    studentId,
+    studentName,
+    school,
+    diaryStartDate = '',
+    diaryEndDate = '',
+    familyDiaryStartDate = '',
+    familyDiaryEndDate = '',
+  }) => {
     const params = {};
     if (studentId) params.student_id = studentId;
     if (studentName) params.student_name = studentName;
     if (school) params.school = school;
     if (diaryStartDate) params.diary_start_date = diaryStartDate;
     if (diaryEndDate) params.diary_end_date = diaryEndDate;
+    if (familyDiaryStartDate) params.family_diary_start_date = familyDiaryStartDate;
+    if (familyDiaryEndDate) params.family_diary_end_date = familyDiaryEndDate;
     const response = await api.get('/rag/pei-sources-preview', { params });
     return response.data;
   },

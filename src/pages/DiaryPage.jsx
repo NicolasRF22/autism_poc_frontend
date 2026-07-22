@@ -112,27 +112,14 @@ const DiaryPage = () => {
   }, [studentEntries, dateFilter, customDate, customEndDate]);
 
   useEffect(() => {
-    if (!selectedStudent || studentEntries.length === 0) {
-      setEntryImagesById({});
-      return;
-    }
-
-    const loadImages = async () => {
-      const next = {};
-      await Promise.all(studentEntries.map(async (entry) => {
-        try {
-          const images = await diaryAPI.listEntryImages(entry.id);
-          next[entry.id] = Array.isArray(images) ? images : [];
-        } catch (err) {
-          console.warn('Erro ao carregar imagens da entrada:', entry.id, err);
-          next[entry.id] = [];
-        }
-      }));
-      setEntryImagesById(next);
-    };
-
-    loadImages();
-  }, [selectedStudent, studentEntries]);
+    // O backend já embute as imagens de cada entrada na resposta de getStudentEntries
+    // (evita 1 requisição por entrada — ver _diary_images_by_entry em app.py).
+    const next = {};
+    studentEntries.forEach((entry) => {
+      next[entry.id] = Array.isArray(entry.images) ? entry.images : [];
+    });
+    setEntryImagesById(next);
+  }, [studentEntries]);
 
   const applyDateFilter = () => {
     if (studentEntries.length === 0) {

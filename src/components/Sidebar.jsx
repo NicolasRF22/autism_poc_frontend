@@ -130,8 +130,11 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     menuItems.push({ path: '/teacher-student-management', label: 'Docentes x Alunos', icon: '🔗' });
   }
 
+  // Diário Familiar: qualquer role com escopo sobre o aluno pode ver (o backend já
+  // restringe por _student_visible_to_user); só quem escreve entradas é o perfil 'pais'.
+  menuItems.push({ path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' });
+
   if (role === 'admin') {
-    menuItems.push({ path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' });
     menuItems.push({ path: '/pais-alunos', label: 'Pais x Alunos', icon: '👪' });
     menuItems.push({ path: '/admin', label: 'Administração', icon: '🛡️' });
     menuItems.push({ path: '/admin/gastos', label: 'Gastos IA', icon: '💸' });

@@ -90,16 +90,12 @@ const FamilyDiaryPage = () => {
       setError('');
       const list = await familyDiaryAPI.getStudentEntries(studentId);
       const arr = Array.isArray(list) ? list : [];
-      const withImages = await Promise.all(
-        arr.map(async (entry) => {
-          try {
-            const images = await familyDiaryAPI.listEntryImages(entry.id);
-            return { ...entry, images: Array.isArray(images) ? images : [] };
-          } catch {
-            return { ...entry, images: [] };
-          }
-        }),
-      );
+      // O backend já embute as imagens de cada entrada nessa mesma resposta
+      // (evita 1 requisição por entrada — ver _family_diary_images_by_entry em app.py).
+      const withImages = arr.map((entry) => ({
+        ...entry,
+        images: Array.isArray(entry.images) ? entry.images : [],
+      }));
       setEntries(withImages);
     } catch (err) {
       console.error(err);
@@ -506,7 +502,7 @@ const FamilyDiaryPage = () => {
                 </form>
               )}
 
-              {entries.length > 0 && (
+              {!showForm && entries.length > 0 && (
                 <div className="date-filters">
                   <div className="filter-buttons">
                     <button
@@ -552,7 +548,7 @@ const FamilyDiaryPage = () => {
                 </div>
               )}
 
-              {entries.length > 0 && dateFilter !== 'all' && (
+              {!showForm && entries.length > 0 && dateFilter !== 'all' && (
                 <div className="filter-results">
                   {filteredEntries.length === 0 ? (
                     <p>Nenhuma entrada encontrada para este período</p>
@@ -562,61 +558,63 @@ const FamilyDiaryPage = () => {
                 </div>
               )}
 
-              {loadingEntries ? (
-                <p>Carregando entradas...</p>
-              ) : filteredEntries.length === 0 ? (
-                <div className="empty-state">
-                  <p>Nenhuma entrada {dateFilter !== 'all' && entries.length > 0 ? 'para este período' : 'registrada ainda'}</p>
-                  {canWrite && entries.length === 0 && <p>Clique em "Nova Entrada" para começar</p>}
-                </div>
-              ) : (
-                <div className="family-diary-feed">
-                  {filteredEntries.map((entry) => (
-                    <div key={entry.id} className="family-diary-entry-card">
-                      <div className="family-diary-entry-header">
-                        <span className="family-diary-entry-date">{formatDate(entry.entry_date)}</span>
+              {!showForm && (
+                loadingEntries ? (
+                  <p>Carregando entradas...</p>
+                ) : filteredEntries.length === 0 ? (
+                  <div className="empty-state">
+                    <p>Nenhuma entrada {dateFilter !== 'all' && entries.length > 0 ? 'para este período' : 'registrada ainda'}</p>
+                    {canWrite && entries.length === 0 && <p>Clique em "Nova Entrada" para começar</p>}
+                  </div>
+                ) : (
+                  <div className="family-diary-feed">
+                    {filteredEntries.map((entry) => (
+                      <div key={entry.id} className="family-diary-entry-card">
+                        <div className="family-diary-entry-header">
+                          <span className="family-diary-entry-date">{formatDate(entry.entry_date)}</span>
+                        </div>
+                        <p className="family-diary-entry-summary">{entry.observations}</p>
+                        <p className="family-diary-entry-author">Registrado por: {entry.author_name || '—'}</p>
+
+                        {entry.images && entry.images.length > 0 && (
+                          <div className="image-preview-grid">
+                            {entry.images.map((image) => {
+                              const thumbUrl = buildAuthenticatedUrl(image.thumb_url);
+                              const viewUrl = buildAuthenticatedUrl(image.view_url);
+                              return (
+                                <div key={image.image_id} className="image-preview-item">
+                                  <button
+                                    type="button"
+                                    className="image-preview-button"
+                                    onClick={() => openPreview(viewUrl, image.file_name)}
+                                  >
+                                    <img src={thumbUrl} alt={image.file_name} />
+                                  </button>
+                                  {image.caption && <span className="image-file-name">{image.caption}</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {canManageEntry(entry) && (
+                          <div className="family-diary-entry-actions">
+                            <button type="button" className="back-link" onClick={() => openEditForm(entry)}>
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="danger-diary-button"
+                              onClick={() => handleDeleteEntry(entry.id)}
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <p className="family-diary-entry-summary">{entry.observations}</p>
-                      <p className="family-diary-entry-author">Registrado por: {entry.author_name || '—'}</p>
-
-                      {entry.images && entry.images.length > 0 && (
-                        <div className="image-preview-grid">
-                          {entry.images.map((image) => {
-                            const thumbUrl = buildAuthenticatedUrl(image.thumb_url);
-                            const viewUrl = buildAuthenticatedUrl(image.view_url);
-                            return (
-                              <div key={image.image_id} className="image-preview-item">
-                                <button
-                                  type="button"
-                                  className="image-preview-button"
-                                  onClick={() => openPreview(viewUrl, image.file_name)}
-                                >
-                                  <img src={thumbUrl} alt={image.file_name} />
-                                </button>
-                                {image.caption && <span className="image-file-name">{image.caption}</span>}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {canManageEntry(entry) && (
-                        <div className="family-diary-entry-actions">
-                          <button type="button" className="back-link" onClick={() => openEditForm(entry)}>
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            className="danger-diary-button"
-                            onClick={() => handleDeleteEntry(entry.id)}
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )
               )}
             </>
           )}
