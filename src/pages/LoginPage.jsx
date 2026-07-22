@@ -21,7 +21,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       setLoading(true);
       const data = await authAPI.login(username.trim(), password);
       saveAuthSession({ token: data.token, user: data.user });
-      onLoginSuccess(data.user);
+      await onLoginSuccess(data.user);
     } catch (err) {
       const message = err?.response?.data?.error || 'Falha ao autenticar';
       setError(message);

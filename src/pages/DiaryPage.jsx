@@ -462,17 +462,13 @@ const DiaryPage = () => {
     setPreviewTitle(image.file_name);
   };
 
-  const handleDownloadEntry = (entry) => {
+  const buildEntryLines = (entry) => {
     const attendanceLabel =
       entry.attendance === 'falta_justificada' ? 'Falta Justificada'
       : entry.attendance === 'falta_injustificada' ? 'Falta Injustificada'
       : 'Presente';
 
     const lines = [
-      'DIÁRIO DE ACOMPANHAMENTO INDIVIDUAL',
-      '='.repeat(40),
-      '',
-      `Aluno:       ${selectedStudent?.student_name || ''}`,
       `Data:        ${formatDate(entry.diary_date, { dateOnly: true })}`,
       `Professor(es): ${(entry.teachers || []).join(', ')}`,
       `Registrado:  ${formatDate(entry.created_at)}`,
@@ -507,18 +503,80 @@ const DiaryPage = () => {
       });
     }
 
-    lines.push('', '='.repeat(40));
+    return lines;
+  };
 
-    const content = lines.join('\n');
+  const downloadTextFile = (content, filename) => {
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const safeName = (selectedStudent?.student_name || 'aluno').replace(/\s+/g, '_');
-    const safeDate = (entry.diary_date || 'sem_data').replace(/\//g, '-');
     a.href = url;
-    a.download = `diario_${safeName}_${safeDate}.txt`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadEntry = (entry) => {
+    const lines = [
+      'DIÁRIO DE ACOMPANHAMENTO INDIVIDUAL',
+      '='.repeat(40),
+      '',
+      `Aluno:       ${selectedStudent?.student_name || ''}`,
+      ...buildEntryLines(entry),
+      '',
+      '='.repeat(40),
+    ];
+
+    const safeName = (selectedStudent?.student_name || 'aluno').replace(/\s+/g, '_');
+    const safeDate = (entry.diary_date || 'sem_data').replace(/\//g, '-');
+    downloadTextFile(lines.join('\n'), `diario_${safeName}_${safeDate}.txt`);
+  };
+
+  const getPeriodLabel = () => {
+    switch (dateFilter) {
+      case 'today': return 'Hoje';
+      case 'week': return 'Última semana';
+      case 'month': return 'Último mês';
+      case 'custom': {
+        const start = customDate ? formatDate(customDate, { dateOnly: true }) : '(sem início)';
+        const end = customEndDate ? formatDate(customEndDate, { dateOnly: true }) : '(sem fim)';
+        return `${start} até ${end}`;
+      }
+      case 'all':
+      default:
+        return 'Todo o período';
+    }
+  };
+
+  const handleDownloadPeriod = () => {
+    if (filteredEntries.length === 0) {
+      alert('Nenhuma entrada no período selecionado para baixar.');
+      return;
+    }
+
+    const sortedEntries = [...filteredEntries].sort((a, b) =>
+      (a.diary_date || '').localeCompare(b.diary_date || '')
+    );
+
+    const lines = [
+      'DIÁRIO DE ACOMPANHAMENTO INDIVIDUAL',
+      '='.repeat(40),
+      '',
+      `Aluno:            ${selectedStudent?.student_name || ''}`,
+      `Período:          ${getPeriodLabel()}`,
+      `Total de registros: ${sortedEntries.length}`,
+    ];
+
+    sortedEntries.forEach((entry, index) => {
+      lines.push('', '='.repeat(40), `ENTRADA ${index + 1} DE ${sortedEntries.length}`, '='.repeat(40));
+      lines.push(...buildEntryLines(entry));
+    });
+
+    lines.push('', '='.repeat(40), 'FIM DO DOCUMENTO');
+
+    const safeName = (selectedStudent?.student_name || 'aluno').replace(/\s+/g, '_');
+    const safePeriod = getPeriodLabel().replace(/\s+/g, '_').replace(/\//g, '-');
+    downloadTextFile(lines.join('\n'), `diario_${safeName}_${safePeriod}.txt`);
   };
 
   const formatDateTime = (isoString) => {
@@ -741,6 +799,14 @@ const DiaryPage = () => {
           </div>
         )}
 
+        {canDeleteDiary && filteredEntries.length > 0 && (
+          <div className="download-period-wrapper">
+            <button onClick={handleDownloadPeriod} className="download-period-button">
+              ⬇️ Baixar Período ({filteredEntries.length} {filteredEntries.length === 1 ? 'registro' : 'registros'})
+            </button>
+          </div>
+        )}
+
         <div className="entries-list">
           {filteredEntries.length === 0 ? (
             <div className="empty-state">
@@ -818,7 +884,13 @@ const DiaryPage = () => {
                 {entry.open_obs && (
                   <div className="entry-observations">
                     <h4>Observações:</h4>
-                    <p>{entry.open_obs}</p>
+                    <div className="obs-text">
+                      {entry.open_obs.split('\n').map((line, i) =>
+                        line.trim() === ''
+                          ? <div key={i} className="obs-line-gap" />
+                          : <p key={i}>{line}</p>
+                      )}
+                    </div>
                   </div>
                 )}
                 {Array.isArray(entryImagesById[entry.id]) && entryImagesById[entry.id].length > 0 && (

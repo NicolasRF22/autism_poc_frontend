@@ -460,8 +460,23 @@
   cursor: not-allowed;
 }
 
-.clear-btn {
+.download-chat-btn {
   margin-left: auto;
+  background: #16a34a;
+  border: none;
+  color: white;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-chat-btn:hover {
+  background: #15803d;
+}
+
+.clear-btn {
   background: none;
   border: 1px solid #ddd;
   color: #888;
@@ -902,10 +917,35 @@
 }
 
 .pei-sources-title {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 0.88rem;
   font-weight: 700;
   color: #1a1a2e;
+}
+
+.pei-sources-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pei-sources-apply-btn {
+  border: none;
+  background: #4a90d9;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pei-sources-apply-btn:disabled {
+  background: #a0b8cc;
+  cursor: not-allowed;
 }
 
 .pei-sources-loading {
@@ -942,6 +982,74 @@
   margin: 0.45rem 0 0;
   font-size: 0.78rem;
   color: #666;
+}
+
+.pei-documents-sublist {
+  margin: 0.25rem 0 0.35rem;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  color: #555;
+}
+
+.pei-documents-sublist .pei-source-option span {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diary-period-picker {
+  margin: 0.35rem 0 0.4rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.diary-period-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.diary-period-btn {
+  border: 1px solid #d6dde6;
+  background: #fff;
+  color: #4b5563;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.diary-period-btn.active {
+  background: #4a90d9;
+  border-color: #4a90d9;
+  color: #fff;
+}
+
+.diary-period-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #555;
+}
+
+.diary-period-custom input[type='date'] {
+  border: 1px solid #d6dde6;
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.76rem;
+}
+
+.diary-period-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #888;
+  font-style: italic;
 }
 
 .chat-sources-preview {

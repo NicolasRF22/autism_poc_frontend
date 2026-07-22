@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import useIsMobile from '../hooks/useIsMobile';
 import './Sidebar.css';
 import logoAutismIa from '../assets/logo-autism-ia.jpeg';
 import logoFapemig from '../assets/logo-fapemig.png';
@@ -10,6 +11,7 @@ import logoUnifei from '../assets/logo-unifei.png';
 const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   const location = useLocation();
   const draggingRef = useRef(false);
+  const isMobile = useIsMobile();
 
   const startResizing = (event) => {
     if (!isOpen || window.innerWidth <= 768) {
@@ -40,12 +42,65 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   };
 
   const role = user?.role || '';
+
+  if (role === 'pais') {
+    const familyMenuItems = [{ path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' }];
+
+    return (
+      <>
+        <div className={`sidebar ${isOpen ? '' : 'sidebar-hidden'}`} style={{ width: `${width}px` }}>
+          <div className="sidebar-header">
+            <img className="sidebar-logo" src={logoAutismIa} alt="Autism.iA" />
+            <p className="sidebar-brand-name">SmartPEI</p>
+          </div>
+
+          <nav className="sidebar-nav">
+            {familyMenuItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`sidebar-item ${location.pathname === item.path ? 'active' : ''}`}
+              >
+                <span className="sidebar-icon">{item.icon}</span>
+                <span className="sidebar-label">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+
+          <div className="sidebar-footer">
+            <div className="sidebar-user">
+              <p className="sidebar-user-name">{user?.username}</p>
+              <p className="sidebar-user-role">Perfil: {user?.role}</p>
+            </div>
+            <button className="sidebar-logout" onClick={onLogout}>
+              Sair
+            </button>
+            <p>© 2026 Autism.IA</p>
+          </div>
+
+          {isOpen && <div className="sidebar-resizer" onMouseDown={startResizing} />}
+        </div>
+
+        <button
+          className={`sidebar-toggle-btn ${isOpen ? 'open' : 'closed'}`}
+          style={{ left: isOpen ? `${width}px` : '0px' }}
+          onClick={onToggle}
+          title={isOpen ? 'Ocultar menu' : 'Mostrar menu'}
+        >
+          {isOpen ? '‹' : '›'}
+        </button>
+      </>
+    );
+  }
+
   const canAccessTeacherManagement = ['admin', 'secretaria', 'viewer', 'avaliador'].includes(role);
   const canAccessCadastro = ['admin'].includes(role);
   const canAccessPreRegistrationPages = ['admin', 'secretaria', 'avaliador'].includes(role);
   const canAccessTeacherStudentManagement = ['admin', 'secretaria', 'coordenacao', 'avaliador'].includes(role);
   const canAccessChatAndPei = ['admin', 'avaliador'].includes(role);
-  const menuItems = [
+  const isProfessorMobile = role === 'professor' && isMobile;
+
+  let menuItems = [
     { path: '/inicio', label: 'Início', icon: '🏠' },
     { path: '/estudo-de-caso', label: 'Estudo de Caso', icon: '📋' },
     { path: '/cadastro-da-escola', label: 'Cadastro da Escola', icon: '🏫' },
@@ -75,9 +130,15 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     menuItems.push({ path: '/teacher-student-management', label: 'Docentes x Alunos', icon: '🔗' });
   }
 
-  if (user?.role === 'admin') {
+  if (role === 'admin') {
+    menuItems.push({ path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' });
+    menuItems.push({ path: '/pais-alunos', label: 'Pais x Alunos', icon: '👪' });
     menuItems.push({ path: '/admin', label: 'Administração', icon: '🛡️' });
     menuItems.push({ path: '/admin/gastos', label: 'Gastos IA', icon: '💸' });
+  }
+
+  if (isProfessorMobile) {
+    menuItems = [{ path: '/diario', label: 'Diário Individual', icon: '📖' }];
   }
 
   return (

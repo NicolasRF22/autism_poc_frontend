@@ -66,6 +66,48 @@
   cursor: not-allowed;
 }
 
+.attachments-pending-list {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed #d6dde6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.attachments-pending-title {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #667085;
+}
+
+.attachments-pending-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.attachments-pending-filename {
+  font-size: 0.84rem;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  flex-shrink: 0;
+}
+
+.attachments-caption-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.attachments-pending-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
 .attachments-students-list {
   display: flex;
   flex-direction: column;

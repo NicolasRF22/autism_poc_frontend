@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './PDIForm.css';
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, getFetchErrorMessage } from '../services/api';
 import { formsAPI } from '../services/api';
 import { getStoredUser, municipalityAPI } from '../services/api';
 
@@ -376,7 +376,10 @@ const SchoolFormNew = () => {
         body: JSON.stringify(schoolData),
       });
 
-      if (!response.ok) throw new Error('Erro ao salvar escola');
+      if (!response.ok) {
+        const message = await getFetchErrorMessage(response, 'Erro ao salvar escola');
+        throw new Error(message);
+      }
 
       if (source === 'cadastro-da-escola') {
         const payload = await response.json();
@@ -392,7 +395,7 @@ const SchoolFormNew = () => {
       navigate(backPath);
     } catch (err) {
       console.error(err);
-      alert('Erro ao salvar dados da escola');
+      alert(err?.message || 'Erro ao salvar dados da escola');
     } finally {
       setLoading(false);
     }

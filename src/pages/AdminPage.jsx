@@ -9,6 +9,7 @@ const ROLES = [
   'professor',
   'viewer',
   'avaliador',
+  'pais',
 ];
 
 const REQUIRES_MUNICIPIO = new Set(['secretaria', 'coordenacao', 'professor']);

@@ -247,13 +247,21 @@ export const formsAPI = {
 
 export const ragAPI = {
   // Upload e indexação de PDF
-  uploadDocument: async (file, metadata) => {
+  uploadDocument: async (file, metadata, caption = '') => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('metadata', JSON.stringify(metadata));
+    formData.append('caption', caption || '');
     const response = await api.post('/rag/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return response.data;
+  },
+
+  // Atualizar legenda de um documento indexado
+  updateDocumentCaption: async (docId, caption) => {
+    const encodedDocId = encodeURIComponent(String(docId));
+    const response = await api.patch(`/rag/documents/${encodedDocId}/caption`, { caption });
     return response.data;
   },
 
@@ -293,6 +301,10 @@ export const ragAPI = {
     studentName = '',
     school = '',
     selectedSources = null,
+    selectedDocumentIds = null,
+    selectedPeiIds = null,
+    diaryStartDate = '',
+    diaryEndDate = '',
     newSession = false,
   }) => {
     const payload = {
@@ -302,6 +314,10 @@ export const ragAPI = {
       ...(studentName ? { student_name: studentName } : {}),
       ...(school ? { school } : {}),
       ...(selectedSources ? { selected_sources: selectedSources } : {}),
+      ...(Array.isArray(selectedDocumentIds) ? { selected_document_ids: selectedDocumentIds } : {}),
+      ...(Array.isArray(selectedPeiIds) ? { selected_pei_ids: selectedPeiIds } : {}),
+      ...(diaryStartDate ? { diary_start_date: diaryStartDate } : {}),
+      ...(diaryEndDate ? { diary_end_date: diaryEndDate } : {}),
       ...(newSession ? { new_session: true } : {}),
     };
     const response = await api.post('/rag/chat', payload);
@@ -330,6 +346,17 @@ export const ragAPI = {
     return response.data;
   },
 
+  // Baixar PDF do histórico de uma sessão de chat
+  downloadChatSessionPdf: async (sessionId) => {
+    const response = await api.get(`/rag/chat/sessions/${sessionId}/pdf`, {
+      responseType: 'blob',
+    });
+    return {
+      blob: response.data,
+      filename: parseFilenameFromContentDisposition(response.headers?.['content-disposition']),
+    };
+  },
+
   // Gerar PEI completo
   generatePEI: async (data) => {
     const response = await api.post('/rag/generate-pei', data);
@@ -337,11 +364,13 @@ export const ragAPI = {
   },
 
   // Prévia das fontes para geração de PEI
-  getPEISourcesPreview: async ({ studentId, studentName, school }) => {
+  getPEISourcesPreview: async ({ studentId, studentName, school, diaryStartDate = '', diaryEndDate = '' }) => {
     const params = {};
     if (studentId) params.student_id = studentId;
     if (studentName) params.student_name = studentName;
     if (school) params.school = school;
+    if (diaryStartDate) params.diary_start_date = diaryStartDate;
+    if (diaryEndDate) params.diary_end_date = diaryEndDate;
     const response = await api.get('/rag/pei-sources-preview', { params });
     return response.data;
   },
@@ -579,6 +608,65 @@ export const diaryAPI = {
   // Confirmar importação do diário após revisão
   commitPdfImport: async (entries) => {
     const response = await api.post('/diary/import/commit', { entries });
+    return response.data;
+  },
+};
+
+// ============================================
+// API de Diário Familiar
+// ============================================
+export const familyDiaryAPI = {
+  // Listar entradas de um aluno
+  getStudentEntries: async (studentId) => {
+    const response = await api.get(`/family-diary/entries/${studentId}`);
+    return response.data;
+  },
+
+  // Criar nova entrada (somente responsáveis)
+  createEntry: async ({ student_id, observations, entry_date }) => {
+    const response = await api.post('/family-diary/entries', { student_id, observations, entry_date });
+    return response.data;
+  },
+
+  // Atualizar observações/data de uma entrada
+  updateEntry: async (entryId, observations, entryDate) => {
+    const response = await api.put(`/family-diary/entry/${entryId}`, {
+      observations,
+      entry_date: entryDate,
+    });
+    return response.data;
+  },
+
+  // Remover entrada
+  deleteEntry: async (entryId) => {
+    const response = await api.delete(`/family-diary/entry/${entryId}`);
+    return response.data;
+  },
+
+  // Upload de imagens para uma entrada
+  uploadEntryImages: async (entryId, files, captions = []) => {
+    const formData = new FormData();
+    (files || []).forEach((file) => {
+      formData.append('files', file);
+    });
+    (captions || []).forEach((caption) => {
+      formData.append('captions', caption || '');
+    });
+    const response = await api.post(`/family-diary/entries/${entryId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  // Listar imagens de uma entrada
+  listEntryImages: async (entryId) => {
+    const response = await api.get(`/family-diary/entries/${entryId}/images`);
+    return response.data;
+  },
+
+  // Remover imagem anexada
+  deleteEntryImage: async (imageId) => {
+    const response = await api.delete(`/family-diary/images/${imageId}`);
     return response.data;
   },
 };

@@ -11,6 +11,10 @@ const AttachmentsPage = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [expandedCards, setExpandedCards] = useState({});
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [editingCaptionDocId, setEditingCaptionDocId] = useState('');
+  const [editingCaptionValue, setEditingCaptionValue] = useState('');
+  const [savingCaption, setSavingCaption] = useState(false);
 
   const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
@@ -100,7 +104,7 @@ const AttachmentsPage = () => {
     setSelectedRegisteredStudentId(registeredStudent.id);
   };
 
-  const handleFileUpload = async (event) => {
+  const handleFileUpload = (event) => {
     const files = Array.from(event.target.files || []);
     event.target.value = '';
     if (!files.length) return;
@@ -109,6 +113,27 @@ const AttachmentsPage = () => {
       alert('Selecione um aluno cadastrado antes de enviar os anexos.');
       return;
     }
+
+    setPendingFiles((prev) => [
+      ...prev,
+      ...files.map((file) => ({ file, caption: '' })),
+    ]);
+  };
+
+  const handlePendingCaptionChange = (index, caption) => {
+    setPendingFiles((prev) => prev.map((item, i) => (i === index ? { ...item, caption } : item)));
+  };
+
+  const handleRemovePendingFile = (index) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCancelPendingUpload = () => {
+    setPendingFiles([]);
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!pendingFiles.length) return;
 
     const studentItem = registeredStudents.find((item) => item.id === selectedRegisteredStudentId);
     const schoolName = getSchoolNameFromRegisteredStudent(studentItem);
@@ -121,27 +146,53 @@ const AttachmentsPage = () => {
     setUploadLoading(true);
     const errors = [];
 
-    for (let index = 0; index < files.length; index += 1) {
-      setUploadProgress({ current: index + 1, total: files.length });
+    for (let index = 0; index < pendingFiles.length; index += 1) {
+      setUploadProgress({ current: index + 1, total: pendingFiles.length });
+      const { file, caption } = pendingFiles[index];
       try {
-        await ragAPI.uploadDocument(files[index], {
+        await ragAPI.uploadDocument(file, {
           student_name: studentItem.name.trim(),
           school: schoolName.trim(),
-        });
+        }, caption.trim());
       } catch (err) {
-        errors.push(`${files[index].name}: ${err.response?.data?.error || err.message}`);
+        errors.push(`${file.name}: ${err.response?.data?.error || err.message}`);
       }
     }
 
     await loadStudents();
     setUploadLoading(false);
     setUploadProgress({ current: 0, total: 0 });
+    setPendingFiles([]);
 
     if (errors.length === 0) {
       const uploadedKey = `${studentItem.name}__${schoolName}`;
       setExpandedCards((prev) => ({ ...prev, [uploadedKey]: true }));
     } else {
       alert(`Erros ao enviar:\n${errors.join('\n')}`);
+    }
+  };
+
+  const handleStartEditCaption = (doc) => {
+    setEditingCaptionDocId(doc.doc_id);
+    setEditingCaptionValue(doc.caption || '');
+  };
+
+  const handleCancelEditCaption = () => {
+    setEditingCaptionDocId('');
+    setEditingCaptionValue('');
+  };
+
+  const handleSaveCaption = async (docId) => {
+    setSavingCaption(true);
+    try {
+      await ragAPI.updateDocumentCaption(docId, editingCaptionValue.trim());
+      await loadStudents();
+      setEditingCaptionDocId('');
+      setEditingCaptionValue('');
+    } catch (err) {
+      alert('Erro ao salvar legenda: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSavingCaption(false);
     }
   };
 
@@ -210,11 +261,59 @@ const AttachmentsPage = () => {
               accept=".pdf"
               multiple
               onChange={handleFileUpload}
-              disabled={uploadLoading}
+              disabled={uploadLoading || !selectedRegisteredStudentId}
               style={{ display: 'none' }}
             />
           </label>
         </div>
+
+        {pendingFiles.length > 0 && (
+          <div className="attachments-pending-list">
+            <p className="attachments-pending-title">
+              Defina uma legenda para cada anexo (opcional — usada para identificar o documento nas telas de chat/PEI):
+            </p>
+            {pendingFiles.map((item, index) => (
+              <div key={`${item.file.name}-${index}`} className="attachments-pending-item">
+                <span className="attachments-pending-filename" title={item.file.name}>📎 {item.file.name}</span>
+                <input
+                  type="text"
+                  className="attachments-input attachments-caption-input"
+                  placeholder="Legenda (ex.: Laudo neurológico 2025)"
+                  value={item.caption}
+                  onChange={(event) => handlePendingCaptionChange(index, event.target.value)}
+                  disabled={uploadLoading}
+                />
+                <button
+                  type="button"
+                  className="attachments-doc-btn delete"
+                  onClick={() => handleRemovePendingFile(index)}
+                  disabled={uploadLoading}
+                  title="Remover da lista"
+                >
+                  🗑️
+                </button>
+              </div>
+            ))}
+            <div className="attachments-pending-actions">
+              <button
+                type="button"
+                className="attachments-upload-btn"
+                onClick={handleConfirmUpload}
+                disabled={uploadLoading}
+              >
+                {uploadLoading ? `Enviando ${uploadProgress.current}/${uploadProgress.total}...` : 'Confirmar envio'}
+              </button>
+              <button
+                type="button"
+                className="attachments-expand-btn"
+                onClick={handleCancelPendingUpload}
+                disabled={uploadLoading}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="attachments-students-list">
@@ -262,34 +361,84 @@ const AttachmentsPage = () => {
                     {docs.length === 0 ? (
                       <p className="attachments-doc-empty">Documentos indisponíveis para exibição.</p>
                     ) : (
-                      docs.map((doc) => (
-                        <div key={doc.doc_id} className="attachments-doc-item">
-                          <div className="attachments-doc-info">
-                            <span className="attachments-doc-name" title={doc.file_name}>📎 {doc.file_name}</span>
-                            <span className="attachments-doc-date">
-                              {doc.upload_date ? new Date(doc.upload_date).toLocaleDateString('pt-BR') : ''}
-                            </span>
+                      docs.map((doc) => {
+                        const isEditingCaption = editingCaptionDocId === doc.doc_id;
+                        return (
+                          <div key={doc.doc_id} className="attachments-doc-item">
+                            <div className="attachments-doc-info">
+                              {isEditingCaption ? (
+                                <input
+                                  type="text"
+                                  className="attachments-input attachments-caption-input"
+                                  placeholder="Legenda (ex.: Laudo neurológico 2025)"
+                                  value={editingCaptionValue}
+                                  onChange={(event) => setEditingCaptionValue(event.target.value)}
+                                  disabled={savingCaption}
+                                  autoFocus
+                                />
+                              ) : (
+                                <span className="attachments-doc-name" title={doc.file_name}>
+                                  📎 {doc.caption || doc.file_name}
+                                </span>
+                              )}
+                              <span className="attachments-doc-date">
+                                {doc.upload_date ? new Date(doc.upload_date).toLocaleDateString('pt-BR') : ''}
+                              </span>
+                            </div>
+                            <div className="attachments-doc-actions">
+                              {isEditingCaption ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="attachments-doc-btn"
+                                    onClick={() => handleSaveCaption(doc.doc_id)}
+                                    disabled={savingCaption}
+                                    title="Salvar legenda"
+                                  >
+                                    ✅
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="attachments-doc-btn delete"
+                                    onClick={handleCancelEditCaption}
+                                    disabled={savingCaption}
+                                    title="Cancelar"
+                                  >
+                                    ✖️
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="attachments-doc-btn"
+                                    onClick={() => handleStartEditCaption(doc)}
+                                    title="Editar legenda"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="attachments-doc-btn"
+                                    onClick={() => handleDownloadDocument(doc.doc_id, doc.file_name)}
+                                    title="Baixar documento"
+                                  >
+                                    ⬇️
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="attachments-doc-btn delete"
+                                    onClick={() => handleDeleteDocument(doc.doc_id)}
+                                    title="Remover documento"
+                                  >
+                                    🗑️
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <div className="attachments-doc-actions">
-                            <button
-                              type="button"
-                              className="attachments-doc-btn"
-                              onClick={() => handleDownloadDocument(doc.doc_id, doc.file_name)}
-                              title="Baixar documento"
-                            >
-                              ⬇️
-                            </button>
-                            <button
-                              type="button"
-                              className="attachments-doc-btn delete"
-                              onClick={() => handleDeleteDocument(doc.doc_id)}
-                              title="Remover documento"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 )}

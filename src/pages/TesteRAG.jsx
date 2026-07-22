@@ -21,22 +21,59 @@ const TesteRAG = () => {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatHistoryLoading, setChatHistoryLoading] = useState(false);
   const [chatResetLoading, setChatResetLoading] = useState(false);
+  const [chatPdfLoading, setChatPdfLoading] = useState(false);
   const [selectedChatStudentId, setSelectedChatStudentId] = useState('');
   const [chatSourcesPreview, setChatSourcesPreview] = useState(null);
   const [chatSourcesLoading, setChatSourcesLoading] = useState(false);
   const [chatSelectedSources, setChatSelectedSources] = useState({
-    vector_documents: true,
-    diary: true,
-    pdi: true,
-    student_pre_registration: true,
-    teachers_pre_registration: true,
-    school_pre_registration: true,
-    linked_peis: true,
+    vector_documents: false,
+    diary: false,
+    pdi: false,
+    student_pre_registration: false,
+    teachers_pre_registration: false,
+    school_pre_registration: false,
+    linked_peis: false,
   });
+  const [chatSelectedDocumentIds, setChatSelectedDocumentIds] = useState([]);
+  const [chatSelectedPeiIds, setChatSelectedPeiIds] = useState([]);
+  const [chatDiaryPeriod, setChatDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const messagesEndRef = useRef(null);
   const chatLoadRequestRef = useRef(0);
 
   const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+  const formatISODate = (date) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  };
+
+  // Mesma lógica de período do Diário (DiaryPage.jsx: 'today'/'week'/'month'/'all'/'custom'),
+  // aqui usada para restringir quais entradas do diário entram como contexto para a IA.
+  const computeDiaryDateRange = (period) => {
+    const preset = period?.preset || 'all';
+    if (preset === 'custom') {
+      return { start: period.startDate || '', end: period.endDate || '' };
+    }
+    if (preset === 'all') {
+      return { start: '', end: '' };
+    }
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (preset === 'today') {
+      return { start: formatISODate(today), end: formatISODate(today) };
+    }
+    if (preset === 'week') {
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return { start: formatISODate(weekAgo), end: '' };
+    }
+    if (preset === 'month') {
+      const monthAgo = new Date(today);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      return { start: formatISODate(monthAgo), end: '' };
+    }
+    return { start: '', end: '' };
+  };
 
   const sanitizeFilenamePart = (value) => (
     String(value || 'estudante')
@@ -129,14 +166,17 @@ const TesteRAG = () => {
   const [peiSourcesPreview, setPeiSourcesPreview] = useState(null);
   const [peiSourcesLoading, setPeiSourcesLoading] = useState(false);
   const [peiSelectedSources, setPeiSelectedSources] = useState({
-    vector_documents: true,
-    diary: true,
-    pdi: true,
-    student_pre_registration: true,
-    teachers_pre_registration: true,
-    school_pre_registration: true,
-    linked_peis: true,
+    vector_documents: false,
+    diary: false,
+    pdi: false,
+    student_pre_registration: false,
+    teachers_pre_registration: false,
+    school_pre_registration: false,
+    linked_peis: false,
   });
+  const [peiSelectedDocumentIds, setPeiSelectedDocumentIds] = useState([]);
+  const [peiSelectedPeiIds, setPeiSelectedPeiIds] = useState([]);
+  const [peiDiaryPeriod, setPeiDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const [peiPrompt, setPeiPrompt] = useState('');
   const [initialPeiPrompt, setInitialPeiPrompt] = useState('');
   const [peiPromptLoading, setPeiPromptLoading] = useState(true);
@@ -209,6 +249,18 @@ const TesteRAG = () => {
       targetStudentKey: nextStudentKey,
     });
   }, [selectedChatStudentId, registeredStudents, registeredSchools, students]);
+
+  const handleApplyChatSourceFilters = () => {
+    if (!selectedChatStudentId) return;
+    const studentItem = registeredStudents.find((item) => item.id === selectedChatStudentId);
+    if (!studentItem) return;
+    loadChatSourcesPreview({
+      studentId: studentItem.id,
+      studentName: studentItem.name || '',
+      school: getSchoolNameFromRegisteredStudent(studentItem),
+      resetSelections: false,
+    });
+  };
 
   const loadChatHistoryForStudent = async ({ studentId, studentName: selectedStudentName, school: selectedSchool, targetStudentKey }) => {
     if (!studentId || !targetStudentKey) {
@@ -442,7 +494,22 @@ const TesteRAG = () => {
     });
   };
 
-  const loadPeiSourcesPreview = async ({ studentId, studentName: selectedStudentName, school: selectedSchool }) => {
+  const handleApplyPeiSourceFilters = () => {
+    if (!peiSelectedStudentId) return;
+    const studentItem = registeredStudents.find((item) => item.id === peiSelectedStudentId);
+    if (!studentItem) return;
+    const schoolItem = studentItem.school_id
+      ? registeredSchools.find((item) => item.id === studentItem.school_id)
+      : null;
+    loadPeiSourcesPreview({
+      studentId: peiSelectedStudentId,
+      studentName: studentItem.name || '',
+      school: schoolItem?.name || studentItem.school_name || '',
+      resetSelections: false,
+    });
+  };
+
+  const loadPeiSourcesPreview = async ({ studentId, studentName: selectedStudentName, school: selectedSchool, resetSelections = true }) => {
     if (!studentId || !selectedStudentName) {
       setPeiSourcesPreview(null);
       return;
@@ -450,24 +517,41 @@ const TesteRAG = () => {
 
     setPeiSourcesLoading(true);
     try {
+      const diaryRange = computeDiaryDateRange(peiDiaryPeriod);
       const data = await ragAPI.getPEISourcesPreview({
         studentId,
         studentName: selectedStudentName,
         school: selectedSchool,
+        diaryStartDate: diaryRange.start,
+        diaryEndDate: diaryRange.end,
       });
       const nextSources = data?.sources || null;
       setPeiSourcesPreview(nextSources);
 
       if (nextSources) {
-        setPeiSelectedSources({
-          vector_documents: Boolean(nextSources.vector_documents?.included),
-          diary: Boolean(nextSources.diary?.included),
-          pdi: Boolean(nextSources.pdi?.included),
-          student_pre_registration: Boolean(nextSources.student_pre_registration?.included),
-          teachers_pre_registration: Boolean(nextSources.teachers_pre_registration?.included),
-          school_pre_registration: Boolean(nextSources.school_pre_registration?.included),
-          linked_peis: Boolean(nextSources.linked_peis?.included),
-        });
+        const nextDocIds = (nextSources.vector_documents?.documents || []).map((doc) => doc.doc_id).filter(Boolean);
+        const nextPeiIds = (nextSources.linked_peis?.peis || []).map((pei) => pei.id).filter(Boolean);
+
+        if (resetSelections) {
+          // Aluno novo: por padrão, nenhuma fonte vem marcada — o usuário escolhe
+          // explicitamente o que deve ser enviado à IA a cada geração.
+          setPeiSelectedSources({
+            vector_documents: false,
+            diary: false,
+            pdi: false,
+            student_pre_registration: false,
+            teachers_pre_registration: false,
+            school_pre_registration: false,
+            linked_peis: false,
+          });
+          setPeiSelectedDocumentIds(nextDocIds);
+          setPeiSelectedPeiIds(nextPeiIds);
+        } else {
+          // "Aplicar filtros": mantém as marcações do usuário, só remove ids de
+          // documentos/PEIs que não existem mais na prévia atualizada.
+          setPeiSelectedDocumentIds((prev) => prev.filter((id) => nextDocIds.includes(id)));
+          setPeiSelectedPeiIds((prev) => prev.filter((id) => nextPeiIds.includes(id)));
+        }
       }
     } catch (err) {
       console.error('Erro ao carregar prévia de fontes do PEI:', err);
@@ -477,7 +561,7 @@ const TesteRAG = () => {
     }
   };
 
-  const loadChatSourcesPreview = async ({ studentId, studentName: selectedStudentName, school: selectedSchool }) => {
+  const loadChatSourcesPreview = async ({ studentId, studentName: selectedStudentName, school: selectedSchool, resetSelections = true }) => {
     if (!studentId || !selectedStudentName) {
       setChatSourcesPreview(null);
       return;
@@ -485,25 +569,42 @@ const TesteRAG = () => {
 
     setChatSourcesLoading(true);
     try {
+      const diaryRange = computeDiaryDateRange(chatDiaryPeriod);
       const data = await ragAPI.getPEISourcesPreview({
         studentId,
         studentName: selectedStudentName,
         school: selectedSchool,
+        diaryStartDate: diaryRange.start,
+        diaryEndDate: diaryRange.end,
       });
 
       const nextSources = data?.sources || null;
       setChatSourcesPreview(nextSources);
 
       if (nextSources) {
-        setChatSelectedSources({
-          vector_documents: Boolean(nextSources.vector_documents?.included),
-          diary: Boolean(nextSources.diary?.included),
-          pdi: Boolean(nextSources.pdi?.included),
-          student_pre_registration: Boolean(nextSources.student_pre_registration?.included),
-          teachers_pre_registration: Boolean(nextSources.teachers_pre_registration?.included),
-          school_pre_registration: Boolean(nextSources.school_pre_registration?.included),
-          linked_peis: Boolean(nextSources.linked_peis?.included),
-        });
+        const nextDocIds = (nextSources.vector_documents?.documents || []).map((doc) => doc.doc_id).filter(Boolean);
+        const nextPeiIds = (nextSources.linked_peis?.peis || []).map((pei) => pei.id).filter(Boolean);
+
+        if (resetSelections) {
+          // Aluno novo: por padrão, nenhuma fonte vem marcada — o usuário escolhe
+          // explicitamente o que deve ser enviado à IA a cada conversa.
+          setChatSelectedSources({
+            vector_documents: false,
+            diary: false,
+            pdi: false,
+            student_pre_registration: false,
+            teachers_pre_registration: false,
+            school_pre_registration: false,
+            linked_peis: false,
+          });
+          setChatSelectedDocumentIds(nextDocIds);
+          setChatSelectedPeiIds(nextPeiIds);
+        } else {
+          // "Aplicar filtros": mantém as marcações do usuário, só remove ids de
+          // documentos/PEIs que não existem mais na prévia atualizada.
+          setChatSelectedDocumentIds((prev) => prev.filter((id) => nextDocIds.includes(id)));
+          setChatSelectedPeiIds((prev) => prev.filter((id) => nextPeiIds.includes(id)));
+        }
       }
     } catch (err) {
       console.error('Erro ao carregar prévia de fontes do Chat:', err);
@@ -530,6 +631,10 @@ const TesteRAG = () => {
         studentName: selectedStudent?.student_name || '',
         school: selectedStudent?.school || '',
         selectedSources: chatSelectedSources,
+        selectedDocumentIds: chatSelectedDocumentIds,
+        selectedPeiIds: chatSelectedPeiIds,
+        diaryStartDate: computeDiaryDateRange(chatDiaryPeriod).start,
+        diaryEndDate: computeDiaryDateRange(chatDiaryPeriod).end,
       });
 
       if (data?.session_id && studentKey) {
@@ -588,6 +693,27 @@ const TesteRAG = () => {
     }
   };
 
+  const handleDownloadChatHistory = async () => {
+    if (!selectedStudent || messages.length === 0 || !activeSessionId) return;
+
+    setChatPdfLoading(true);
+    try {
+      const { blob, filename } = await ragAPI.downloadChatSessionPdf(activeSessionId);
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || `chat_${sanitizeFilenamePart(selectedStudent.student_name)}_${buildTimestampFilenamePart()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert('Erro ao gerar PDF do chat: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setChatPdfLoading(false);
+    }
+  };
+
   const PEI_STAGES = [
     { pct: 15, label: 'Buscando documentos...' },
     { pct: 40, label: 'Analisando perfil do estudante...' },
@@ -627,11 +753,16 @@ const TesteRAG = () => {
     }, 3500);
 
     try {
+      const peiDiaryRange = computeDiaryDateRange(peiDiaryPeriod);
       const data = await ragAPI.generatePEI({
         student_id: peiSelectedStudentId,
         student_name: studentName.trim(),
         school: school.trim(),
         selected_sources: peiSelectedSources,
+        selected_document_ids: peiSelectedDocumentIds,
+        selected_pei_ids: peiSelectedPeiIds,
+        diary_start_date: peiDiaryRange.start,
+        diary_end_date: peiDiaryRange.end,
       });
       const clientDurationMs = Math.max(0, Math.round(performance.now() - startedAt));
       clearInterval(timer);
@@ -973,6 +1104,53 @@ const TesteRAG = () => {
     content: chatPromptDraft,
   });
 
+  const toggleSelectedDocumentId = (setter, docId) => {
+    setter((prev) => (
+      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
+    ));
+  };
+
+  const DIARY_PERIOD_PRESETS = [
+    { key: 'today', label: 'Hoje' },
+    { key: 'week', label: 'Semana' },
+    { key: 'month', label: 'Mês' },
+    { key: 'all', label: 'Tudo' },
+    { key: 'custom', label: 'Personalizado' },
+  ];
+
+  const renderDiaryPeriodPicker = (period, setPeriod) => (
+    <div className="diary-period-picker">
+      <div className="diary-period-presets">
+        {DIARY_PERIOD_PRESETS.map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            className={`diary-period-btn ${period.preset === opt.key ? 'active' : ''}`}
+            onClick={() => setPeriod((prev) => ({ ...prev, preset: opt.key }))}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      {period.preset === 'custom' && (
+        <div className="diary-period-custom">
+          <input
+            type="date"
+            value={period.startDate}
+            onChange={(event) => setPeriod((prev) => ({ ...prev, startDate: event.target.value }))}
+          />
+          <span>até</span>
+          <input
+            type="date"
+            value={period.endDate}
+            onChange={(event) => setPeriod((prev) => ({ ...prev, endDate: event.target.value }))}
+          />
+        </div>
+      )}
+      <p className="diary-period-hint">Clique em "Aplicar filtros" acima para atualizar a prévia com este período.</p>
+    </div>
+  );
+
   const formatPreviewDetail = (baseDetail, excerpt) => {
     const cleanExcerpt = String(excerpt || '').trim();
     if (!cleanExcerpt) return baseDetail;
@@ -1142,6 +1320,16 @@ const TesteRAG = () => {
               </span>
             )}
             {messages.length > 0 && (
+              <button
+                className="download-chat-btn"
+                onClick={handleDownloadChatHistory}
+                disabled={chatPdfLoading || !activeSessionId}
+                title="Baixar conversa (PDF)"
+              >
+                {chatPdfLoading ? 'Gerando PDF...' : '⬇️ Baixar'}
+              </button>
+            )}
+            {messages.length > 0 && (
               <button className="clear-btn" onClick={handleClearChatHistory} disabled={chatResetLoading}>
                 {chatResetLoading ? 'Limpando...' : 'Limpar'}
               </button>
@@ -1151,7 +1339,17 @@ const TesteRAG = () => {
           <div className="messages-area">
             {selectedStudent && (
               <div className="chat-sources-preview">
-                <h4 className="pei-sources-title">📎 Fontes usadas no chat</h4>
+                <div className="pei-sources-header">
+                  <h4 className="pei-sources-title">📎 Fontes usadas no chat</h4>
+                  <button
+                    type="button"
+                    className="pei-sources-apply-btn"
+                    onClick={handleApplyChatSourceFilters}
+                    disabled={chatSourcesLoading}
+                  >
+                    {chatSourcesLoading ? 'Aplicando...' : '🔄 Aplicar filtros'}
+                  </button>
+                </div>
                 {chatSourcesLoading ? (
                   <p className="pei-sources-loading">Carregando fontes...</p>
                 ) : (
@@ -1175,6 +1373,47 @@ const TesteRAG = () => {
                             {source.label}: <strong>{source.detail}</strong>
                           </span>
                         </label>
+                        {source.key === 'vector_documents'
+                          && chatSelectedSources.vector_documents
+                          && (chatSourcesPreview?.vector_documents?.documents || []).length > 0 && (
+                            <ul className="pei-documents-sublist">
+                              {chatSourcesPreview.vector_documents.documents.map((doc) => (
+                                <li key={doc.doc_id}>
+                                  <label className="pei-source-option">
+                                    <input
+                                      type="checkbox"
+                                      checked={chatSelectedDocumentIds.includes(doc.doc_id)}
+                                      onChange={() => toggleSelectedDocumentId(setChatSelectedDocumentIds, doc.doc_id)}
+                                    />
+                                    <span title={doc.file_name}>{doc.caption || doc.file_name}</span>
+                                  </label>
+                                </li>
+                              ))}
+                            </ul>
+                        )}
+                        {source.key === 'diary' && chatSelectedSources.diary && (
+                          renderDiaryPeriodPicker(chatDiaryPeriod, setChatDiaryPeriod)
+                        )}
+                        {source.key === 'linked_peis'
+                          && chatSelectedSources.linked_peis
+                          && (chatSourcesPreview?.linked_peis?.peis || []).length > 0 && (
+                            <ul className="pei-documents-sublist">
+                              {chatSourcesPreview.linked_peis.peis.map((pei) => (
+                                <li key={pei.id}>
+                                  <label className="pei-source-option">
+                                    <input
+                                      type="checkbox"
+                                      checked={chatSelectedPeiIds.includes(pei.id)}
+                                      onChange={() => toggleSelectedDocumentId(setChatSelectedPeiIds, pei.id)}
+                                    />
+                                    <span title={pei.excerpt}>
+                                      PEI de {pei.created_at ? new Date(pei.created_at).toLocaleDateString('pt-BR') : '—'}
+                                    </span>
+                                  </label>
+                                </li>
+                              ))}
+                            </ul>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -1282,7 +1521,17 @@ const TesteRAG = () => {
 
             {peiSelectedStudentId && (
               <div className="pei-sources-preview">
-                <h3 className="pei-sources-title">📎 Fontes usadas na geração</h3>
+                <div className="pei-sources-header">
+                  <h3 className="pei-sources-title">📎 Fontes usadas na geração</h3>
+                  <button
+                    type="button"
+                    className="pei-sources-apply-btn"
+                    onClick={handleApplyPeiSourceFilters}
+                    disabled={peiSourcesLoading}
+                  >
+                    {peiSourcesLoading ? 'Aplicando...' : '🔄 Aplicar filtros'}
+                  </button>
+                </div>
                 {peiSourcesLoading ? (
                   <p className="pei-sources-loading">Carregando fontes...</p>
                 ) : (
@@ -1307,20 +1556,50 @@ const TesteRAG = () => {
                               {source.label}: <strong>{source.detail}</strong>
                             </span>
                           </label>
+                          {source.key === 'vector_documents'
+                            && peiSelectedSources.vector_documents
+                            && (peiSourcesPreview?.vector_documents?.documents || []).length > 0 && (
+                              <ul className="pei-documents-sublist">
+                                {peiSourcesPreview.vector_documents.documents.map((doc) => (
+                                  <li key={doc.doc_id}>
+                                    <label className="pei-source-option">
+                                      <input
+                                        type="checkbox"
+                                        checked={peiSelectedDocumentIds.includes(doc.doc_id)}
+                                        onChange={() => toggleSelectedDocumentId(setPeiSelectedDocumentIds, doc.doc_id)}
+                                      />
+                                      <span title={doc.file_name}>{doc.caption || doc.file_name}</span>
+                                    </label>
+                                  </li>
+                                ))}
+                              </ul>
+                          )}
+                          {source.key === 'diary' && peiSelectedSources.diary && (
+                            renderDiaryPeriodPicker(peiDiaryPeriod, setPeiDiaryPeriod)
+                          )}
+                          {source.key === 'linked_peis'
+                            && peiSelectedSources.linked_peis
+                            && (peiSourcesPreview?.linked_peis?.peis || []).length > 0 && (
+                              <ul className="pei-documents-sublist">
+                                {peiSourcesPreview.linked_peis.peis.map((pei) => (
+                                  <li key={pei.id}>
+                                    <label className="pei-source-option">
+                                      <input
+                                        type="checkbox"
+                                        checked={peiSelectedPeiIds.includes(pei.id)}
+                                        onChange={() => toggleSelectedDocumentId(setPeiSelectedPeiIds, pei.id)}
+                                      />
+                                      <span title={pei.excerpt}>
+                                        PEI de {pei.created_at ? new Date(pei.created_at).toLocaleDateString('pt-BR') : '—'}
+                                      </span>
+                                    </label>
+                                  </li>
+                                ))}
+                              </ul>
+                          )}
                         </li>
                       ))}
                     </ul>
-                    {Array.isArray(peiSourcesPreview?.vector_documents?.documents)
-                      && peiSourcesPreview.vector_documents.documents.length > 0 && (
-                        <p className="pei-sources-files">
-                          Arquivos: {peiSourcesPreview.vector_documents.documents
-                            .slice(0, 3)
-                            .map((doc) => doc.file_name)
-                            .filter(Boolean)
-                            .join(', ')}
-                          {peiSourcesPreview.vector_documents.documents.length > 3 ? '...' : ''}
-                        </p>
-                      )}
                     <p className="pei-sources-files">
                       Selecione as fontes desejadas antes de gerar o PEI. Fontes não encontradas ficam desabilitadas.
                     </p>

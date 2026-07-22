@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Sidebar from './components/Sidebar';
 import Home from './pages/Home';
 import DiaryPage from './pages/DiaryPage';
+import FamilyDiaryPage from './pages/FamilyDiaryPage';
 import DiaryEntry from './pages/DiaryEntry';
 import PDIPage from './pages/PDIPage';
 import PDIForm from './pages/PDIForm';
@@ -15,6 +16,7 @@ import StudentFullForm from './pages/StudentFormNew';
 import TeachersPage from './pages/TeachersPage';
 import TeacherForm from './pages/TeacherFormNew';
 import TeacherStudentManagementPage from './pages/TeacherStudentManagementPage';
+import ParentStudentManagementPage from './pages/ParentStudentManagementPage';
 import TesteRAG from './pages/TesteRAG';
 import AttachmentsPage from './pages/AttachmentsPage';
 import LoginPage from './pages/LoginPage';
@@ -23,7 +25,8 @@ import AdminUsagePage from './pages/AdminUsagePage';
 import CadastroPage from './pages/CadastroPage';
 import EstudoDeCasoPage from './pages/EstudoDeCasoPage';
 import CadastroDaEscolaPage from './pages/CadastroDaEscolaPage';
-import { authAPI, clearAuthSession, getAuthToken, getStoredUser } from './services/api';
+import { authAPI, clearAuthSession, diaryAPI, getAuthToken, getStoredUser } from './services/api';
+import useIsMobile from './hooks/useIsMobile';
 import './App.css';
 
 const SIDEBAR_MIN_WIDTH = 200;
@@ -53,6 +56,7 @@ const SCHOOL_EDIT_ROLES = new Set(['admin', 'secretaria', 'coordenacao', 'avalia
 const LEARNING_EDIT_ROLES = new Set(['admin', 'professor', 'avaliador']);
 const SCHOOL_REGISTRATION_ROLES = new Set(['admin', 'coordenacao', 'avaliador']);
 const TEACHER_STUDENT_LINK_ROLES = new Set(['admin', 'secretaria', 'coordenacao', 'avaliador']);
+const PARENT_STUDENT_LINK_ROLES = new Set(['admin']);
 const CHAT_AND_PEI_ROLES = new Set(['admin', 'avaliador']);
 
 const hasAnyRole = (user, allowedRoles) => allowedRoles.has(user?.role || '');
@@ -62,6 +66,8 @@ function App() {
   const [sidebarWidth, setSidebarWidth] = useState(getInitialSidebarWidth);
   const [user, setUser] = useState(getStoredUser());
   const [authLoading, setAuthLoading] = useState(true);
+  const [postLoginTarget, setPostLoginTarget] = useState('/inicio');
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const token = getAuthToken();
@@ -110,7 +116,26 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, [sidebarOpen]);
 
-  const handleLoginSuccess = (authenticatedUser) => {
+  const handleLoginSuccess = async (authenticatedUser) => {
+    let target = '/inicio';
+
+    if (authenticatedUser?.role === 'professor' && isMobile) {
+      try {
+        const students = await diaryAPI.getStudents();
+        if (Array.isArray(students) && students.length === 1) {
+          const [onlyStudent] = students;
+          const studentId = onlyStudent?.student_id;
+          const studentName = onlyStudent?.student_name;
+          if (studentId && studentName) {
+            target = `/diario?student=${encodeURIComponent(studentName)}&studentId=${encodeURIComponent(studentId)}`;
+          }
+        }
+      } catch {
+        // Mantém o destino padrão (/inicio) se a busca de alunos falhar
+      }
+    }
+
+    setPostLoginTarget(target);
     setUser(authenticatedUser);
   };
 
@@ -143,7 +168,9 @@ function App() {
   const canEditLearning = hasAnyRole(user, LEARNING_EDIT_ROLES);
   const canEditSchoolRegistration = hasAnyRole(user, SCHOOL_REGISTRATION_ROLES);
   const canAccessTeacherStudentLinks = hasAnyRole(user, TEACHER_STUDENT_LINK_ROLES);
+  const canAccessParentStudentLinks = hasAnyRole(user, PARENT_STUDENT_LINK_ROLES);
   const canAccessChatAndPei = hasAnyRole(user, CHAT_AND_PEI_ROLES);
+  const isPais = user?.role === 'pais';
 
   return (
     <Router>
@@ -167,12 +194,20 @@ function App() {
             style={{ marginLeft: sidebarOpen ? `${sidebarWidth}px` : '0px' }}
           >
             <Routes>
-              <Route path="/" element={<Navigate to="/inicio" replace />} />
-              <Route path="/login" element={<Navigate to="/inicio" replace />} />
+              {isPais ? (
+                <>
+                  <Route path="/diario-familiar" element={<FamilyDiaryPage />} />
+                  <Route path="*" element={<Navigate to="/diario-familiar" replace />} />
+                </>
+              ) : (
+                <>
+              <Route path="/" element={<Navigate to={postLoginTarget} replace />} />
+              <Route path="/login" element={<Navigate to={postLoginTarget} replace />} />
               <Route path="/inicio" element={<Home />} />
               <Route path="/estudo-de-caso" element={<EstudoDeCasoPage />} />
               <Route path="/cadastro-da-escola" element={<CadastroDaEscolaPage />} />
               <Route path="/diario" element={<DiaryPage />} />
+              <Route path="/diario-familiar" element={<FamilyDiaryPage />} />
               <Route
                 path="/diario/:studentName/novo"
                 element={canEditLearning ? <DiaryEntry /> : <Navigate to="/inicio" replace />}
@@ -221,6 +256,10 @@ function App() {
                 path="/teacher-student-management"
                 element={canAccessTeacherStudentLinks ? <TeacherStudentManagementPage user={user} /> : <Navigate to="/inicio" replace />}
               />
+              <Route
+                path="/pais-alunos"
+                element={canAccessParentStudentLinks ? <ParentStudentManagementPage /> : <Navigate to="/inicio" replace />}
+              />
               <Route path="/chat" element={<Navigate to="/rag" replace />} />
               <Route path="/rag" element={canAccessChatAndPei ? <TesteRAG /> : <Navigate to="/inicio" replace />} />
               <Route path="/anexos" element={<AttachmentsPage />} />
@@ -238,6 +277,8 @@ function App() {
                 element={user?.role === 'admin' ? <AdminUsagePage /> : <Navigate to="/inicio" replace />}
               />
               <Route path="*" element={<Navigate to="/inicio" replace />} />
+                </>
+              )}
             </Routes>
           </main>
         </div>
