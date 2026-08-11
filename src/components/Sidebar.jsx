@@ -141,7 +141,10 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   }
 
   if (isProfessorMobile) {
-    menuItems = [{ path: '/diario', label: 'Diário Individual', icon: '📖' }];
+    menuItems = [
+      { path: '/diario', label: 'Diário Individual', icon: '📖' },
+      { path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' },
+    ];
   }
 
   return (
