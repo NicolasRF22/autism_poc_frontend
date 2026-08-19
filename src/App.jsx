@@ -59,7 +59,7 @@ const SCHOOL_REGISTRATION_ROLES = new Set(['admin', 'coordenacao', 'avaliador'])
 const TEACHER_STUDENT_LINK_ROLES = new Set(['admin', 'secretaria', 'coordenacao', 'avaliador']);
 const PARENT_STUDENT_LINK_ROLES = new Set(['admin']);
 const CHAT_AND_PEI_ROLES = new Set(['admin', 'avaliador']);
-const DIARY_SUMMARY_ROLES = new Set(['admin', 'professor', 'pais']);
+const DIARY_SUMMARY_ROLES = new Set(['admin', 'coordenacao', 'professor', 'pais']);
 
 const hasAnyRole = (user, allowedRoles) => allowedRoles.has(user?.role || '');
 

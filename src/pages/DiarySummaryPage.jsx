@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { diarySummaryAPI, getStoredUser, ragAPI } from '../services/api';
+import { diarySummaryAPI, getStoredUser, ragAPI, studentAPI } from '../services/api';
 import './DiaryEntry.css';
 import './DiaryPage.css';
 import './TesteRAG.css';
@@ -71,9 +71,45 @@ const formatDateBR = (value) => {
 
 const entryKey = (entry) => `${entry.type}::${entry.id}`;
 
+// Mesmo padrão de janela rolante do Diário Escolar/Familiar (DiaryPage.jsx) — usado
+// aqui pro filtro de período dos "Resumos salvos" (diferente do computeRange acima,
+// que é o período usado pra *gerar* um resumo novo).
+const getSavedFilterRange = (filter, start, end) => {
+  const today = getTodayDateString();
+  switch (filter) {
+    case 'today':
+      return { start: today, end: today };
+    case 'week': {
+      const date = parseISODateLocal(today);
+      date.setDate(date.getDate() - 7);
+      return { start: formatISODateLocal(date), end: '' };
+    }
+    case 'month': {
+      const date = parseISODateLocal(today);
+      date.setMonth(date.getMonth() - 1);
+      return { start: formatISODateLocal(date), end: '' };
+    }
+    case 'custom':
+      return { start: start || '', end: end || '' };
+    case 'all':
+    default:
+      return { start: '', end: '' };
+  }
+};
+
+// Um resumo "cobre" um tipo se pelo menos uma das entradas de origem for daquele tipo
+// (mesma regra do backend, _diary_summary_covers_type) — um resumo "ambos" cobre os dois.
+const summaryCoversType = (summary, type) =>
+  (summary.source_entries || []).some((ref) => ref?.type === type);
+
 const DiarySummaryPage = () => {
   const currentUser = getStoredUser();
   const role = currentUser?.role || '';
+
+  // Só admin gera resumos novos (escolhe período/aluno/entradas, conversa com a IA e
+  // gerencia o prompt). Coordenação/professor/pais só visualizam os resumos já prontos
+  // dos alunos vinculados a eles (o backend já filtra isso via _student_visible_to_user).
+  const canGenerate = role === 'admin';
 
   const [periodPreset, setPeriodPreset] = useState('week');
   const [customStart, setCustomStart] = useState('');
@@ -88,7 +124,7 @@ const DiarySummaryPage = () => {
 
   // 'escolar' | 'familiar' | 'ambos' — controla quais entradas aparecem na seção 4
   // e quais tipos entram no resumo (e, por consequência, como o resumo salvo fica
-  // rotulado depois como fonte no chat: "Resumo Diário Individual"/"...Familiar").
+  // rotulado depois como fonte no chat: "Resumo Diário Escolar"/"...Familiar").
   const [sourceType, setSourceType] = useState('ambos');
 
   const [entries, setEntries] = useState([]);
@@ -120,7 +156,32 @@ const DiarySummaryPage = () => {
   const [savingMessageIndex, setSavingMessageIndex] = useState(null);
   const [viewingSummary, setViewingSummary] = useState(null);
 
+  // Filtros da seção "Resumos salvos" — período (dia/semana/mês/personalizado, igual ao
+  // Diário Escolar/Familiar) e tipo (escolar/familiar/ambos). Só client-side, sobre o
+  // que já foi carregado pra o aluno selecionado.
+  const [savedPeriodFilter, setSavedPeriodFilter] = useState('all');
+  const [savedCustomStart, setSavedCustomStart] = useState('');
+  const [savedCustomEnd, setSavedCustomEnd] = useState('');
+  const [savedTypeFilter, setSavedTypeFilter] = useState('ambos');
+
+  const filteredSavedSummaries = useMemo(() => {
+    const { start, end } = getSavedFilterRange(savedPeriodFilter, savedCustomStart, savedCustomEnd);
+    return savedSummaries.filter((summary) => {
+      const summaryStart = summary.period_start || '';
+      const summaryEnd = summary.period_end || '';
+      // Interseção de intervalos — mesma regra do backend (_filter_diary_summaries_by_period).
+      if (end && summaryStart && summaryStart > end) return false;
+      if (start && summaryEnd && summaryEnd < start) return false;
+      if (savedTypeFilter === 'escolar' && !summaryCoversType(summary, 'escolar')) return false;
+      if (savedTypeFilter === 'familiar' && !summaryCoversType(summary, 'familiar')) return false;
+      return true;
+    });
+  }, [savedSummaries, savedPeriodFilter, savedCustomStart, savedCustomEnd, savedTypeFilter]);
+
+  // Fluxo de geração (admin): lista de alunos depende do período escolhido (só quem tem
+  // entradas nesse período aparece).
   useEffect(() => {
+    if (!canGenerate) return;
     if (!hasValidRange) {
       setStudents([]);
       return;
@@ -140,7 +201,29 @@ const DiarySummaryPage = () => {
     };
     loadStudents();
     setSelectedStudentId('');
-  }, [range.start, range.end, hasValidRange]);
+  }, [range.start, range.end, hasValidRange, canGenerate]);
+
+  // Perfis restritos (view-only): não escolhem período pra gerar nada, só navegam pelos
+  // alunos vinculados a eles pra ver os resumos já prontos — studentAPI já filtra por
+  // vínculo/escola (mesmo escopo do _student_visible_to_user usado no backend).
+  useEffect(() => {
+    if (canGenerate) return;
+    const loadScopedStudents = async () => {
+      try {
+        setLoadingStudents(true);
+        setError('');
+        const list = await studentAPI.getAllStudents();
+        setStudents(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error(err);
+        setError('Erro ao carregar alunos.');
+      } finally {
+        setLoadingStudents(false);
+      }
+    };
+    loadScopedStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canGenerate]);
 
   const updatePromptFormFromPrompt = (prompt) => {
     const safePrompt = prompt || {};
@@ -191,9 +274,12 @@ const DiarySummaryPage = () => {
   };
 
   useEffect(() => {
+    // Prompt de instrução só existe pro fluxo de geração (admin) — perfis restritos nem
+    // teriam permissão no backend pra esse endpoint.
+    if (!canGenerate) return;
     loadDiarySummaryPrompt();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [canGenerate]);
 
   const persistPrompt = async ({ promptId, name, description, content, activate = false }) => {
     const payload = {
@@ -327,6 +413,7 @@ const DiarySummaryPage = () => {
   };
 
   useEffect(() => {
+    if (!canGenerate) return;
     if (!selectedStudentId || !hasValidRange) {
       setEntries([]);
       setSavedSummaries([]);
@@ -350,7 +437,19 @@ const DiarySummaryPage = () => {
     startNewConversation();
     loadSavedSummaries(selectedStudentId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStudentId, range.start, range.end]);
+  }, [selectedStudentId, range.start, range.end, canGenerate]);
+
+  // Perfis restritos: sem período/entradas, só carrega os resumos já prontos do aluno
+  // selecionado (os filtros de período/tipo dessa lista são aplicados client-side).
+  useEffect(() => {
+    if (canGenerate) return;
+    if (!selectedStudentId) {
+      setSavedSummaries([]);
+      return;
+    }
+    loadSavedSummaries(selectedStudentId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStudentId, canGenerate]);
 
   // Sempre que a lista de entradas mudar (aluno/período novo) ou a fonte escolhida
   // mudar (escolar/familiar/ambos), reseta a seleção pra "tudo marcado, só do(s)
@@ -471,49 +570,55 @@ const DiarySummaryPage = () => {
     <div className="diary-summary-page">
       <div className="diary-summary-header">
         <h1>Resumo Diário</h1>
-        <p>Gere e salve resumos de período a partir das entradas do diário escolar e familiar.</p>
+        <p>
+          {canGenerate
+            ? 'Gere e salve resumos de período a partir das entradas do diário escolar e familiar.'
+            : 'Consulte os resumos de período já gerados para os alunos vinculados ao seu perfil.'}
+        </p>
       </div>
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="form-section diary-summary-period">
-        <h2>1. Período</h2>
-        <div className="filter-buttons">
-          <button
-            className={`filter-btn ${periodPreset === 'week' ? 'active' : ''}`}
-            onClick={() => setPeriodPreset('week')}
-          >
-            📊 Semana Atual
-          </button>
-          <button
-            className={`filter-btn ${periodPreset === 'month' ? 'active' : ''}`}
-            onClick={() => setPeriodPreset('month')}
-          >
-            📈 Último Mês
-          </button>
-          <button
-            className={`filter-btn ${periodPreset === 'custom' ? 'active' : ''}`}
-            onClick={() => setPeriodPreset('custom')}
-          >
-            🗓️ Personalizado
-          </button>
-        </div>
-        {periodPreset === 'custom' && (
-          <div className="custom-date-filter">
-            <label>Período:</label>
-            <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
-            <span className="date-range-separator">até</span>
-            <input type="date" value={customEnd} min={customStart || undefined} onChange={(e) => setCustomEnd(e.target.value)} />
+      {canGenerate && (
+        <div className="form-section diary-summary-period">
+          <h2>1. Período</h2>
+          <div className="filter-buttons">
+            <button
+              className={`filter-btn ${periodPreset === 'week' ? 'active' : ''}`}
+              onClick={() => setPeriodPreset('week')}
+            >
+              📊 Semana Atual
+            </button>
+            <button
+              className={`filter-btn ${periodPreset === 'month' ? 'active' : ''}`}
+              onClick={() => setPeriodPreset('month')}
+            >
+              📈 Último Mês
+            </button>
+            <button
+              className={`filter-btn ${periodPreset === 'custom' ? 'active' : ''}`}
+              onClick={() => setPeriodPreset('custom')}
+            >
+              🗓️ Personalizado
+            </button>
           </div>
-        )}
-        {hasValidRange && (
-          <p className="diary-summary-period-label">
-            Período selecionado: <strong>{formatDateBR(range.start)} até {formatDateBR(range.end)}</strong>
-          </p>
-        )}
-      </div>
+          {periodPreset === 'custom' && (
+            <div className="custom-date-filter">
+              <label>Período:</label>
+              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
+              <span className="date-range-separator">até</span>
+              <input type="date" value={customEnd} min={customStart || undefined} onChange={(e) => setCustomEnd(e.target.value)} />
+            </div>
+          )}
+          {hasValidRange && (
+            <p className="diary-summary-period-label">
+              Período selecionado: <strong>{formatDateBR(range.start)} até {formatDateBR(range.end)}</strong>
+            </p>
+          )}
+        </div>
+      )}
 
-      {hasValidRange && (
+      {canGenerate && hasValidRange && (
         <div className="form-section">
           <h2>2. Aluno</h2>
           {loadingStudents ? (
@@ -541,7 +646,32 @@ const DiarySummaryPage = () => {
         </div>
       )}
 
-      {selectedStudentId && (
+      {!canGenerate && (
+        <div className="form-section">
+          <h2>Aluno</h2>
+          {loadingStudents ? (
+            <p>Carregando alunos...</p>
+          ) : students.length === 0 ? (
+            <p>Nenhum aluno vinculado ao seu perfil.</p>
+          ) : (
+            <div className="diary-summary-student-grid">
+              {students.map((student) => (
+                <button
+                  key={student.id}
+                  type="button"
+                  className={`diary-summary-student-card ${selectedStudentId === student.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedStudentId(student.id)}
+                >
+                  <strong>{student.name}</strong>
+                  <span>{student.school_name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {canGenerate && selectedStudentId && (
         <>
           <div className="form-section">
             <h2>3. Fonte</h2>
@@ -688,48 +818,126 @@ const DiarySummaryPage = () => {
               </button>
             </div>
           </div>
-
-          <div className="form-section">
-            <h2>Resumos salvos {selectedStudent ? `— ${selectedStudent.name}` : ''}</h2>
-            {loadingSummaries ? (
-              <p>Carregando resumos salvos...</p>
-            ) : savedSummaries.length === 0 ? (
-              <p>Nenhum resumo salvo ainda para este aluno.</p>
-            ) : (
-              <div className="diary-summary-saved-list">
-                {savedSummaries.map((summary) => (
-                  <div key={summary.id} className="diary-summary-saved-item">
-                    <div className="diary-summary-saved-header">
-                      <strong>{formatDateBR(summary.period_start)} até {formatDateBR(summary.period_end)}</strong>
-                      {canDeleteSummary(summary) && (
-                        <button
-                          type="button"
-                          className="danger-diary-button"
-                          onClick={() => handleDeleteSummary(summary.id)}
-                        >
-                          Remover
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="diary-summary-saved-text-btn"
-                      onClick={() => setViewingSummary(summary)}
-                    >
-                      {truncateText(summary.summary_text, SAVED_SUMMARY_PREVIEW_LENGTH)}
-                    </button>
-                    <p className="diary-summary-saved-author">
-                      Salvo por: {summary.author_name || '—'} em {formatDateBR((summary.created_at || '').slice(0, 10))}
-                      {(summary.summary_text || '').length > SAVED_SUMMARY_PREVIEW_LENGTH && (
-                        <> · <button type="button" className="diary-summary-read-more" onClick={() => setViewingSummary(summary)}>ver conteúdo completo</button></>
-                      )}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </>
+      )}
+
+      {selectedStudentId && (
+        <div className="form-section">
+          <h2>Resumos salvos {selectedStudent ? `— ${selectedStudent.name}` : ''}</h2>
+
+          <div className="filter-buttons">
+            <button
+              type="button"
+              className={`filter-btn ${savedPeriodFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setSavedPeriodFilter('all')}
+            >
+              Tudo
+            </button>
+            <button
+              type="button"
+              className={`filter-btn ${savedPeriodFilter === 'today' ? 'active' : ''}`}
+              onClick={() => setSavedPeriodFilter('today')}
+            >
+              📅 Hoje
+            </button>
+            <button
+              type="button"
+              className={`filter-btn ${savedPeriodFilter === 'week' ? 'active' : ''}`}
+              onClick={() => setSavedPeriodFilter('week')}
+            >
+              📊 Semana
+            </button>
+            <button
+              type="button"
+              className={`filter-btn ${savedPeriodFilter === 'month' ? 'active' : ''}`}
+              onClick={() => setSavedPeriodFilter('month')}
+            >
+              📈 Mês
+            </button>
+            <button
+              type="button"
+              className={`filter-btn ${savedPeriodFilter === 'custom' ? 'active' : ''}`}
+              onClick={() => setSavedPeriodFilter('custom')}
+            >
+              🗓️ Personalizado
+            </button>
+          </div>
+          {savedPeriodFilter === 'custom' && (
+            <div className="custom-date-filter">
+              <label>Período:</label>
+              <input type="date" value={savedCustomStart} onChange={(e) => setSavedCustomStart(e.target.value)} />
+              <span className="date-range-separator">até</span>
+              <input
+                type="date"
+                value={savedCustomEnd}
+                min={savedCustomStart || undefined}
+                onChange={(e) => setSavedCustomEnd(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div className="filter-buttons">
+            <button
+              type="button"
+              className={`filter-btn ${savedTypeFilter === 'ambos' ? 'active' : ''}`}
+              onClick={() => setSavedTypeFilter('ambos')}
+            >
+              📚 Ambos
+            </button>
+            <button
+              type="button"
+              className={`filter-btn ${savedTypeFilter === 'escolar' ? 'active' : ''}`}
+              onClick={() => setSavedTypeFilter('escolar')}
+            >
+              📖 Escolar
+            </button>
+            <button
+              type="button"
+              className={`filter-btn ${savedTypeFilter === 'familiar' ? 'active' : ''}`}
+              onClick={() => setSavedTypeFilter('familiar')}
+            >
+              👨‍👩‍👧 Familiar
+            </button>
+          </div>
+
+          {loadingSummaries ? (
+            <p>Carregando resumos salvos...</p>
+          ) : filteredSavedSummaries.length === 0 ? (
+            <p>{savedSummaries.length === 0 ? 'Nenhum resumo salvo ainda para este aluno.' : 'Nenhum resumo salvo para os filtros selecionados.'}</p>
+          ) : (
+            <div className="diary-summary-saved-list">
+              {filteredSavedSummaries.map((summary) => (
+                <div key={summary.id} className="diary-summary-saved-item">
+                  <div className="diary-summary-saved-header">
+                    <strong>{formatDateBR(summary.period_start)} até {formatDateBR(summary.period_end)}</strong>
+                    {canDeleteSummary(summary) && (
+                      <button
+                        type="button"
+                        className="danger-diary-button"
+                        onClick={() => handleDeleteSummary(summary.id)}
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="diary-summary-saved-text-btn"
+                    onClick={() => setViewingSummary(summary)}
+                  >
+                    {truncateText(summary.summary_text, SAVED_SUMMARY_PREVIEW_LENGTH)}
+                  </button>
+                  <p className="diary-summary-saved-author">
+                    Salvo por: {summary.author_name || '—'} em {formatDateBR((summary.created_at || '').slice(0, 10))}
+                    {(summary.summary_text || '').length > SAVED_SUMMARY_PREVIEW_LENGTH && (
+                      <> · <button type="button" className="diary-summary-read-more" onClick={() => setViewingSummary(summary)}>ver conteúdo completo</button></>
+                    )}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {viewingSummary && (

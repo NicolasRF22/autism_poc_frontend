@@ -1221,7 +1221,7 @@ const TesteRAG = () => {
     },
     {
       key: 'diary',
-      label: 'Diário Individual',
+      label: 'Diário Escolar',
       detail: chatSourcesPreview?.diary?.included
         ? formatPreviewDetail(
             `${chatSourcesPreview.diary.entries_count} entrada(s)`,
@@ -1243,7 +1243,7 @@ const TesteRAG = () => {
     },
     {
       key: 'diary_summary_individual',
-      label: 'Resumo Diário Individual',
+      label: 'Resumo Diário Escolar',
       detail: chatSourcesPreview?.diary_summary_individual?.included
         ? formatPreviewDetail(
             `${chatSourcesPreview.diary_summary_individual.count || 0} resumo(s)`,
@@ -1318,7 +1318,7 @@ const TesteRAG = () => {
     },
     {
       key: 'diary',
-      label: 'Diário Individual',
+      label: 'Diário Escolar',
       detail: peiSourcesPreview?.diary?.included
         ? formatPreviewDetail(
             `${peiSourcesPreview.diary.entries_count} entrada(s)`,
@@ -1340,7 +1340,7 @@ const TesteRAG = () => {
     },
     {
       key: 'diary_summary_individual',
-      label: 'Resumo Diário Individual',
+      label: 'Resumo Diário Escolar',
       detail: peiSourcesPreview?.diary_summary_individual?.included
         ? formatPreviewDetail(
             `${peiSourcesPreview.diary_summary_individual.count || 0} resumo(s)`,
