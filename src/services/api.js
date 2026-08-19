@@ -307,6 +307,10 @@ export const ragAPI = {
     diaryEndDate = '',
     familyDiaryStartDate = '',
     familyDiaryEndDate = '',
+    diarySummaryIndividualStartDate = '',
+    diarySummaryIndividualEndDate = '',
+    diarySummaryFamilyStartDate = '',
+    diarySummaryFamilyEndDate = '',
     newSession = false,
   }) => {
     const payload = {
@@ -322,6 +326,10 @@ export const ragAPI = {
       ...(diaryEndDate ? { diary_end_date: diaryEndDate } : {}),
       ...(familyDiaryStartDate ? { family_diary_start_date: familyDiaryStartDate } : {}),
       ...(familyDiaryEndDate ? { family_diary_end_date: familyDiaryEndDate } : {}),
+      ...(diarySummaryIndividualStartDate ? { diary_summary_individual_start_date: diarySummaryIndividualStartDate } : {}),
+      ...(diarySummaryIndividualEndDate ? { diary_summary_individual_end_date: diarySummaryIndividualEndDate } : {}),
+      ...(diarySummaryFamilyStartDate ? { diary_summary_family_start_date: diarySummaryFamilyStartDate } : {}),
+      ...(diarySummaryFamilyEndDate ? { diary_summary_family_end_date: diarySummaryFamilyEndDate } : {}),
       ...(newSession ? { new_session: true } : {}),
     };
     const response = await api.post('/rag/chat', payload);
@@ -376,6 +384,10 @@ export const ragAPI = {
     diaryEndDate = '',
     familyDiaryStartDate = '',
     familyDiaryEndDate = '',
+    diarySummaryIndividualStartDate = '',
+    diarySummaryIndividualEndDate = '',
+    diarySummaryFamilyStartDate = '',
+    diarySummaryFamilyEndDate = '',
   }) => {
     const params = {};
     if (studentId) params.student_id = studentId;
@@ -385,6 +397,10 @@ export const ragAPI = {
     if (diaryEndDate) params.diary_end_date = diaryEndDate;
     if (familyDiaryStartDate) params.family_diary_start_date = familyDiaryStartDate;
     if (familyDiaryEndDate) params.family_diary_end_date = familyDiaryEndDate;
+    if (diarySummaryIndividualStartDate) params.diary_summary_individual_start_date = diarySummaryIndividualStartDate;
+    if (diarySummaryIndividualEndDate) params.diary_summary_individual_end_date = diarySummaryIndividualEndDate;
+    if (diarySummaryFamilyStartDate) params.diary_summary_family_start_date = diarySummaryFamilyStartDate;
+    if (diarySummaryFamilyEndDate) params.diary_summary_family_end_date = diarySummaryFamilyEndDate;
     const response = await api.get('/rag/pei-sources-preview', { params });
     return response.data;
   },
@@ -459,6 +475,17 @@ export const ragAPI = {
     return response.data;
   },
 
+  // Prompt do Resumo Diário
+  getDiarySummaryPrompt: async () => {
+    const response = await api.get('/rag/diary-summary-prompt');
+    return response.data;
+  },
+
+  resetDiarySummaryPrompt: async () => {
+    const response = await api.post('/rag/diary-summary-prompt/reset');
+    return response.data;
+  },
+
   // Catálogo de prompts
   listPrompts: async (scope) => {
     const response = await api.get('/rag/prompts', { params: { scope } });
@@ -511,10 +538,19 @@ export const diaryAPI = {
     return response.data;
   },
 
-  // Buscar entradas de um aluno específico
-  getStudentEntries: async (studentName) => {
-    const response = await api.get(`/diary/entries/${encodeURIComponent(studentName)}`);
-    return response.data;
+  // Buscar entradas de um aluno específico (com filtro de data opcional).
+  // Retorna { entries: [...], total: N|null }
+  // total = contagem sem filtro de data (para "X de Y"), null se indisponível.
+  getStudentEntries: async (studentName, { studentId, startDate, endDate } = {}) => {
+    const params = {};
+    if (studentId) params.student_id = studentId;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    const response = await api.get(`/diary/entries/${encodeURIComponent(studentName)}`, { params });
+    const data = response.data;
+    // Suporte ao formato antigo (array puro) e novo ({ entries, total })
+    if (Array.isArray(data)) return { entries: data, total: null };
+    return { entries: Array.isArray(data.entries) ? data.entries : [], total: data.total ?? null };
   },
 
   // Criar nova entrada de diário
@@ -681,6 +717,63 @@ export const familyDiaryAPI = {
   // Remover imagem anexada
   deleteEntryImage: async (imageId) => {
     const response = await api.delete(`/family-diary/images/${imageId}`);
+    return response.data;
+  },
+};
+
+// ============================================
+// API de Resumo Diário
+// ============================================
+export const diarySummaryAPI = {
+  // Alunos (no escopo do usuário) com entradas no período
+  getStudents: async (startDate, endDate) => {
+    const response = await api.get('/diary-summary/students', {
+      params: { start_date: startDate || '', end_date: endDate || '' },
+    });
+    return response.data;
+  },
+
+  // Entradas (escolares + familiares) de um aluno no período, pra seleção via checkbox
+  getEntries: async (studentId, startDate, endDate) => {
+    const response = await api.get('/diary-summary/entries', {
+      params: { student_id: studentId, start_date: startDate || '', end_date: endDate || '' },
+    });
+    return response.data;
+  },
+
+  // Envia uma mensagem no chat (contexto = entradas selecionadas + prompt de instrução)
+  sendMessage: async ({ studentId, sessionId, instructionPrompt, message, entryIds }) => {
+    const response = await api.post('/diary-summary/chat', {
+      student_id: studentId,
+      session_id: sessionId,
+      instruction_prompt: instructionPrompt,
+      message,
+      entry_ids: entryIds,
+    });
+    return response.data;
+  },
+
+  // Salva um resumo gerado, atrelado ao aluno/período
+  saveSummary: async ({ studentId, periodStart, periodEnd, summaryText, sourceEntries }) => {
+    const response = await api.post('/diary-summary/summaries', {
+      student_id: studentId,
+      period_start: periodStart,
+      period_end: periodEnd,
+      summary_text: summaryText,
+      source_entries: sourceEntries,
+    });
+    return response.data;
+  },
+
+  // Lista resumos salvos de um aluno
+  getSummaries: async (studentId) => {
+    const response = await api.get('/diary-summary/summaries', { params: { student_id: studentId } });
+    return response.data;
+  },
+
+  // Remove um resumo salvo
+  deleteSummary: async (summaryId) => {
+    const response = await api.delete(`/diary-summary/summaries/${summaryId}`);
     return response.data;
   },
 };

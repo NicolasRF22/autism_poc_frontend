@@ -29,6 +29,8 @@ const TesteRAG = () => {
     vector_documents: false,
     diary: false,
     family_diary: false,
+    diary_summary_individual: false,
+    diary_summary_family: false,
     pdi: false,
     student_pre_registration: false,
     teachers_pre_registration: false,
@@ -39,6 +41,8 @@ const TesteRAG = () => {
   const [chatSelectedPeiIds, setChatSelectedPeiIds] = useState([]);
   const [chatDiaryPeriod, setChatDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const [chatFamilyDiaryPeriod, setChatFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [chatDiarySummaryIndividualPeriod, setChatDiarySummaryIndividualPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [chatDiarySummaryFamilyPeriod, setChatDiarySummaryFamilyPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const messagesEndRef = useRef(null);
   const chatLoadRequestRef = useRef(0);
 
@@ -171,6 +175,8 @@ const TesteRAG = () => {
     vector_documents: false,
     diary: false,
     family_diary: false,
+    diary_summary_individual: false,
+    diary_summary_family: false,
     pdi: false,
     student_pre_registration: false,
     teachers_pre_registration: false,
@@ -181,6 +187,8 @@ const TesteRAG = () => {
   const [peiSelectedPeiIds, setPeiSelectedPeiIds] = useState([]);
   const [peiDiaryPeriod, setPeiDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const [peiFamilyDiaryPeriod, setPeiFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [peiDiarySummaryIndividualPeriod, setPeiDiarySummaryIndividualPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [peiDiarySummaryFamilyPeriod, setPeiDiarySummaryFamilyPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const [peiPrompt, setPeiPrompt] = useState('');
   const [initialPeiPrompt, setInitialPeiPrompt] = useState('');
   const [peiPromptLoading, setPeiPromptLoading] = useState(true);
@@ -523,6 +531,8 @@ const TesteRAG = () => {
     try {
       const diaryRange = computeDiaryDateRange(peiDiaryPeriod);
       const familyDiaryRange = computeDiaryDateRange(peiFamilyDiaryPeriod);
+      const diarySummaryIndividualRange = computeDiaryDateRange(peiDiarySummaryIndividualPeriod);
+      const diarySummaryFamilyRange = computeDiaryDateRange(peiDiarySummaryFamilyPeriod);
       const data = await ragAPI.getPEISourcesPreview({
         studentId,
         studentName: selectedStudentName,
@@ -531,6 +541,10 @@ const TesteRAG = () => {
         diaryEndDate: diaryRange.end,
         familyDiaryStartDate: familyDiaryRange.start,
         familyDiaryEndDate: familyDiaryRange.end,
+        diarySummaryIndividualStartDate: diarySummaryIndividualRange.start,
+        diarySummaryIndividualEndDate: diarySummaryIndividualRange.end,
+        diarySummaryFamilyStartDate: diarySummaryFamilyRange.start,
+        diarySummaryFamilyEndDate: diarySummaryFamilyRange.end,
       });
       const nextSources = data?.sources || null;
       setPeiSourcesPreview(nextSources);
@@ -546,6 +560,8 @@ const TesteRAG = () => {
             vector_documents: false,
             diary: false,
             family_diary: false,
+            diary_summary_individual: false,
+            diary_summary_family: false,
             pdi: false,
             student_pre_registration: false,
             teachers_pre_registration: false,
@@ -579,6 +595,8 @@ const TesteRAG = () => {
     try {
       const diaryRange = computeDiaryDateRange(chatDiaryPeriod);
       const familyDiaryRange = computeDiaryDateRange(chatFamilyDiaryPeriod);
+      const diarySummaryIndividualRange = computeDiaryDateRange(chatDiarySummaryIndividualPeriod);
+      const diarySummaryFamilyRange = computeDiaryDateRange(chatDiarySummaryFamilyPeriod);
       const data = await ragAPI.getPEISourcesPreview({
         studentId,
         studentName: selectedStudentName,
@@ -587,6 +605,10 @@ const TesteRAG = () => {
         diaryEndDate: diaryRange.end,
         familyDiaryStartDate: familyDiaryRange.start,
         familyDiaryEndDate: familyDiaryRange.end,
+        diarySummaryIndividualStartDate: diarySummaryIndividualRange.start,
+        diarySummaryIndividualEndDate: diarySummaryIndividualRange.end,
+        diarySummaryFamilyStartDate: diarySummaryFamilyRange.start,
+        diarySummaryFamilyEndDate: diarySummaryFamilyRange.end,
       });
 
       const nextSources = data?.sources || null;
@@ -603,6 +625,8 @@ const TesteRAG = () => {
             vector_documents: false,
             diary: false,
             family_diary: false,
+            diary_summary_individual: false,
+            diary_summary_family: false,
             pdi: false,
             student_pre_registration: false,
             teachers_pre_registration: false,
@@ -649,6 +673,10 @@ const TesteRAG = () => {
         diaryEndDate: computeDiaryDateRange(chatDiaryPeriod).end,
         familyDiaryStartDate: computeDiaryDateRange(chatFamilyDiaryPeriod).start,
         familyDiaryEndDate: computeDiaryDateRange(chatFamilyDiaryPeriod).end,
+        diarySummaryIndividualStartDate: computeDiaryDateRange(chatDiarySummaryIndividualPeriod).start,
+        diarySummaryIndividualEndDate: computeDiaryDateRange(chatDiarySummaryIndividualPeriod).end,
+        diarySummaryFamilyStartDate: computeDiaryDateRange(chatDiarySummaryFamilyPeriod).start,
+        diarySummaryFamilyEndDate: computeDiaryDateRange(chatDiarySummaryFamilyPeriod).end,
       });
 
       if (data?.session_id && studentKey) {
@@ -769,6 +797,8 @@ const TesteRAG = () => {
     try {
       const peiDiaryRange = computeDiaryDateRange(peiDiaryPeriod);
       const peiFamilyDiaryRange = computeDiaryDateRange(peiFamilyDiaryPeriod);
+      const peiDiarySummaryIndividualRange = computeDiaryDateRange(peiDiarySummaryIndividualPeriod);
+      const peiDiarySummaryFamilyRange = computeDiaryDateRange(peiDiarySummaryFamilyPeriod);
       const data = await ragAPI.generatePEI({
         student_id: peiSelectedStudentId,
         student_name: studentName.trim(),
@@ -780,6 +810,10 @@ const TesteRAG = () => {
         diary_end_date: peiDiaryRange.end,
         family_diary_start_date: peiFamilyDiaryRange.start,
         family_diary_end_date: peiFamilyDiaryRange.end,
+        diary_summary_individual_start_date: peiDiarySummaryIndividualRange.start,
+        diary_summary_individual_end_date: peiDiarySummaryIndividualRange.end,
+        diary_summary_family_start_date: peiDiarySummaryFamilyRange.start,
+        diary_summary_family_end_date: peiDiarySummaryFamilyRange.end,
       });
       const clientDurationMs = Math.max(0, Math.round(performance.now() - startedAt));
       clearInterval(timer);
@@ -1208,6 +1242,28 @@ const TesteRAG = () => {
       available: Boolean(chatSourcesPreview?.family_diary?.included),
     },
     {
+      key: 'diary_summary_individual',
+      label: 'Resumo Diário Individual',
+      detail: chatSourcesPreview?.diary_summary_individual?.included
+        ? formatPreviewDetail(
+            `${chatSourcesPreview.diary_summary_individual.count || 0} resumo(s)`,
+            chatSourcesPreview?.diary_summary_individual?.excerpt,
+          )
+        : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.diary_summary_individual?.included),
+    },
+    {
+      key: 'diary_summary_family',
+      label: 'Resumo Diário Familiar',
+      detail: chatSourcesPreview?.diary_summary_family?.included
+        ? formatPreviewDetail(
+            `${chatSourcesPreview.diary_summary_family.count || 0} resumo(s)`,
+            chatSourcesPreview?.diary_summary_family?.excerpt,
+          )
+        : 'não encontrado',
+      available: Boolean(chatSourcesPreview?.diary_summary_family?.included),
+    },
+    {
       key: 'pdi',
       label: 'PDI',
       detail: chatSourcesPreview?.pdi?.included
@@ -1281,6 +1337,28 @@ const TesteRAG = () => {
           )
         : 'não encontrado',
       available: Boolean(peiSourcesPreview?.family_diary?.included),
+    },
+    {
+      key: 'diary_summary_individual',
+      label: 'Resumo Diário Individual',
+      detail: peiSourcesPreview?.diary_summary_individual?.included
+        ? formatPreviewDetail(
+            `${peiSourcesPreview.diary_summary_individual.count || 0} resumo(s)`,
+            peiSourcesPreview?.diary_summary_individual?.excerpt,
+          )
+        : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.diary_summary_individual?.included),
+    },
+    {
+      key: 'diary_summary_family',
+      label: 'Resumo Diário Familiar',
+      detail: peiSourcesPreview?.diary_summary_family?.included
+        ? formatPreviewDetail(
+            `${peiSourcesPreview.diary_summary_family.count || 0} resumo(s)`,
+            peiSourcesPreview?.diary_summary_family?.excerpt,
+          )
+        : 'não encontrado',
+      available: Boolean(peiSourcesPreview?.diary_summary_family?.included),
     },
     {
       key: 'pdi',
@@ -1435,6 +1513,12 @@ const TesteRAG = () => {
                         )}
                         {source.key === 'family_diary' && chatSelectedSources.family_diary && (
                           renderDiaryPeriodPicker(chatFamilyDiaryPeriod, setChatFamilyDiaryPeriod)
+                        )}
+                        {source.key === 'diary_summary_individual' && chatSelectedSources.diary_summary_individual && (
+                          renderDiaryPeriodPicker(chatDiarySummaryIndividualPeriod, setChatDiarySummaryIndividualPeriod)
+                        )}
+                        {source.key === 'diary_summary_family' && chatSelectedSources.diary_summary_family && (
+                          renderDiaryPeriodPicker(chatDiarySummaryFamilyPeriod, setChatDiarySummaryFamilyPeriod)
                         )}
                         {source.key === 'linked_peis'
                           && chatSelectedSources.linked_peis
@@ -1621,6 +1705,12 @@ const TesteRAG = () => {
                           )}
                           {source.key === 'family_diary' && peiSelectedSources.family_diary && (
                             renderDiaryPeriodPicker(peiFamilyDiaryPeriod, setPeiFamilyDiaryPeriod)
+                          )}
+                          {source.key === 'diary_summary_individual' && peiSelectedSources.diary_summary_individual && (
+                            renderDiaryPeriodPicker(peiDiarySummaryIndividualPeriod, setPeiDiarySummaryIndividualPeriod)
+                          )}
+                          {source.key === 'diary_summary_family' && peiSelectedSources.diary_summary_family && (
+                            renderDiaryPeriodPicker(peiDiarySummaryFamilyPeriod, setPeiDiarySummaryFamilyPeriod)
                           )}
                           {source.key === 'linked_peis'
                             && peiSelectedSources.linked_peis

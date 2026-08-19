@@ -44,7 +44,10 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   const role = user?.role || '';
 
   if (role === 'pais') {
-    const familyMenuItems = [{ path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' }];
+    const familyMenuItems = [
+      { path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' },
+      { path: '/resumo-diario', label: 'Resumo Diário', icon: '📝' },
+    ];
 
     return (
       <>
@@ -134,6 +137,10 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   // restringe por _student_visible_to_user); só quem escreve entradas é o perfil 'pais'.
   menuItems.push({ path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' });
 
+  if (['admin', 'professor'].includes(role)) {
+    menuItems.push({ path: '/resumo-diario', label: 'Resumo Diário', icon: '📝' });
+  }
+
   if (role === 'admin') {
     menuItems.push({ path: '/pais-alunos', label: 'Pais x Alunos', icon: '👪' });
     menuItems.push({ path: '/admin', label: 'Administração', icon: '🛡️' });
@@ -144,6 +151,7 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     menuItems = [
       { path: '/diario', label: 'Diário Individual', icon: '📖' },
       { path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' },
+      { path: '/resumo-diario', label: 'Resumo Diário', icon: '📝' },
     ];
   }
 

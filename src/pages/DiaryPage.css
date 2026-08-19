@@ -853,6 +853,29 @@
   cursor: not-allowed;
 }
 
+/* Entries loading (inline, dentro da view do aluno) */
+.entries-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+.entries-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;

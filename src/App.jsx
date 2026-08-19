@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import Home from './pages/Home';
 import DiaryPage from './pages/DiaryPage';
 import FamilyDiaryPage from './pages/FamilyDiaryPage';
+import DiarySummaryPage from './pages/DiarySummaryPage';
 import DiaryEntry from './pages/DiaryEntry';
 import PDIPage from './pages/PDIPage';
 import PDIForm from './pages/PDIForm';
@@ -58,6 +59,7 @@ const SCHOOL_REGISTRATION_ROLES = new Set(['admin', 'coordenacao', 'avaliador'])
 const TEACHER_STUDENT_LINK_ROLES = new Set(['admin', 'secretaria', 'coordenacao', 'avaliador']);
 const PARENT_STUDENT_LINK_ROLES = new Set(['admin']);
 const CHAT_AND_PEI_ROLES = new Set(['admin', 'avaliador']);
+const DIARY_SUMMARY_ROLES = new Set(['admin', 'professor', 'pais']);
 
 const hasAnyRole = (user, allowedRoles) => allowedRoles.has(user?.role || '');
 
@@ -170,6 +172,7 @@ function App() {
   const canAccessTeacherStudentLinks = hasAnyRole(user, TEACHER_STUDENT_LINK_ROLES);
   const canAccessParentStudentLinks = hasAnyRole(user, PARENT_STUDENT_LINK_ROLES);
   const canAccessChatAndPei = hasAnyRole(user, CHAT_AND_PEI_ROLES);
+  const canAccessDiarySummary = hasAnyRole(user, DIARY_SUMMARY_ROLES);
   const isPais = user?.role === 'pais';
 
   return (
@@ -197,6 +200,7 @@ function App() {
               {isPais ? (
                 <>
                   <Route path="/diario-familiar" element={<FamilyDiaryPage />} />
+                  <Route path="/resumo-diario" element={<DiarySummaryPage />} />
                   <Route path="*" element={<Navigate to="/diario-familiar" replace />} />
                 </>
               ) : (
@@ -208,6 +212,10 @@ function App() {
               <Route path="/cadastro-da-escola" element={<CadastroDaEscolaPage />} />
               <Route path="/diario" element={<DiaryPage />} />
               <Route path="/diario-familiar" element={<FamilyDiaryPage />} />
+              <Route
+                path="/resumo-diario"
+                element={canAccessDiarySummary ? <DiarySummaryPage /> : <Navigate to="/inicio" replace />}
+              />
               <Route
                 path="/diario/:studentName/novo"
                 element={canEditLearning ? <DiaryEntry /> : <Navigate to="/inicio" replace />}

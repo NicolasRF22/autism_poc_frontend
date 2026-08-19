@@ -64,7 +64,8 @@ const DiaryPage = () => {
   const [newStudentId, setNewStudentId] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentEntries, setStudentEntries] = useState([]);
-  const [filteredEntries, setFilteredEntries] = useState([]);
+  const [totalEntries, setTotalEntries] = useState(null);
+  const [entriesLoading, setEntriesLoading] = useState(false);
   const [dateFilter, setDateFilter] = useState('week'); // 'all', 'today', 'week', 'month', 'custom'
   const [customDate, setCustomDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -108,10 +109,6 @@ const DiaryPage = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    applyDateFilter();
-  }, [studentEntries, dateFilter, customDate, customEndDate]);
-
-  useEffect(() => {
     // O backend já embute as imagens de cada entrada na resposta de getStudentEntries
     // (evita 1 requisição por entrada — ver _diary_images_by_entry em app.py).
     const next = {};
@@ -121,88 +118,67 @@ const DiaryPage = () => {
     setEntryImagesById(next);
   }, [studentEntries]);
 
-  const applyDateFilter = () => {
-    if (studentEntries.length === 0) {
-      setFilteredEntries([]);
-      return;
-    }
+  // Calcula o range de datas (YYYY-MM-DD) para o filtro ativo.
+  // Retorna { startDate, endDate } — null = sem restrição nesse lado.
+  const getDateRangeForFilter = (filter, start, end) => {
+    const toISO = (d) => d.toISOString().split('T')[0];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    let filtered = [...studentEntries];
-
-    switch (dateFilter) {
+    switch (filter) {
       case 'today':
-        filtered = studentEntries.filter(entry => {
-          const entryDate = parseLocalDate(entry.diary_date);
-          if (!entryDate) return false;
-          return entryDate >= today;
-        });
-        break;
-      
-      case 'week':
+        return { startDate: toISO(today), endDate: toISO(today) };
+      case 'week': {
         const weekAgo = new Date(today);
         weekAgo.setDate(weekAgo.getDate() - 7);
-        filtered = studentEntries.filter(entry => {
-          const entryDate = parseLocalDate(entry.diary_date);
-          if (!entryDate) return false;
-          return entryDate >= weekAgo;
-        });
-        break;
-      
-      case 'month':
+        return { startDate: toISO(weekAgo), endDate: null };
+      }
+      case 'month': {
         const monthAgo = new Date(today);
         monthAgo.setMonth(monthAgo.getMonth() - 1);
-        filtered = studentEntries.filter(entry => {
-          const entryDate = parseLocalDate(entry.diary_date);
-          if (!entryDate) return false;
-          return entryDate >= monthAgo;
-        });
-        break;
-      
-      case 'custom': {
-        const start = customDate ? parseLocalDate(customDate) : null;
-        const end = customEndDate ? parseLocalDate(customEndDate) : null;
-        if (start || end) {
-          filtered = studentEntries.filter(entry => {
-            const entryDate = parseLocalDate(entry.diary_date);
-            if (!entryDate) return false;
-            if (start && entryDate < start) return false;
-            if (end && entryDate > end) return false;
-            return true;
-          });
-        }
-        break;
+        return { startDate: toISO(monthAgo), endDate: null };
       }
-      
+      case 'custom':
+        return { startDate: start || null, endDate: end || null };
       case 'all':
       default:
-        filtered = studentEntries;
-        break;
+        return { startDate: null, endDate: null };
     }
-
-    setFilteredEntries(filtered);
   };
 
-  const loadStudentDirect = async (studentName, studentId) => {
+  // Busca entradas para o filtro ativo e atualiza studentEntries.
+  // Recebe o student e o filtro explicitamente para evitar stale closure.
+  const fetchEntriesForStudent = async (student, filter, start, end) => {
+    if (!student) return;
+    const { startDate, endDate } = getDateRangeForFilter(filter, start, end);
+    setEntriesLoading(true);
     try {
-      setLoading(true);
-      const data = await diaryAPI.getStudentEntries(studentName);
-      setStudentEntries(data);
-      setSelectedStudent({
-        student_name: studentName,
-        student_id: studentId || null,
-        last_teachers: data?.[0]?.teachers || [],
-        last_date: data?.[0]?.diary_date || null,
-        total_entries: data.length,
+      const { entries, total } = await diaryAPI.getStudentEntries(student.student_name, {
+        studentId: student.student_id || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       });
+      setStudentEntries(entries);
+      setTotalEntries(total);
     } catch (err) {
       console.error(err);
-      setError('Erro ao carregar diário do aluno.');
+      setError('Erro ao carregar entradas do aluno.');
     } finally {
-      setLoading(false);
+      setEntriesLoading(false);
     }
+  };
+
+  const loadStudentDirect = (studentName, studentId) => {
+    const student = {
+      student_name: studentName,
+      student_id: studentId || null,
+      last_teachers: [],
+      last_date: null,
+      total_entries: null,
+    };
+    setSelectedStudent(student);
+    setStudentEntries([]);
+    fetchEntriesForStudent(student, 'week', '', '');
   };
 
   const loadStudentsSilent = async () => {
@@ -284,21 +260,19 @@ const DiaryPage = () => {
     );
   };
 
-  const handleStudentClick = async (student) => {
-    try {
-      const data = await diaryAPI.getStudentEntries(student.student_name);
-      setStudentEntries(data);
-      setSelectedStudent(student);
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao carregar entradas do aluno');
-    }
+  const handleStudentClick = (student) => {
+    setSelectedStudent(student);
+    setStudentEntries([]);
+    setDateFilter('week');
+    setCustomDate('');
+    setCustomEndDate('');
+    fetchEntriesForStudent(student, 'week', '', '');
   };
 
   const handleBackToList = () => {
     setSelectedStudent(null);
     setStudentEntries([]);
-    setFilteredEntries([]);
+    setTotalEntries(null);
     setDateFilter('week');
     setCustomDate('');
     setCustomEndDate('');
@@ -319,37 +293,49 @@ const DiaryPage = () => {
   };
 
   const handleFilterChange = (filter) => {
+    const newStart = filter !== 'custom' ? '' : customDate;
+    const newEnd = filter !== 'custom' ? '' : customEndDate;
     setDateFilter(filter);
     if (filter !== 'custom') {
       setCustomDate('');
       setCustomEndDate('');
     }
+    fetchEntriesForStudent(selectedStudent, filter, newStart, newEnd);
   };
 
   const handleCustomDateChange = (date) => {
     setCustomDate(date);
     setDateFilter('custom');
+    // Só busca quando pelo menos uma das datas estiver definida
+    if (date || customEndDate) {
+      fetchEntriesForStudent(selectedStudent, 'custom', date, customEndDate);
+    }
   };
 
   const handleCustomEndDateChange = (date) => {
     setCustomEndDate(date);
     setDateFilter('custom');
+    if (customDate || date) {
+      fetchEntriesForStudent(selectedStudent, 'custom', customDate, date);
+    }
   };
 
   const handleDeleteEntry = async (entryId) => {
     if (!window.confirm('Tem certeza que deseja excluir esta entrada?')) return;
-    
+
     try {
       await diaryAPI.deleteEntry(entryId);
-      
-      // Recarregar entradas
-      const data = await diaryAPI.getStudentEntries(selectedStudent.student_name);
-      setStudentEntries(data);
-      
-      // Se não há mais entradas, voltar para lista
-      if (data.length === 0) {
-        handleBackToList();
-        loadStudents();
+      await fetchEntriesForStudent(selectedStudent, dateFilter, customDate, customEndDate);
+
+      // Se não há mais entradas no período, e o filtro já é 'all', volta para lista
+      if (dateFilter === 'all') {
+        setStudentEntries((prev) => {
+          if (prev.length === 0) {
+            handleBackToList();
+            loadStudents();
+          }
+          return prev;
+        });
       }
     } catch (err) {
       console.error(err);
@@ -378,7 +364,7 @@ const DiaryPage = () => {
       } catch (bulkDeleteError) {
         console.warn('DELETE /diary/students indisponível no backend atual. Aplicando fallback por entradas.', bulkDeleteError);
 
-        const entries = await diaryAPI.getStudentEntries(student.student_name);
+        const { entries } = await diaryAPI.getStudentEntries(student.student_name);
         for (const entry of entries) {
           await diaryAPI.deleteEntry(entry.id);
           removedEntries += 1;
@@ -536,12 +522,12 @@ const DiaryPage = () => {
   };
 
   const handleDownloadPeriod = () => {
-    if (filteredEntries.length === 0) {
+    if (studentEntries.length === 0) {
       alert('Nenhuma entrada no período selecionado para baixar.');
       return;
     }
 
-    const sortedEntries = [...filteredEntries].sort((a, b) =>
+    const sortedEntries = [...studentEntries].sort((a, b) =>
       (a.diary_date || '').localeCompare(b.diary_date || '')
     );
 
@@ -675,8 +661,7 @@ const DiaryPage = () => {
       loadStudents();
 
       if (selectedStudent) {
-        const data = await diaryAPI.getStudentEntries(selectedStudent.student_name);
-        setStudentEntries(data);
+        await fetchEntriesForStudent(selectedStudent, dateFilter, customDate, customEndDate);
       }
     } catch (err) {
       console.error(err);
@@ -778,29 +763,38 @@ const DiaryPage = () => {
         {/* Contador de resultados */}
         {dateFilter !== 'all' && (
           <div className="filter-results">
-            {filteredEntries.length === 0 ? (
+            {entriesLoading ? (
+              <p>Buscando registros...</p>
+            ) : studentEntries.length === 0 ? (
               <p>Nenhuma entrada encontrada para este período</p>
+            ) : totalEntries !== null && totalEntries > studentEntries.length ? (
+              <p>{studentEntries.length} de {totalEntries} {totalEntries === 1 ? 'registro' : 'registros'}</p>
             ) : (
-              <p>Mostrando {filteredEntries.length} de {studentEntries.length} registros</p>
+              <p>{studentEntries.length} {studentEntries.length === 1 ? 'registro' : 'registros'}</p>
             )}
           </div>
         )}
 
-        {canDeleteDiary && filteredEntries.length > 0 && (
+        {canDeleteDiary && studentEntries.length > 0 && !entriesLoading && (
           <div className="download-period-wrapper">
             <button onClick={handleDownloadPeriod} className="download-period-button">
-              ⬇️ Baixar Período ({filteredEntries.length} {filteredEntries.length === 1 ? 'registro' : 'registros'})
+              ⬇️ Baixar Período ({studentEntries.length} {studentEntries.length === 1 ? 'registro' : 'registros'})
             </button>
           </div>
         )}
 
         <div className="entries-list">
-          {filteredEntries.length === 0 ? (
+          {entriesLoading ? (
+            <div className="entries-loading">
+              <div className="entries-loading-spinner" />
+              <p>Carregando entradas...</p>
+            </div>
+          ) : studentEntries.length === 0 ? (
             <div className="empty-state">
               <p>Nenhuma entrada {dateFilter !== 'all' ? 'para este período' : 'ainda'}</p>
             </div>
           ) : (
-            filteredEntries.map((entry) => (
+            studentEntries.map((entry) => (
               <div key={entry.id} className="entry-card">
                 <div className="entry-header">
                   <h3>📅 {formatDate(entry.diary_date, { dateOnly: true })}</h3>
