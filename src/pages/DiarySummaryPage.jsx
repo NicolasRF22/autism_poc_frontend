@@ -155,6 +155,7 @@ const DiarySummaryPage = () => {
   const [loadingSummaries, setLoadingSummaries] = useState(false);
   const [savingMessageIndex, setSavingMessageIndex] = useState(null);
   const [viewingSummary, setViewingSummary] = useState(null);
+  const [summaryCopied, setSummaryCopied] = useState(false);
 
   // Filtros da seção "Resumos salvos" — período (dia/semana/mês/personalizado, igual ao
   // Diário Escolar/Familiar) e tipo (escolar/familiar/ambos). Só client-side, sobre o
@@ -564,6 +565,25 @@ const DiarySummaryPage = () => {
 
   const canDeleteSummary = (summary) => role === 'admin' || summary.author_user_id === currentUser?.id;
 
+  // Reseta o feedback "Copiado!" sempre que um resumo diferente é aberto (ou o modal fecha).
+  useEffect(() => {
+    setSummaryCopied(false);
+  }, [viewingSummary]);
+
+  const handleCopySummary = async () => {
+    const text = viewingSummary?.summary_text || '';
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível copiar o resumo. Copie manualmente selecionando o texto.');
+      return;
+    }
+    setSummaryCopied(true);
+    setTimeout(() => setSummaryCopied(false), 2000);
+  };
+
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
   return (
@@ -947,7 +967,12 @@ const DiarySummaryPage = () => {
               <h3>
                 Resumo — {formatDateBR(viewingSummary.period_start)} até {formatDateBR(viewingSummary.period_end)}
               </h3>
-              <button className="pei-prompt-modal-close" onClick={() => setViewingSummary(null)}>✕</button>
+              <div className="diary-summary-modal-header-actions">
+                <button type="button" className="diary-summary-copy-btn" onClick={handleCopySummary}>
+                  {summaryCopied ? '✅ Copiado!' : '📋 Copiar'}
+                </button>
+                <button className="pei-prompt-modal-close" onClick={() => setViewingSummary(null)}>✕</button>
+              </div>
             </div>
             <div className="pei-prompt-modal-body">
               <p className="pei-prompt-meta">

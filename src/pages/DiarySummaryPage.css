@@ -278,6 +278,30 @@
   width: min(700px, 100%);
 }
 
+.diary-summary-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.diary-summary-copy-btn {
+  background: #eef2ff;
+  color: #4338ca;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.diary-summary-copy-btn:hover {
+  background: #e0e7ff;
+}
+
 .diary-summary-modal-text {
   white-space: pre-wrap;
   color: #374151;
