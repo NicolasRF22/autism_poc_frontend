@@ -150,6 +150,7 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   if (isProfessorMobile) {
     menuItems = [
       { path: '/diario', label: 'Diário Escolar', icon: '📖' },
+      { path: '/anexos', label: 'Anexos', icon: '📎' },
       { path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' },
       { path: '/resumo-diario', label: 'Resumo Diário', icon: '📝' },
     ];
