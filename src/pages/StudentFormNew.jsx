@@ -1216,27 +1216,27 @@ const StudentFormNew = () => {
 
               <div className="form-group">
                 <label>O aluno interage com colegas durante atividades em grupo sem mediação constante?</label>
-                {renderRadioGroup(socialInteracts, setSocialInteracts, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(socialInteracts, setSocialInteracts, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Ele consegue iniciar interações sociais espontaneamente?</label>
-                {renderRadioGroup(socialInitiates, setSocialInitiates, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(socialInitiates, setSocialInitiates, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Participa de atividades sociais propostas pela escola quando há estímulos adequados?</label>
-                {renderRadioGroup(socialParticipates, setSocialParticipates, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(socialParticipates, setSocialParticipates, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Consegue esperar sua vez e reagir adequadamente a frustrações em jogos ou atividades sociais?</label>
-                {renderRadioGroup(socialWaitsTurn, setSocialWaitsTurn, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(socialWaitsTurn, setSocialWaitsTurn, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Demonstra interesse em compartilhar experiências ou prefere interações mais limitadas?</label>
-                {renderRadioGroup(socialShares, setSocialShares, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(socialShares, setSocialShares, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
@@ -1256,27 +1256,27 @@ const StudentFormNew = () => {
 
               <div className="form-group">
                 <label>O aluno demonstra emoções básicas, como alegria ou frustração, de forma clara?</label>
-                {renderRadioGroup(affectiveDemonstrates, setAffectiveDemonstrates, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(affectiveDemonstrates, setAffectiveDemonstrates, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Reage positivamente a elogios e estímulos motivacionais?</label>
-                {renderRadioGroup(affectiveReacts, setAffectiveReacts, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(affectiveReacts, setAffectiveReacts, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Busca apoio emocional quando enfrenta dificuldades?</label>
-                {renderRadioGroup(affectiveSeeksSupport, setAffectiveSeeksSupport, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(affectiveSeeksSupport, setAffectiveSeeksSupport, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Fica desregulado emocionalmente com mudanças na rotina escolar?</label>
-                {renderRadioGroup(affectiveRoutineChanges, setAffectiveRoutineChanges, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(affectiveRoutineChanges, setAffectiveRoutineChanges, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Consegue se acalmar sozinho ou com ajuda mínima após momentos de desregulação?</label>
-                {renderRadioGroup(affectiveCalmDown, setAffectiveCalmDown, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(affectiveCalmDown, setAffectiveCalmDown, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
@@ -1296,27 +1296,27 @@ const StudentFormNew = () => {
 
               <div className="form-group">
                 <label>O aluno demonstra interesse em aprender coisas novas ou explorar áreas de interesse específico?</label>
-                {renderRadioGroup(cognitiveInterest, setCognitiveInterest, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(cognitiveInterest, setCognitiveInterest, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Consegue compreender e seguir instruções simples sem mediação constante?</label>
-                {renderRadioGroup(cognitiveInstructions, setCognitiveInstructions, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(cognitiveInstructions, setCognitiveInstructions, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Mantém a atenção nas atividades propostas por períodos adequados à sua idade?</label>
-                {renderRadioGroup(cognitiveAttention, setCognitiveAttention, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(cognitiveAttention, setCognitiveAttention, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Resolve problemas simples de forma independente ou com suporte mínimo?</label>
-                {renderRadioGroup(cognitiveProblems, setCognitiveProblems, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(cognitiveProblems, setCognitiveProblems, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Aprende melhor com suporte visual do que com instruções apenas verbais?</label>
-                {renderRadioGroup(cognitiveVisual, setCognitiveVisual, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(cognitiveVisual, setCognitiveVisual, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
@@ -1336,27 +1336,27 @@ const StudentFormNew = () => {
 
               <div className="form-group">
                 <label>O aluno apresenta coordenação motora fina suficiente para segurar lápis ou manipular objetos pequenos?</label>
-                {renderRadioGroup(motorFine, setMotorFine, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(motorFine, setMotorFine, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Demonstra coordenação motora grossa para correr, pular ou subir escadas?</label>
-                {renderRadioGroup(motorGross, setMotorGross, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(motorGross, setMotorGross, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Realiza tarefas de autocuidado, como vestir-se ou abrir lancheiras, de forma independente?</label>
-                {renderRadioGroup(motorSelfCare, setMotorSelfCare, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(motorSelfCare, setMotorSelfCare, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Participa de atividades físicas ou recreativas sem sinais de cansaço excessivo?</label>
-                {renderRadioGroup(motorPhysical, setMotorPhysical, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(motorPhysical, setMotorPhysical, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Apresenta comportamentos motores repetitivos ou resistência a novos desafios motores?</label>
-                {renderRadioGroup(motorRepetitive, setMotorRepetitive, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(motorRepetitive, setMotorRepetitive, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
@@ -1416,27 +1416,27 @@ const StudentFormNew = () => {
 
               <div className="form-group">
                 <label>A família participa de reuniões e eventos relacionados ao desenvolvimento do aluno?</label>
-                {renderRadioGroup(familyParticipates, setFamilyParticipates, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(familyParticipates, setFamilyParticipates, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Existe comunicação frequente entre a família e a escola para alinhar estratégias pedagógicas?</label>
-                {renderRadioGroup(familyCommunication, setFamilyCommunication, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(familyCommunication, setFamilyCommunication, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>A família oferece suporte emocional consistente e incentiva a autonomia do aluno?</label>
-                {renderRadioGroup(familySupport, setFamilySupport, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(familySupport, setFamilySupport, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>Há colaboração familiar no uso de recursos terapêuticos ou adaptações sugeridas?</label>
-                {renderRadioGroup(familyCollaboration, setFamilyCollaboration, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(familyCollaboration, setFamilyCollaboration, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
                 <label>A família está aberta a novas abordagens ou sugestões para apoiar o aluno?</label>
-                {renderRadioGroup(familyOpenness, setFamilyOpenness, ['Sim', 'Não'], isViewMode)}
+                {renderRadioGroup(familyOpenness, setFamilyOpenness, ['Sim', 'Não', 'Parcialmente'], isViewMode)}
               </div>
 
               <div className="form-group">
