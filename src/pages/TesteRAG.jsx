@@ -1273,8 +1273,10 @@ const TesteRAG = () => {
     },
     {
       key: 'student_pre_registration',
-      label: 'Pré-cadastro do Aluno',
-      detail: chatSourcesPreview?.student_pre_registration?.included ? 'incluído' : 'não encontrado',
+      label: 'Pré-cadastro do Aluno + Estudo de Caso',
+      detail: chatSourcesPreview?.student_pre_registration?.included
+        ? `${chatSourcesPreview.student_pre_registration.case_study_answers_count || 0} resposta(s) do Estudo de Caso`
+        : 'não encontrado',
       available: Boolean(chatSourcesPreview?.student_pre_registration?.included),
     },
     {
@@ -1287,9 +1289,12 @@ const TesteRAG = () => {
     },
     {
       key: 'school_pre_registration',
-      label: 'Pré-cadastro da Escola',
+      label: 'Pré-cadastro da Escola + Cadastro da Escola',
       detail: chatSourcesPreview?.school_pre_registration?.included
-        ? (chatSourcesPreview.school_pre_registration.school_name || 'incluído')
+        ? formatPreviewDetail(
+            `${chatSourcesPreview.school_pre_registration.registration_answers_count || 0} resposta(s) do Cadastro da Escola`,
+            chatSourcesPreview.school_pre_registration.school_name,
+          )
         : 'não encontrado',
       available: Boolean(chatSourcesPreview?.school_pre_registration?.included),
     },
@@ -1370,8 +1375,10 @@ const TesteRAG = () => {
     },
     {
       key: 'student_pre_registration',
-      label: 'Pré-cadastro do Aluno',
-      detail: peiSourcesPreview?.student_pre_registration?.included ? 'incluído' : 'não encontrado',
+      label: 'Pré-cadastro do Aluno + Estudo de Caso',
+      detail: peiSourcesPreview?.student_pre_registration?.included
+        ? `${peiSourcesPreview.student_pre_registration.case_study_answers_count || 0} resposta(s) do Estudo de Caso`
+        : 'não encontrado',
       available: Boolean(peiSourcesPreview?.student_pre_registration?.included),
     },
     {
@@ -1384,9 +1391,12 @@ const TesteRAG = () => {
     },
     {
       key: 'school_pre_registration',
-      label: 'Pré-cadastro da Escola',
+      label: 'Pré-cadastro da Escola + Cadastro da Escola',
       detail: peiSourcesPreview?.school_pre_registration?.included
-        ? (peiSourcesPreview.school_pre_registration.school_name || 'incluído')
+        ? formatPreviewDetail(
+            `${peiSourcesPreview.school_pre_registration.registration_answers_count || 0} resposta(s) do Cadastro da Escola`,
+            peiSourcesPreview.school_pre_registration.school_name,
+          )
         : 'não encontrado',
       available: Boolean(peiSourcesPreview?.school_pre_registration?.included),
     },
