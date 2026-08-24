@@ -101,6 +101,12 @@ const DiaryPage = () => {
 
   useEffect(() => {
     if (autoStudentName) {
+      // Carregamento direto de um aluno (link com ?student=/&studentId=, ex.: retorno do
+      // formulário de nova entrada ou redirecionamento de login do professor no celular)
+      // não passa por loadStudents() — precisa soltar a tela de "Carregando diários..."
+      // manualmente, senão `loading` (que começa true) nunca vira false e a tela trava
+      // pra sempre nesse fluxo, mesmo o aluno já tendo carregado nos bastidores.
+      setLoading(false);
       loadStudentDirect(autoStudentName, autoStudentId);
       loadStudentsSilent();
     } else {
