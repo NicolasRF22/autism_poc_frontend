@@ -19,6 +19,13 @@ const formatDate = (value) => {
   return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleDateString('pt-BR');
 };
 
+const formatDateTime = (isoString) => {
+  if (!isoString) return '—';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+};
+
 const parseLocalDate = (value) => {
   if (!value) return null;
 
@@ -36,6 +43,8 @@ const FamilyDiaryPage = () => {
   const currentUser = getStoredUser();
   const role = currentUser?.role || '';
   const canWrite = role === 'pais';
+  // Mesma regra do Diário Escolar (canDeleteDiary em DiaryPage.jsx) — download é admin-only.
+  const canDownloadDiary = role === 'admin';
 
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
@@ -339,6 +348,111 @@ const FamilyDiaryPage = () => {
 
   const canManageEntry = (entry) => role === 'admin' || entry.author_user_id === currentUser?.id;
 
+  // Download em .txt — mesma lógica do Diário Escolar (DiaryPage.jsx: buildEntryLines/
+  // downloadTextFile/handleDownloadEntry/handleDownloadPeriod), adaptada ao formato mais
+  // simples de uma entrada do Diário Familiar (sem professores/presença/atividades).
+  const getPeriodLabel = () => {
+    switch (dateFilter) {
+      case 'today': return 'Hoje';
+      case 'week': return 'Última semana';
+      case 'month': return 'Último mês';
+      case 'custom': {
+        const start = customDate ? formatDate(customDate) : '(sem início)';
+        const end = customEndDate ? formatDate(customEndDate) : '(sem fim)';
+        return `${start} até ${end}`;
+      }
+      case 'all':
+      default:
+        return 'Todo o período';
+    }
+  };
+
+  const buildFamilyEntryLines = (entry) => {
+    const lines = [
+      `Data:           ${formatDate(entry.entry_date)}`,
+      `Registrado por: ${entry.author_name || '—'}`,
+      `Registrado em:  ${formatDateTime(entry.created_at)}`,
+      entry.updated_at && entry.updated_at !== entry.created_at
+        ? `Atualizado em:  ${formatDateTime(entry.updated_at)}`
+        : '',
+    ].filter((l) => l !== '');
+
+    if (entry.observations) {
+      lines.push('', '-'.repeat(40), 'OBSERVAÇÕES', '-'.repeat(40));
+      lines.push(entry.observations);
+    }
+
+    const images = entry.images || [];
+    if (images.length > 0) {
+      lines.push('', '-'.repeat(40), 'IMAGENS', '-'.repeat(40));
+      images.forEach((img, i) => {
+        const caption = img.caption ? ` — ${img.caption}` : '';
+        lines.push(`${i + 1}. ${img.file_name}${caption}`);
+      });
+    }
+
+    return lines;
+  };
+
+  const downloadTextFile = (content, filename) => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const selectedStudentName = students.find((s) => s.id === selectedStudentId)?.name || '';
+
+  const handleDownloadEntry = (entry) => {
+    const lines = [
+      'DIÁRIO FAMILIAR',
+      '='.repeat(40),
+      '',
+      `Aluno:       ${selectedStudentName}`,
+      ...buildFamilyEntryLines(entry),
+      '',
+      '='.repeat(40),
+    ];
+
+    const safeName = (selectedStudentName || 'aluno').replace(/\s+/g, '_');
+    const safeDate = (entry.entry_date || 'sem_data').replace(/\//g, '-');
+    downloadTextFile(lines.join('\n'), `diario_familiar_${safeName}_${safeDate}.txt`);
+  };
+
+  const handleDownloadPeriod = () => {
+    if (filteredEntries.length === 0) {
+      alert('Nenhuma entrada no período selecionado para baixar.');
+      return;
+    }
+
+    const sortedEntries = [...filteredEntries].sort((a, b) =>
+      (a.entry_date || '').localeCompare(b.entry_date || '')
+    );
+
+    const lines = [
+      'DIÁRIO FAMILIAR',
+      '='.repeat(40),
+      '',
+      `Aluno:            ${selectedStudentName}`,
+      `Período:          ${getPeriodLabel()}`,
+      `Total de registros: ${sortedEntries.length}`,
+    ];
+
+    sortedEntries.forEach((entry, index) => {
+      lines.push('', '='.repeat(40), `ENTRADA ${index + 1} DE ${sortedEntries.length}`, '='.repeat(40));
+      lines.push(...buildFamilyEntryLines(entry));
+    });
+
+    lines.push('', '='.repeat(40), 'FIM DO DOCUMENTO');
+
+    const safeName = (selectedStudentName || 'aluno').replace(/\s+/g, '_');
+    const safePeriod = getPeriodLabel().replace(/\s+/g, '_').replace(/\//g, '-');
+    downloadTextFile(lines.join('\n'), `diario_familiar_${safeName}_${safePeriod}.txt`);
+  };
+
   return (
     <div className="family-diary-page">
       <div className="family-diary-header">
@@ -558,6 +672,14 @@ const FamilyDiaryPage = () => {
                 </div>
               )}
 
+              {canDownloadDiary && !showForm && !loadingEntries && filteredEntries.length > 0 && (
+                <div className="download-period-wrapper">
+                  <button onClick={handleDownloadPeriod} className="download-period-button">
+                    ⬇️ Baixar Período ({filteredEntries.length} {filteredEntries.length === 1 ? 'registro' : 'registros'})
+                  </button>
+                </div>
+              )}
+
               {!showForm && (
                 loadingEntries ? (
                   <p>Carregando entradas...</p>
@@ -597,18 +719,32 @@ const FamilyDiaryPage = () => {
                           </div>
                         )}
 
-                        {canManageEntry(entry) && (
+                        {(canManageEntry(entry) || canDownloadDiary) && (
                           <div className="family-diary-entry-actions">
-                            <button type="button" className="back-link" onClick={() => openEditForm(entry)}>
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className="danger-diary-button"
-                              onClick={() => handleDeleteEntry(entry.id)}
-                            >
-                              Remover
-                            </button>
+                            {canManageEntry(entry) && (
+                              <>
+                                <button type="button" className="back-link" onClick={() => openEditForm(entry)}>
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="danger-diary-button"
+                                  onClick={() => handleDeleteEntry(entry.id)}
+                                >
+                                  Remover
+                                </button>
+                              </>
+                            )}
+                            {canDownloadDiary && (
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadEntry(entry)}
+                                className="download-entry-button"
+                                title="Baixar entrada como texto"
+                              >
+                                ⬇️
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
