@@ -48,7 +48,7 @@ const getInitialSidebarWidth = () => {
   return getDefaultSidebarWidth();
 };
 
-const TEACHER_LIST_ROLES = new Set(['admin', 'secretaria', 'viewer']);
+const TEACHER_LIST_ROLES = new Set(['admin', 'secretaria']); // viewer removido
 const TEACHER_MANAGEMENT_ROLES = new Set(['admin', 'secretaria', 'avaliador']);
 const CADASTRO_ROLES = new Set(['admin']);
 const STUDENT_CREATE_ROLES = new Set(['admin', 'secretaria', 'avaliador']);
@@ -63,7 +63,7 @@ const CHAT_AND_PEI_ROLES = new Set(['admin', 'avaliador']);
 const CHAT_ONLY_ROLES = new Set(['professor', 'coordenacao']);
 // Admin também acede ao /chat para gerir Skills
 const CHAT_PAGE_ROLES = new Set(['admin', 'professor', 'coordenacao']);
-const DIARY_SUMMARY_ROLES = new Set(['admin', 'coordenacao', 'professor', 'pais']);
+const DIARY_SUMMARY_ROLES = new Set(['admin', 'coordenacao', 'professor', 'pais', 'viewer']);
 
 const hasAnyRole = (user, allowedRoles) => allowedRoles.has(user?.role || '');
 

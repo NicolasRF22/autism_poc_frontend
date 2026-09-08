@@ -96,7 +96,7 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     );
   }
 
-  const canAccessTeacherManagement = ['admin', 'secretaria', 'viewer', 'avaliador'].includes(role);
+  const canAccessTeacherManagement = ['admin', 'secretaria', 'avaliador'].includes(role); // viewer removido
   const canAccessCadastro = ['admin'].includes(role);
   const canAccessPreRegistrationPages = ['admin', 'secretaria', 'avaliador'].includes(role);
   const canAccessTeacherStudentManagement = ['admin', 'secretaria', 'coordenacao', 'avaliador'].includes(role);
@@ -106,13 +106,16 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   const canAccessChatPage = ['admin', 'professor', 'coordenacao'].includes(role);
   const isProfessorMobile = role === 'professor' && isMobile;
 
+  const isViewer = role === 'viewer';
+
   let menuItems = [
     { path: '/inicio', label: 'Início', icon: '🏠' },
     { path: '/estudo-de-caso', label: 'Estudo de Caso', icon: '📋' },
     { path: '/cadastro-da-escola', label: 'Cadastro da Escola', icon: '🏫' },
     { path: '/diario', label: 'Diário Escolar', icon: '📖' },
     { path: '/pdi', label: 'PDI Individual', icon: '📑' },
-    { path: '/anexos', label: 'Anexos', icon: '📎' },
+    // Viewer não vê Anexos
+    ...(!isViewer ? [{ path: '/anexos', label: 'Anexos', icon: '📎' }] : []),
   ];
 
   if (canAccessChatAndPei) {
@@ -144,7 +147,7 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   // restringe por _student_visible_to_user); só quem escreve entradas é o perfil 'pais'.
   menuItems.push({ path: '/diario-familiar', label: 'Diário Familiar', icon: '👨‍👩‍👧' });
 
-  if (['admin', 'coordenacao', 'professor'].includes(role)) {
+  if (['admin', 'coordenacao', 'professor', 'viewer'].includes(role)) {
     menuItems.push({ path: '/resumo-diario', label: 'Resumo Diário', icon: '📝' });
   }
 

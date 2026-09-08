@@ -70,6 +70,8 @@ const FamilyDiaryPage = () => {
 
   const [previewImage, setPreviewImage] = useState(null);
   const [previewTitle, setPreviewTitle] = useState('');
+  const [previewImages, setPreviewImages] = useState([]); // lista de {url, title, caption}
+  const [previewIndex, setPreviewIndex] = useState(0);
 
   useEffect(() => {
     const loadStudents = async () => {
@@ -280,14 +282,41 @@ const FamilyDiaryPage = () => {
     }
   };
 
+  // Preview simples — usado nas imagens do formulário (sem navegação)
   const openPreview = (url, title = 'Imagem') => {
+    setPreviewImages([]);
+    setPreviewIndex(0);
     setPreviewImage(url);
     setPreviewTitle(title);
+  };
+
+  // Preview com navegação — usado nas imagens do feed (múltiplas por entrada)
+  const openPreviewList = (images, index) => {
+    const normalized = images.map((img) => ({
+      url: buildAuthenticatedUrl(img.view_url),
+      title: img.file_name || 'Imagem',
+      caption: img.caption || '',
+    }));
+    setPreviewImages(normalized);
+    setPreviewIndex(index);
+    setPreviewImage(normalized[index].url);
+    setPreviewTitle(normalized[index].title);
   };
 
   const closePreview = () => {
     setPreviewImage(null);
     setPreviewTitle('');
+    setPreviewImages([]);
+    setPreviewIndex(0);
+  };
+
+  const navigatePreview = (direction) => {
+    const newIndex = previewIndex + direction;
+    if (newIndex < 0 || newIndex >= previewImages.length) return;
+    const item = previewImages[newIndex];
+    setPreviewIndex(newIndex);
+    setPreviewImage(item.url);
+    setPreviewTitle(item.title);
   };
 
   const handleSubmit = async (event) => {
@@ -705,15 +734,14 @@ const FamilyDiaryPage = () => {
 
                         {entry.images && entry.images.length > 0 && (
                           <div className="image-preview-grid">
-                            {entry.images.map((image) => {
+                            {entry.images.map((image, imgIndex) => {
                               const thumbUrl = buildAuthenticatedUrl(image.thumb_url);
-                              const viewUrl = buildAuthenticatedUrl(image.view_url);
                               return (
                                 <div key={image.image_id} className="image-preview-item">
                                   <button
                                     type="button"
                                     className="image-preview-button"
-                                    onClick={() => openPreview(viewUrl, image.file_name)}
+                                    onClick={() => openPreviewList(entry.images, imgIndex)}
                                   >
                                     <img src={thumbUrl} alt={image.file_name} />
                                   </button>
@@ -763,15 +791,41 @@ const FamilyDiaryPage = () => {
       )}
 
       {previewImage && (
-        <div className="image-preview-modal" onClick={closePreview}>
-          <div className="image-preview-modal-content" onClick={(event) => event.stopPropagation()}>
+        <div className="image-preview-overlay" onClick={closePreview}>
+          <div className="image-preview-modal" onClick={(event) => event.stopPropagation()}>
             <div className="image-preview-modal-header">
               <h3>{previewTitle}</h3>
-              <button type="button" onClick={closePreview}>
-                ✕
-              </button>
+              {previewImages.length > 1 && (
+                <span className="preview-counter">{previewIndex + 1} / {previewImages.length}</span>
+              )}
+              <button type="button" onClick={closePreview}>✕</button>
             </div>
-            <img src={previewImage} alt={previewTitle} />
+            <div className="image-preview-body">
+              {previewImages.length > 1 && (
+                <button
+                  type="button"
+                  className="preview-nav-btn preview-nav-prev"
+                  onClick={() => navigatePreview(-1)}
+                  disabled={previewIndex === 0}
+                >
+                  ‹
+                </button>
+              )}
+              <img src={previewImage} alt={previewTitle} />
+              {previewImages.length > 1 && (
+                <button
+                  type="button"
+                  className="preview-nav-btn preview-nav-next"
+                  onClick={() => navigatePreview(1)}
+                  disabled={previewIndex === previewImages.length - 1}
+                >
+                  ›
+                </button>
+              )}
+            </div>
+            {previewImages[previewIndex]?.caption && (
+              <div className="preview-caption">{previewImages[previewIndex].caption}</div>
+            )}
           </div>
         </div>
       )}
