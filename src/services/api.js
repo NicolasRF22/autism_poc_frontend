@@ -927,4 +927,27 @@ export const teacherAPI = {
   },
 };
 
+// ─── Skills API ──────────────────────────────────────────────────────────────
+export const skillsAPI = {
+  list: async () => {
+    const response = await api.get('/skills');
+    return response.data;
+  },
+
+  create: async ({ title, description = '', prompt }) => {
+    const response = await api.post('/skills', { title, description, prompt });
+    return response.data;
+  },
+
+  update: async (skillId, { title, description, prompt }) => {
+    const response = await api.put(`/skills/${skillId}`, { title, description, prompt });
+    return response.data;
+  },
+
+  delete: async (skillId) => {
+    const response = await api.delete(`/skills/${skillId}`);
+    return response.data;
+  },
+};
+
 export default api;

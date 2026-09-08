@@ -179,6 +179,646 @@
   margin-top: 1rem;
 }
 
+/* ─── Toolbar actions group ─────────────────────────────────────────────── */
+.chat-only-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* Tab buttons */
+.chat-tab-btn {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.chat-tab-btn.active {
+  background: #111827;
+  color: #fff;
+}
+
+.chat-tab-btn.skills-tab.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+}
+
+.chat-tab-btn:hover:not(.active) {
+  background: #d1d5db;
+}
+
+/* ─── Sources tab button ─────────────────────────────────────────────────── */
+.chat-tab-btn.sources-tab.active {
+  background: #0f766e;
+  color: #fff;
+}
+
+/* ─── Painel de Fontes ───────────────────────────────────────────────────── */
+.chat-sources-panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.chat-sources-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.chat-sources-apply-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #0f766e;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+.chat-sources-apply-btn:hover { opacity: 0.88; }
+.chat-sources-apply-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.chat-sources-loading {
+  color: #6b7280;
+  font-size: 0.88rem;
+  margin: 0.25rem 0;
+}
+
+.chat-sources-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.chat-sources-list li {
+  font-size: 0.88rem;
+}
+
+.chat-sources-list li.unavailable {
+  opacity: 0.5;
+}
+
+.chat-source-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+
+.chat-source-option input[type="checkbox"] {
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #0f766e;
+}
+
+.chat-source-option span {
+  color: #374151;
+  line-height: 1.4;
+}
+
+.chat-source-option strong {
+  color: #1f2937;
+}
+
+.chat-sources-sublist {
+  list-style: none;
+  margin: 0.4rem 0 0.25rem 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Period pickers */
+.chat-diary-period-picker {
+  margin: 0.4rem 0 0.1rem 1.5rem;
+}
+
+.chat-diary-period-presets {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.chat-diary-period-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  background: #f9fafb;
+  color: #374151;
+  transition: background 0.15s, border-color 0.15s;
+}
+.chat-diary-period-btn.active {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
+.chat-diary-period-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  font-size: 0.83rem;
+}
+
+.chat-diary-period-custom input[type="date"] {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.83rem;
+}
+
+.chat-diary-period-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.76rem;
+  color: #9ca3af;
+}
+
+/* ─── Skill inline no chat ───────────────────────────────────────────────── */
+.chat-skill-runner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chat-skill-select {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.chat-skill-select:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.chat-skill-select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.chat-skill-run-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #fff;
+  white-space: nowrap;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.chat-skill-run-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.chat-skill-run-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Bolha especial para mensagem de execução de skill */
+.chat-only-bubble.user.skill-run {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* Hint about active sources on skill runner */
+.skills-sources-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+  padding: 0.5rem 0.75rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+/* ─── Skills panel layout ────────────────────────────────────────────────── */
+.skills-panel {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 1rem;
+  min-height: 520px;
+  align-items: start;
+}
+
+/* Left column: skill list */
+.skills-list-col {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 620px;
+  overflow: hidden;
+}
+
+.skills-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.skills-list-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1f2937;
+}
+
+.skills-add-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.skills-add-btn:hover {
+  opacity: 0.88;
+}
+
+.skills-empty {
+  color: #6b7280;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem 0;
+  margin: 0;
+}
+
+.skills-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.skills-list-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.skills-list-item:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.skills-list-item.selected {
+  border-color: #4f46e5;
+  background: #eef2ff;
+}
+
+.skills-item-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #1f2937;
+}
+
+.skills-item-desc {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+.skills-item-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.skills-item-actions button {
+  border: none;
+  border-radius: 6px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #e5e7eb;
+  color: #374151;
+  transition: opacity 0.2s;
+}
+.skills-item-actions button:hover {
+  opacity: 0.8;
+}
+
+.skills-delete-btn {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+/* Right column */
+.skills-run-col {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+}
+
+.skills-empty-run {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: #6b7280;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* ─── Skill form (admin) ──────────────────────────────────────────────────── */
+.skills-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.skills-form h4 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  color: #1f2937;
+}
+
+.skills-form label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.skills-form input,
+.skills-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.skills-form input:focus,
+.skills-form textarea:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.skills-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.skills-form-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+.skills-form-actions button:hover {
+  opacity: 0.88;
+}
+.skills-form-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.skills-cancel-btn {
+  background: #e5e7eb !important;
+  color: #374151 !important;
+}
+
+/* ─── Skill runner ────────────────────────────────────────────────────────── */
+.skills-runner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.skills-runner h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #1f2937;
+}
+
+.skills-runner-desc {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.skills-runner-prompt {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.85rem;
+}
+
+.skills-runner-prompt label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.skills-runner-prompt pre {
+  margin: 0;
+  font-size: 0.85rem;
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.skills-runner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.skills-run-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #fff;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.skills-run-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.skills-run-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.skills-runner-hint {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Loading indicator */
+.skills-running-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: #4f46e5;
+}
+
+.skills-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #c7d2fe;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: skills-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes skills-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Result area */
+.skills-result {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.skills-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.skills-json-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+.skills-json-btn:hover {
+  opacity: 0.88;
+}
+
+.skills-result-content {
+  padding: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #1f2937;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.skills-result-content p {
+  margin: 0 0 0.5rem;
+}
+
+.skills-result-content :is(h1, h2, h3, h4) {
+  margin: 0.6rem 0 0.3rem;
+}
+
+.skills-result-content ul,
+.skills-result-content ol {
+  margin: 0.25rem 0 0.5rem 1.25rem;
+  padding: 0;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .skills-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .skills-list-col {
+    max-height: 260px;
+  }
+}
+
 @media (max-width: 720px) {
   .chat-only-page {
     padding: 1rem;
@@ -192,7 +832,12 @@
     align-items: stretch;
   }
 
-  .chat-only-toolbar select,
+  .chat-only-toolbar-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .chat-tab-btn,
   .chat-only-toolbar button,
   .chat-only-input button {
     width: 100%;

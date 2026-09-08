@@ -69,9 +69,14 @@ const TesteRAG = () => {
       return { start: formatISODate(today), end: formatISODate(today) };
     }
     if (preset === 'week') {
-      const weekAgo = new Date(today);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return { start: formatISODate(weekAgo), end: '' };
+      // Semana começa no sábado e termina na sexta
+      const dow = today.getDay(); // 0=Dom … 6=Sáb
+      const daysSinceSat = dow === 6 ? 0 : dow + 1;
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - daysSinceSat);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6); // sexta-feira
+      return { start: formatISODate(weekStart), end: formatISODate(weekEnd) };
     }
     if (preset === 'month') {
       const monthAgo = new Date(today);

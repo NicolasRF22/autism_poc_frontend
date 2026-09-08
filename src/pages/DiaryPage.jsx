@@ -135,9 +135,14 @@ const DiaryPage = () => {
       case 'today':
         return { startDate: toISO(today), endDate: toISO(today) };
       case 'week': {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return { startDate: toISO(weekAgo), endDate: null };
+        // Semana começa no sábado e termina na sexta
+        const dow = today.getDay(); // 0=Dom … 6=Sáb
+        const daysSinceSat = dow === 6 ? 0 : dow + 1;
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - daysSinceSat);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // sexta-feira
+        return { startDate: toISO(weekStart), endDate: toISO(weekEnd) };
       }
       case 'month': {
         const monthAgo = new Date(today);

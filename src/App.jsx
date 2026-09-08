@@ -19,6 +19,7 @@ import TeacherForm from './pages/TeacherFormNew';
 import TeacherStudentManagementPage from './pages/TeacherStudentManagementPage';
 import ParentStudentManagementPage from './pages/ParentStudentManagementPage';
 import TesteRAG from './pages/TesteRAG';
+import ChatPage from './pages/ChatPage';
 import AttachmentsPage from './pages/AttachmentsPage';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
@@ -59,6 +60,9 @@ const SCHOOL_REGISTRATION_ROLES = new Set(['admin', 'coordenacao', 'avaliador'])
 const TEACHER_STUDENT_LINK_ROLES = new Set(['admin', 'secretaria', 'coordenacao', 'avaliador']);
 const PARENT_STUDENT_LINK_ROLES = new Set(['admin']);
 const CHAT_AND_PEI_ROLES = new Set(['admin', 'avaliador']);
+const CHAT_ONLY_ROLES = new Set(['professor', 'coordenacao']);
+// Admin também acede ao /chat para gerir Skills
+const CHAT_PAGE_ROLES = new Set(['admin', 'professor', 'coordenacao']);
 const DIARY_SUMMARY_ROLES = new Set(['admin', 'coordenacao', 'professor', 'pais']);
 
 const hasAnyRole = (user, allowedRoles) => allowedRoles.has(user?.role || '');
@@ -172,6 +176,8 @@ function App() {
   const canAccessTeacherStudentLinks = hasAnyRole(user, TEACHER_STUDENT_LINK_ROLES);
   const canAccessParentStudentLinks = hasAnyRole(user, PARENT_STUDENT_LINK_ROLES);
   const canAccessChatAndPei = hasAnyRole(user, CHAT_AND_PEI_ROLES);
+  const canAccessChatOnly = hasAnyRole(user, CHAT_ONLY_ROLES);
+  const canAccessChatPage = hasAnyRole(user, CHAT_PAGE_ROLES);
   const canAccessDiarySummary = hasAnyRole(user, DIARY_SUMMARY_ROLES);
   const isPais = user?.role === 'pais';
 
@@ -268,8 +274,8 @@ function App() {
                 path="/pais-alunos"
                 element={canAccessParentStudentLinks ? <ParentStudentManagementPage /> : <Navigate to="/inicio" replace />}
               />
-              <Route path="/chat" element={<Navigate to="/rag" replace />} />
-              <Route path="/rag" element={canAccessChatAndPei ? <TesteRAG /> : <Navigate to="/inicio" replace />} />
+              <Route path="/chat" element={canAccessChatPage ? <ChatPage /> : <Navigate to="/inicio" replace />} />
+              <Route path="/rag" element={canAccessChatAndPei ? <TesteRAG /> : canAccessChatOnly ? <Navigate to="/chat" replace /> : <Navigate to="/inicio" replace />} />
               <Route path="/anexos" element={<AttachmentsPage />} />
               <Route path="/teste-rag" element={<Navigate to="/rag" replace />} />
               <Route

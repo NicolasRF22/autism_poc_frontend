@@ -80,9 +80,15 @@ const getSavedFilterRange = (filter, start, end) => {
     case 'today':
       return { start: today, end: today };
     case 'week': {
+      // Semana começa no sábado e termina na sexta
       const date = parseISODateLocal(today);
-      date.setDate(date.getDate() - 7);
-      return { start: formatISODateLocal(date), end: '' };
+      const dow = date.getDay(); // 0=Dom … 6=Sáb
+      const daysSinceSat = dow === 6 ? 0 : dow + 1;
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - daysSinceSat);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6); // sexta-feira
+      return { start: formatISODateLocal(weekStart), end: formatISODateLocal(weekEnd) };
     }
     case 'month': {
       const date = parseISODateLocal(today);

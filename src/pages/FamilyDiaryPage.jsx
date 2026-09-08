@@ -139,12 +139,17 @@ const FamilyDiaryPage = () => {
         break;
 
       case 'week': {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
+        // Semana começa no sábado e termina na sexta
+        const dow = today.getDay(); // 0=Dom … 6=Sáb
+        const daysSinceSat = dow === 6 ? 0 : dow + 1;
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - daysSinceSat);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // sexta-feira
         filtered = entries.filter((entry) => {
           const entryDateValue = parseLocalDate(entry.entry_date);
           if (!entryDateValue) return false;
-          return entryDateValue >= weekAgo;
+          return entryDateValue >= weekStart && entryDateValue <= weekEnd;
         });
         break;
       }

@@ -101,6 +101,9 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
   const canAccessPreRegistrationPages = ['admin', 'secretaria', 'avaliador'].includes(role);
   const canAccessTeacherStudentManagement = ['admin', 'secretaria', 'coordenacao', 'avaliador'].includes(role);
   const canAccessChatAndPei = ['admin', 'avaliador'].includes(role);
+  const canAccessChatOnly = ['professor', 'coordenacao'].includes(role);
+  // Admin também acede ao /chat para gerir Skills
+  const canAccessChatPage = ['admin', 'professor', 'coordenacao'].includes(role);
   const isProfessorMobile = role === 'professor' && isMobile;
 
   let menuItems = [
@@ -114,6 +117,10 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
 
   if (canAccessChatAndPei) {
     menuItems.push({ path: '/rag', label: 'Chat e PEI', icon: '🤖' });
+  }
+
+  if (canAccessChatPage) {
+    menuItems.push({ path: '/chat', label: 'Chat / Skills', icon: '💬' });
   }
 
   if (canAccessCadastro) {
