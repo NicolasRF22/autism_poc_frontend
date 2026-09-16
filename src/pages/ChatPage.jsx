@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { diaryAPI, getStoredUser, ragAPI, skillsAPI, studentAPI } from '../services/api';
+import { diaryAPI, getStoredUser, ragAPI, savedSkillsAPI, skillsAPI, studentAPI } from '../services/api';
 import './ChatPage.css';
 
 // ─── helpers de data ──────────────────────────────────────────────────────────
@@ -49,9 +49,8 @@ const EMPTY_SOURCES = {
   diary_summary_family: false,
   pdi: false,
   student_pre_registration: false,
-  teachers_pre_registration: false,
   school_pre_registration: false,
-  linked_peis: false,
+  saved_skill_results: false,
 };
 
 const DIARY_PERIOD_PRESETS = [
@@ -94,7 +93,6 @@ const ChatPage = () => {
   const [sourcesLoading, setSourcesLoading] = useState(false);
   const [selectedSources, setSelectedSources] = useState({ ...EMPTY_SOURCES });
   const [selectedDocumentIds, setSelectedDocumentIds] = useState([]);
-  const [selectedPeiIds, setSelectedPeiIds] = useState([]);
   const [diaryPeriod, setDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const [familyDiaryPeriod, setFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
   const [diarySummaryIndividualPeriod, setDiarySummaryIndividualPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
@@ -110,10 +108,28 @@ const ChatPage = () => {
   const [skillForm, setSkillForm] = useState({ title: '', description: '', prompt: '' });
   const [savingSkill, setSavingSkill] = useState(false);
   const [deletingSkillId, setDeletingSkillId] = useState(null);
+  const [downloadingSkillPdf, setDownloadingSkillPdf] = useState(false);
 
   // skill inline no chat
   const [chatSkillId, setChatSkillId] = useState('');
   const [runningSkillInChat, setRunningSkillInChat] = useState(false);
+  const [lastSkillRunInChat, setLastSkillRunInChat] = useState(null); // { skill, student, response, sessionId }
+  const [savingSkillResult, setSavingSkillResult] = useState(false);
+
+  // skills salvas
+  const [savedSkills, setSavedSkills] = useState([]);
+  const [loadingSavedSkills, setLoadingSavedSkills] = useState(false);
+  const [expandedSavedSkillId, setExpandedSavedSkillId] = useState(null);
+  const [deletingSavedSkillId, setDeletingSavedSkillId] = useState(null);
+
+  // sub-abas do painel de detalhes da skill
+  const [skillDetailTab, setSkillDetailTab] = useState('test'); // 'test' | 'saved'
+  const [savedResultsStudentFilter, setSavedResultsStudentFilter] = useState('');
+  const [savedResultsPeriod, setSavedResultsPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [savedResultsAuthorFilter, setSavedResultsAuthorFilter] = useState('');
+
+  // período para fontes: Respostas de Skills
+  const [savedSkillResultsPeriod, setSavedSkillResultsPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
 
   const endRef = useRef(null);
 
@@ -158,6 +174,11 @@ const ChatPage = () => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // ─── carregar skills salvas quando sub-aba de respostas salvas é ativada ──
+  useEffect(() => {
+    if (activeTab === 'skills' && skillDetailTab === 'saved' && selectedSkill) loadSavedSkills();
+  }, [activeTab, skillDetailTab, selectedSkill]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── carregar fontes quando aluno muda ───────────────────────────────────
   const loadSourcesPreview = useCallback(async ({
     studentId,
@@ -175,6 +196,7 @@ const ChatPage = () => {
       const fr = computeDiaryDateRange(familyDiaryPeriod);
       const sir = computeDiaryDateRange(diarySummaryIndividualPeriod);
       const sfr = computeDiaryDateRange(diarySummaryFamilyPeriod);
+      const ssr = computeDiaryDateRange(savedSkillResultsPeriod);
       const data = await ragAPI.getPEISourcesPreview({
         studentId,
         studentName,
@@ -187,19 +209,18 @@ const ChatPage = () => {
         diarySummaryIndividualEndDate: sir.end,
         diarySummaryFamilyStartDate: sfr.start,
         diarySummaryFamilyEndDate: sfr.end,
+        savedSkillResultsStartDate: ssr.start,
+        savedSkillResultsEndDate: ssr.end,
       });
       const preview = data?.sources || null;
       setSourcesPreview(preview);
       if (preview) {
         const nextDocIds = (preview.vector_documents?.documents || []).map((d) => d.doc_id).filter(Boolean);
-        const nextPeiIds = (preview.linked_peis?.peis || []).map((p) => p.id).filter(Boolean);
         if (resetSelections) {
           setSelectedSources({ ...EMPTY_SOURCES });
           setSelectedDocumentIds(nextDocIds);
-          setSelectedPeiIds(nextPeiIds);
         } else {
           setSelectedDocumentIds((prev) => prev.filter((id) => nextDocIds.includes(id)));
-          setSelectedPeiIds((prev) => prev.filter((id) => nextPeiIds.includes(id)));
         }
       }
     } catch (err) {
@@ -208,7 +229,7 @@ const ChatPage = () => {
     } finally {
       setSourcesLoading(false);
     }
-  }, [diaryPeriod, familyDiaryPeriod, diarySummaryIndividualPeriod, diarySummaryFamilyPeriod]);
+  }, [diaryPeriod, familyDiaryPeriod, diarySummaryIndividualPeriod, diarySummaryFamilyPeriod, savedSkillResultsPeriod]);
 
   useEffect(() => {
     if (!selectedStudent) {
@@ -240,7 +261,6 @@ const ChatPage = () => {
   const buildSourceParams = () => ({
     selectedSources,
     selectedDocumentIds,
-    selectedPeiIds,
     diaryStartDate: computeDiaryDateRange(diaryPeriod).start,
     diaryEndDate: computeDiaryDateRange(diaryPeriod).end,
     familyDiaryStartDate: computeDiaryDateRange(familyDiaryPeriod).start,
@@ -249,6 +269,8 @@ const ChatPage = () => {
     diarySummaryIndividualEndDate: computeDiaryDateRange(diarySummaryIndividualPeriod).end,
     diarySummaryFamilyStartDate: computeDiaryDateRange(diarySummaryFamilyPeriod).start,
     diarySummaryFamilyEndDate: computeDiaryDateRange(diarySummaryFamilyPeriod).end,
+    savedSkillResultsStartDate: computeDiaryDateRange(savedSkillResultsPeriod).start,
+    savedSkillResultsEndDate: computeDiaryDateRange(savedSkillResultsPeriod).end,
   });
 
   // ─── carregar sessão ao trocar aluno ─────────────────────────────────────
@@ -461,6 +483,7 @@ const ChatPage = () => {
         student: { id: selectedStudent.id, name: selectedStudent.name },
         response: payload?.response || '',
         timestamp: new Date().toISOString(),
+        sessionId: payload?.session_id || null,
       });
     } catch (err) {
       alert(`Erro ao executar skill: ${err.response?.data?.error || err.message}`);
@@ -487,12 +510,19 @@ const ChatPage = () => {
         ...buildSourceParams(),
       });
       const newSid = payload?.session_id || sessionId;
-      const assistantMsg = { role: 'assistant', content: payload?.response || '' };
+      const responseText = payload?.response || '';
+      const assistantMsg = { role: 'assistant', content: responseText };
       setSessionId(newSid);
       setMessages((prev) => {
         const updated = [...prev, assistantMsg];
         sessionCacheRef.current[selectedStudent.id] = { messages: updated, sessionId: newSid };
         return updated;
+      });
+      setLastSkillRunInChat({
+        skill,
+        student: selectedStudent,
+        response: responseText,
+        sessionId: newSid,
       });
       setChatSkillId(''); // reseta o seletor após executar
     } catch (err) {
@@ -502,6 +532,27 @@ const ChatPage = () => {
       ]);
     } finally {
       setRunningSkillInChat(false);
+    }
+  };
+
+  const handleDownloadSkillPdf = async () => {
+    if (!skillResult?.sessionId) {
+      alert('Sessão não disponível para download em PDF.');
+      return;
+    }
+    try {
+      setDownloadingSkillPdf(true);
+      const { blob, filename } = await ragAPI.downloadChatSessionPdf(skillResult.sessionId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || `skill-${(skillResult.skill?.title || 'resultado').replace(/\s+/g, '_')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`Erro ao baixar PDF: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setDownloadingSkillPdf(false);
     }
   };
 
@@ -515,6 +566,83 @@ const ChatPage = () => {
     a.download = `skill-${(selectedSkill?.title || 'resultado').replace(/\s+/g, '_')}-${(skillResult.student?.name || 'aluno').replace(/\s+/g, '_')}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // ─── salvar resultado de skill ───────────────────────────────────────────
+  const handleSaveSkillResult = async (source = 'skills') => {
+    // source: 'skills' (aba skills) | 'chat' (inline no chat)
+    // Ao salvar do chat, usa a última mensagem do assistente (pode ter sido
+    // refinada por mensagens subsequentes após a skill ser executada).
+    let data = null;
+    if (source === 'chat' && lastSkillRunInChat) {
+      const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant' && !m.isError);
+      data = {
+        ...lastSkillRunInChat,
+        response: lastAssistantMsg?.content || lastSkillRunInChat.response,
+      };
+    } else if (source === 'skills' && skillResult) {
+      data = {
+        skill: skillResult.skill,
+        student: skillResult.student,
+        response: skillResult.response,
+        sessionId: skillResult.sessionId,
+      };
+    }
+    if (!data) return;
+    try {
+      setSavingSkillResult(true);
+      await savedSkillsAPI.save({
+        skillId: data.skill?.id || '',
+        skillTitle: data.skill?.title || '',
+        studentId: data.student?.id || '',
+        studentName: data.student?.name || '',
+        response: data.response,
+        sessionId: data.sessionId || '',
+      });
+      alert('Resultado salvo com sucesso!');
+      // Recarrega a lista se a sub-aba de respostas salvas já estava ativa
+      if (activeTab === 'skills' && skillDetailTab === 'saved') loadSavedSkills();
+      // Atualiza o preview de fontes para refletir o novo resultado (sem resetar seleções)
+      if (selectedStudent) {
+        loadSourcesPreview({
+          studentId: selectedStudent.id,
+          studentName: selectedStudent.name || '',
+          school: schoolName,
+          resetSelections: false,
+        });
+      }
+    } catch (err) {
+      alert(`Erro ao salvar: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setSavingSkillResult(false);
+    }
+  };
+
+  const loadSavedSkills = async () => {
+    try {
+      setLoadingSavedSkills(true);
+      const data = await savedSkillsAPI.list();
+      setSavedSkills(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Erro ao carregar skills salvas:', err);
+      setSavedSkills([]);
+    } finally {
+      setLoadingSavedSkills(false);
+    }
+  };
+
+  const handleDeleteSavedSkill = async (resultId) => {
+    if (!window.confirm('Remover este resultado salvo?')) return;
+    try {
+      setDeletingSavedSkillId(resultId);
+      await savedSkillsAPI.delete(resultId);
+      setSavedSkills((prev) => prev.filter((r) => r.id !== resultId));
+      if (expandedSavedSkillId === resultId) setExpandedSavedSkillId(null);
+    } catch (err) {
+      alert(`Erro ao remover: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setDeletingSavedSkillId(null);
+    }
   };
 
   // Professor e coordenação não veem entradas individuais dos diários —
@@ -577,14 +705,6 @@ const ChatPage = () => {
         available: Boolean(sourcesPreview?.student_pre_registration?.included),
       },
       {
-        key: 'teachers_pre_registration',
-        label: 'Docentes',
-        detail: sourcesPreview?.teachers_pre_registration?.included
-          ? `${sourcesPreview.teachers_pre_registration.count || 0} docente(s)`
-          : 'não encontrado',
-        available: Boolean(sourcesPreview?.teachers_pre_registration?.included),
-      },
-      {
         key: 'school_pre_registration',
         label: 'Cadastro da Escola',
         detail: sourcesPreview?.school_pre_registration?.included
@@ -593,12 +713,13 @@ const ChatPage = () => {
         available: Boolean(sourcesPreview?.school_pre_registration?.included),
       },
       {
-        key: 'linked_peis',
-        label: 'PEIs gerados',
-        detail: sourcesPreview?.linked_peis?.included
-          ? formatPreviewDetail(`${sourcesPreview.linked_peis.count || 0} PEI(s)`, sourcesPreview?.linked_peis?.excerpt)
-          : 'não encontrado',
-        available: Boolean(sourcesPreview?.linked_peis?.included),
+        key: 'saved_skill_results',
+        label: 'Respostas de Skills',
+        detail: (() => {
+          const count = sourcesPreview?.saved_skill_results?.count || 0;
+          return count > 0 ? `${count} resposta(s) salva(s)` : 'nenhuma salva';
+        })(),
+        available: Boolean(sourcesPreview?.saved_skill_results?.included),
       },
     ];
 
@@ -669,17 +790,25 @@ const ChatPage = () => {
         </select>
 
         <div className="chat-only-toolbar-actions">
-          <button
-            type="button"
-            className={`chat-tab-btn${activeTab === 'chat' ? ' active' : ''}`}
-            onClick={() => setActiveTab('chat')}
-          >
-            💬 Chat
-          </button>
+          {/* Botão Chat visível apenas para admin (professor/coordenação não precisam dele) */}
+          {isAdmin && (
+            <button
+              type="button"
+              className={`chat-tab-btn${activeTab === 'chat' ? ' active' : ''}`}
+              onClick={() => setActiveTab('chat')}
+            >
+              💬 Chat
+            </button>
+          )}
+          {/* Para professor/coordenação o botão Skills é um toggle; para admin é tab normal */}
           <button
             type="button"
             className={`chat-tab-btn skills-tab${activeTab === 'skills' ? ' active' : ''}`}
-            onClick={() => setActiveTab('skills')}
+            onClick={() =>
+              isAdmin
+                ? setActiveTab('skills')
+                : setActiveTab((t) => (t === 'skills' ? 'chat' : 'skills'))
+            }
           >
             🎯 Skills
           </button>
@@ -792,29 +921,11 @@ const ChatPage = () => {
                     renderDiaryPeriodPicker(diarySummaryFamilyPeriod, setDiarySummaryFamilyPeriod)
                   )}
 
-                  {/* Sub-lista de PEIs individuais */}
-                  {source.key === 'linked_peis'
-                    && selectedSources.linked_peis
-                    && (sourcesPreview?.linked_peis?.peis || []).length > 0 && (
-                      <ul className="chat-sources-sublist">
-                        {sourcesPreview.linked_peis.peis.map((pei) => (
-                          <li key={pei.id}>
-                            <label className="chat-source-option">
-                              <input
-                                type="checkbox"
-                                checked={selectedPeiIds.includes(pei.id)}
-                                onChange={() => toggleDocumentId(setSelectedPeiIds, pei.id)}
-                              />
-                              <span title={pei.excerpt}>
-                                PEI de {pei.created_at
-                                  ? new Date(pei.created_at).toLocaleDateString('pt-BR')
-                                  : '—'}
-                              </span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
+                  {/* Período das Respostas de Skills */}
+                  {source.key === 'saved_skill_results' && selectedSources.saved_skill_results && (
+                    renderDiaryPeriodPicker(savedSkillResultsPeriod, setSavedSkillResultsPeriod)
                   )}
+
                 </li>
               ))}
             </ul>
@@ -852,7 +963,7 @@ const ChatPage = () => {
             <div className="chat-skill-runner">
               <select
                 value={chatSkillId}
-                onChange={(e) => setChatSkillId(e.target.value)}
+                onChange={(e) => { setChatSkillId(e.target.value); setLastSkillRunInChat(null); }}
                 disabled={!selectedStudent || busy || runningSkillInChat}
                 className="chat-skill-select"
               >
@@ -869,6 +980,17 @@ const ChatPage = () => {
               >
                 {runningSkillInChat ? 'Executando…' : '▶ Executar'}
               </button>
+              {lastSkillRunInChat && (
+                <button
+                  type="button"
+                  className="chat-skill-save-btn"
+                  onClick={() => handleSaveSkillResult('chat')}
+                  disabled={savingSkillResult}
+                  title="Salvar a última resposta da skill"
+                >
+                  {savingSkillResult ? '⏳' : '💾 Salvar'}
+                </button>
+              )}
             </div>
           )}
 
@@ -916,7 +1038,7 @@ const ChatPage = () => {
                   <li
                     key={skill.id}
                     className={`skills-list-item${selectedSkill?.id === skill.id ? ' selected' : ''}`}
-                    onClick={() => { setSelectedSkill(skill); setSkillResult(null); setEditingSkill(null); }}
+                    onClick={() => { setSelectedSkill(skill); setSkillResult(null); setEditingSkill(null); setSkillDetailTab('test'); setSavedResultsStudentFilter(''); setSavedResultsPeriod({ preset: 'all', startDate: '', endDate: '' }); setSavedResultsAuthorFilter(''); }}
                   >
                     <div className="skills-item-title">{skill.title}</div>
                     {skill.description && <div className="skills-item-desc">{skill.description}</div>}
@@ -983,59 +1105,269 @@ const ChatPage = () => {
                   <p className="skills-runner-desc">{selectedSkill.description}</p>
                 )}
 
-                <div className="skills-runner-prompt">
-                  <label>Prompt</label>
-                  <pre>{selectedSkill.prompt}</pre>
-                </div>
-
-                <div className="skills-runner-actions">
+                {/* Sub-abas: Testes / Respostas Salvas */}
+                <div className="skill-detail-tabs">
                   <button
                     type="button"
-                    className="skills-run-btn"
-                    onClick={handleRunSkill}
-                    disabled={!selectedStudent || runningSkill}
+                    className={`skill-detail-tab-btn${skillDetailTab === 'test' ? ' active' : ''}`}
+                    onClick={() => setSkillDetailTab('test')}
                   >
-                    {runningSkill ? 'Executando...' : '▶ Executar'}
+                    🧪 Testes
                   </button>
-                  {!selectedStudent && (
-                    <span className="skills-runner-hint">
-                      Selecione um aluno na barra acima para executar.
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    className={`skill-detail-tab-btn${skillDetailTab === 'saved' ? ' active' : ''}`}
+                    onClick={() => setSkillDetailTab('saved')}
+                  >
+                    📋 Respostas Salvas
+                  </button>
                 </div>
 
-                {!selectedStudent ? null : (
-                  <p className="skills-sources-hint">
-                    {Object.values(selectedSources).some(Boolean)
-                      ? `Fontes ativas: ${sourceOptions.filter((s) => selectedSources[s.key]).map((s) => s.label).join(', ')}`
-                      : 'Nenhuma fonte selecionada — use o botão 📎 Fontes na barra para configurar o contexto da skill.'}
-                  </p>
-                )}
+                {/* ── Aba: Testes ── */}
+                {skillDetailTab === 'test' && (
+                  <>
+                    <div className="skills-runner-prompt">
+                      <label>Prompt</label>
+                      <pre>{selectedSkill.prompt}</pre>
+                    </div>
 
-                {runningSkill && (
-                  <div className="skills-running-indicator">
-                    <span className="skills-spinner" />
-                    Processando skill com a IA…
-                  </div>
-                )}
-
-                {skillResult && (
-                  <div className="skills-result">
-                    <div className="skills-result-header">
-                      <span>Resultado — {skillResult.student?.name}</span>
+                    <div className="skills-runner-actions">
                       <button
                         type="button"
-                        className="skills-json-btn"
-                        onClick={handleDownloadSkillJson}
+                        className="skills-run-btn"
+                        onClick={handleRunSkill}
+                        disabled={!selectedStudent || runningSkill}
                       >
-                        ⬇ Download JSON
+                        {runningSkill ? 'Executando...' : '▶ Executar'}
+                      </button>
+                      {!selectedStudent && (
+                        <span className="skills-runner-hint">
+                          Selecione um aluno na barra acima para executar.
+                        </span>
+                      )}
+                    </div>
+
+                    {!selectedStudent ? null : (
+                      <p className="skills-sources-hint">
+                        {Object.values(selectedSources).some(Boolean)
+                          ? `Fontes ativas: ${sourceOptions.filter((s) => selectedSources[s.key]).map((s) => s.label).join(', ')}`
+                          : 'Nenhuma fonte selecionada — use o botão 📎 Fontes na barra para configurar o contexto da skill.'}
+                      </p>
+                    )}
+
+                    {runningSkill && (
+                      <div className="skills-running-indicator">
+                        <span className="skills-spinner" />
+                        Processando skill com a IA…
+                      </div>
+                    )}
+
+                    {skillResult && (
+                      <div className="skills-result">
+                        <div className="skills-result-header">
+                          <span>Resultado — {skillResult.student?.name}</span>
+                          <div className="skills-result-actions">
+                            <button
+                              type="button"
+                              className="skills-save-btn"
+                              onClick={() => handleSaveSkillResult('skills')}
+                              disabled={savingSkillResult}
+                              title="Salvar este resultado em Respostas Salvas"
+                            >
+                              {savingSkillResult ? '⏳ Salvando…' : '💾 Salvar'}
+                            </button>
+                            <button
+                              type="button"
+                              className="skills-pdf-btn"
+                              onClick={handleDownloadSkillPdf}
+                              disabled={downloadingSkillPdf || !skillResult.sessionId}
+                              title={!skillResult.sessionId ? 'PDF indisponível para esta sessão' : 'Baixar resultado em PDF'}
+                            >
+                              {downloadingSkillPdf ? '⏳ Gerando…' : '📄 Download PDF'}
+                            </button>
+                            <button
+                              type="button"
+                              className="skills-json-btn"
+                              onClick={handleDownloadSkillJson}
+                            >
+                              ⬇ Download JSON
+                            </button>
+                          </div>
+                        </div>
+                        <div className="skills-result-content">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {skillResult.response}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ── Aba: Respostas Salvas ── */}
+                {skillDetailTab === 'saved' && (
+                  <div className="saved-skills-panel">
+                    {/* Filtros */}
+                    {(() => {
+                      const forThisSkill = savedSkills.filter((r) => r.skill_id === selectedSkill.id);
+                      const studentOptions = [...new Set(forThisSkill.map((r) => r.student_name).filter(Boolean))].sort();
+                      const authorOptions = [...new Set(forThisSkill.map((r) => r.saved_by_username).filter(Boolean))].sort();
+                      return (
+                    <div className="saved-skills-filters">
+                      <label>
+                        Aluno
+                        <select
+                          className="saved-skills-filter-input"
+                          value={savedResultsStudentFilter}
+                          onChange={(e) => setSavedResultsStudentFilter(e.target.value)}
+                        >
+                          <option value="">Todos</option>
+                          {studentOptions.map((name) => (
+                            <option key={name} value={name}>{name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Salvo por
+                        <select
+                          className="saved-skills-filter-input"
+                          value={savedResultsAuthorFilter}
+                          onChange={(e) => setSavedResultsAuthorFilter(e.target.value)}
+                        >
+                          <option value="">Todos</option>
+                          {authorOptions.map((name) => (
+                            <option key={name} value={name}>{name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Período
+                        <div className="saved-skills-period-presets">
+                          {DIARY_PERIOD_PRESETS.map((opt) => (
+                            <button
+                              key={opt.key}
+                              type="button"
+                              className={`chat-diary-period-btn${savedResultsPeriod.preset === opt.key ? ' active' : ''}`}
+                              onClick={() => setSavedResultsPeriod((p) => ({ ...p, preset: opt.key }))}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        {savedResultsPeriod.preset === 'custom' && (
+                          <div className="chat-diary-period-custom">
+                            <input
+                              type="date"
+                              value={savedResultsPeriod.startDate}
+                              onChange={(e) => setSavedResultsPeriod((p) => ({ ...p, startDate: e.target.value }))}
+                            />
+                            <span>até</span>
+                            <input
+                              type="date"
+                              value={savedResultsPeriod.endDate}
+                              onChange={(e) => setSavedResultsPeriod((p) => ({ ...p, endDate: e.target.value }))}
+                            />
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                      );
+                    })()}
+
+                    <div className="saved-skills-toolbar">
+                      <span className="saved-skills-count">
+                        {loadingSavedSkills ? 'Carregando…' : `${
+                          savedSkills
+                            .filter((r) => r.skill_id === selectedSkill.id)
+                            .filter((r) => !savedResultsStudentFilter || r.student_name === savedResultsStudentFilter)
+                            .filter((r) => !savedResultsAuthorFilter || r.saved_by_username === savedResultsAuthorFilter)
+                            .filter((r) => {
+                              const { start, end } = computeDiaryDateRange(savedResultsPeriod);
+                              const date = (r.created_at || '').slice(0, 10);
+                              if (start && date < start) return false;
+                              if (end && date > end) return false;
+                              return true;
+                            }).length
+                        } resultado(s)`}
+                      </span>
+                      <button
+                        type="button"
+                        className="saved-skills-refresh-btn"
+                        onClick={loadSavedSkills}
+                        disabled={loadingSavedSkills}
+                      >
+                        🔄 Atualizar
                       </button>
                     </div>
-                    <div className="skills-result-content">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {skillResult.response}
-                      </ReactMarkdown>
-                    </div>
+
+                    {loadingSavedSkills ? (
+                      <div className="saved-skills-loading">Carregando resultados salvos…</div>
+                    ) : (() => {
+                      const filtered = savedSkills
+                        .filter((r) => r.skill_id === selectedSkill.id)
+                        .filter((r) => !savedResultsStudentFilter || r.student_name?.toLowerCase().includes(savedResultsStudentFilter.toLowerCase()))
+                        .filter((r) => !savedResultsAuthorFilter || r.saved_by_username?.toLowerCase().includes(savedResultsAuthorFilter.toLowerCase()))
+                        .filter((r) => {
+                          const { start, end } = computeDiaryDateRange(savedResultsPeriod);
+                          const date = (r.created_at || '').slice(0, 10);
+                          if (start && date < start) return false;
+                          if (end && date > end) return false;
+                          return true;
+                        });
+                      return filtered.length === 0 ? (
+                        <div className="saved-skills-empty">
+                          <p>Nenhum resultado salvo para esta skill.</p>
+                          <p>Execute a skill e clique em <strong>💾 Salvar</strong> para guardar resultados aqui.</p>
+                        </div>
+                      ) : (
+                        <ul className="saved-skills-list">
+                          {filtered.map((item) => {
+                            const isExpanded = expandedSavedSkillId === item.id;
+                            const date = item.created_at
+                              ? new Date(item.created_at).toLocaleString('pt-BR', {
+                                  day: '2-digit', month: '2-digit', year: 'numeric',
+                                  hour: '2-digit', minute: '2-digit',
+                                })
+                              : '—';
+                            return (
+                              <li key={item.id} className={`saved-skill-item${isExpanded ? ' expanded' : ''}`}>
+                                <div
+                                  className="saved-skill-header"
+                                  onClick={() => setExpandedSavedSkillId(isExpanded ? null : item.id)}
+                                  role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => e.key === 'Enter' && setExpandedSavedSkillId(isExpanded ? null : item.id)}
+                                >
+                                  <div className="saved-skill-meta">
+                                    <span className="saved-skill-student">👤 {item.student_name}</span>
+                                    <span className="saved-skill-author">💾 {item.saved_by_username}</span>
+                                    <span className="saved-skill-date">📅 {date}</span>
+                                  </div>
+                                  <div className="saved-skill-controls" onClick={(e) => e.stopPropagation()}>
+                                    {isAdmin && (
+                                      <button
+                                        type="button"
+                                        className="saved-skill-delete-btn"
+                                        disabled={deletingSavedSkillId === item.id}
+                                        onClick={() => handleDeleteSavedSkill(item.id)}
+                                      >
+                                        {deletingSavedSkillId === item.id ? '…' : '🗑️'}
+                                      </button>
+                                    )}
+                                    <span className="saved-skill-chevron">{isExpanded ? '▲' : '▼'}</span>
+                                  </div>
+                                </div>
+                                {isExpanded && (
+                                  <div className="saved-skill-content">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.response}</ReactMarkdown>
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

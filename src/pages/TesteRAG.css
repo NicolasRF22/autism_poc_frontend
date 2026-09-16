@@ -1008,6 +1008,47 @@
   gap: 0.35rem;
 }
 
+/* Mode toggle (Relativo / Absoluto) */
+.diary-period-mode-toggle {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.diary-period-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #d6dde6;
+  border-radius: 6px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.diary-period-mode-btn.active {
+  background: #e8f0fb;
+  border-color: #4a90d9;
+  color: #1a4f80;
+}
+
+.diary-period-mode-desc {
+  font-size: 0.64rem;
+  font-weight: 400;
+  color: #9ca3af;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.diary-period-mode-btn.active .diary-period-mode-desc {
+  color: #5a8ab5;
+}
+
 .diary-period-presets {
   display: flex;
   flex-wrap: wrap;

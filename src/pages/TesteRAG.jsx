@@ -33,16 +33,16 @@ const TesteRAG = () => {
     diary_summary_family: false,
     pdi: false,
     student_pre_registration: false,
-    teachers_pre_registration: false,
     school_pre_registration: false,
-    linked_peis: false,
+    saved_skill_results: false,
   });
   const [chatSelectedDocumentIds, setChatSelectedDocumentIds] = useState([]);
   const [chatSelectedPeiIds, setChatSelectedPeiIds] = useState([]);
-  const [chatDiaryPeriod, setChatDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
-  const [chatFamilyDiaryPeriod, setChatFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
-  const [chatDiarySummaryIndividualPeriod, setChatDiarySummaryIndividualPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
-  const [chatDiarySummaryFamilyPeriod, setChatDiarySummaryFamilyPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [chatDiaryPeriod, setChatDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
+  const [chatFamilyDiaryPeriod, setChatFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
+  const [chatDiarySummaryIndividualPeriod, setChatDiarySummaryIndividualPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
+  const [chatDiarySummaryFamilyPeriod, setChatDiarySummaryFamilyPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
+  const [chatSavedSkillResultsPeriod, setChatSavedSkillResultsPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
   const messagesEndRef = useRef(null);
   const chatLoadRequestRef = useRef(0);
 
@@ -55,8 +55,11 @@ const TesteRAG = () => {
 
   // Mesma lógica de período do Diário (DiaryPage.jsx: 'today'/'week'/'month'/'all'/'custom'),
   // aqui usada para restringir quais entradas do diário entram como contexto para a IA.
+  // mode 'relativo': janela rolante para trás a partir de hoje.
+  // mode 'absoluto': período vigente do calendário (semana Dom–Sáb, mês corrente).
   const computeDiaryDateRange = (period) => {
     const preset = period?.preset || 'all';
+    const mode = period?.mode || 'relativo';
     if (preset === 'custom') {
       return { start: period.startDate || '', end: period.endDate || '' };
     }
@@ -69,19 +72,30 @@ const TesteRAG = () => {
       return { start: formatISODate(today), end: formatISODate(today) };
     }
     if (preset === 'week') {
-      // Semana começa no sábado e termina na sexta
+      if (mode === 'relativo') {
+        // Últimos 7 dias a partir de hoje
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - 6);
+        return { start: formatISODate(weekStart), end: formatISODate(today) };
+      }
+      // Absoluto: semana calendário (Dom a Sáb)
       const dow = today.getDay(); // 0=Dom … 6=Sáb
-      const daysSinceSat = dow === 6 ? 0 : dow + 1;
       const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - daysSinceSat);
+      weekStart.setDate(today.getDate() - dow);
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6); // sexta-feira
+      weekEnd.setDate(weekStart.getDate() + 6);
       return { start: formatISODate(weekStart), end: formatISODate(weekEnd) };
     }
     if (preset === 'month') {
-      const monthAgo = new Date(today);
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-      return { start: formatISODate(monthAgo), end: '' };
+      if (mode === 'relativo') {
+        // Últimos 30 dias a partir de hoje
+        const monthStart = new Date(today);
+        monthStart.setDate(today.getDate() - 29);
+        return { start: formatISODate(monthStart), end: formatISODate(today) };
+      }
+      // Absoluto: do 1º do mês atual até hoje
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { start: formatISODate(monthStart), end: formatISODate(today) };
     }
     return { start: '', end: '' };
   };
@@ -184,16 +198,16 @@ const TesteRAG = () => {
     diary_summary_family: false,
     pdi: false,
     student_pre_registration: false,
-    teachers_pre_registration: false,
     school_pre_registration: false,
-    linked_peis: false,
+    saved_skill_results: false,
   });
   const [peiSelectedDocumentIds, setPeiSelectedDocumentIds] = useState([]);
   const [peiSelectedPeiIds, setPeiSelectedPeiIds] = useState([]);
-  const [peiDiaryPeriod, setPeiDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
-  const [peiFamilyDiaryPeriod, setPeiFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
-  const [peiDiarySummaryIndividualPeriod, setPeiDiarySummaryIndividualPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
-  const [peiDiarySummaryFamilyPeriod, setPeiDiarySummaryFamilyPeriod] = useState({ preset: 'all', startDate: '', endDate: '' });
+  const [peiDiaryPeriod, setPeiDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
+  const [peiFamilyDiaryPeriod, setPeiFamilyDiaryPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
+  const [peiDiarySummaryIndividualPeriod, setPeiDiarySummaryIndividualPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
+  const [peiDiarySummaryFamilyPeriod, setPeiDiarySummaryFamilyPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
+  const [peiSavedSkillResultsPeriod, setPeiSavedSkillResultsPeriod] = useState({ preset: 'all', startDate: '', endDate: '', mode: 'relativo' });
   const [peiPrompt, setPeiPrompt] = useState('');
   const [initialPeiPrompt, setInitialPeiPrompt] = useState('');
   const [peiPromptLoading, setPeiPromptLoading] = useState(true);
@@ -556,7 +570,6 @@ const TesteRAG = () => {
 
       if (nextSources) {
         const nextDocIds = (nextSources.vector_documents?.documents || []).map((doc) => doc.doc_id).filter(Boolean);
-        const nextPeiIds = (nextSources.linked_peis?.peis || []).map((pei) => pei.id).filter(Boolean);
 
         if (resetSelections) {
           // Aluno novo: por padrão, nenhuma fonte vem marcada — o usuário escolhe
@@ -569,17 +582,16 @@ const TesteRAG = () => {
             diary_summary_family: false,
             pdi: false,
             student_pre_registration: false,
-            teachers_pre_registration: false,
             school_pre_registration: false,
-            linked_peis: false,
+            saved_skill_results: false,
           });
           setPeiSelectedDocumentIds(nextDocIds);
-          setPeiSelectedPeiIds(nextPeiIds);
+          setPeiSelectedPeiIds([]);
         } else {
           // "Aplicar filtros": mantém as marcações do usuário, só remove ids de
-          // documentos/PEIs que não existem mais na prévia atualizada.
+          // documentos que não existem mais na prévia atualizada.
           setPeiSelectedDocumentIds((prev) => prev.filter((id) => nextDocIds.includes(id)));
-          setPeiSelectedPeiIds((prev) => prev.filter((id) => nextPeiIds.includes(id)));
+          setPeiSelectedPeiIds([]);
         }
       }
     } catch (err) {
@@ -621,7 +633,6 @@ const TesteRAG = () => {
 
       if (nextSources) {
         const nextDocIds = (nextSources.vector_documents?.documents || []).map((doc) => doc.doc_id).filter(Boolean);
-        const nextPeiIds = (nextSources.linked_peis?.peis || []).map((pei) => pei.id).filter(Boolean);
 
         if (resetSelections) {
           // Aluno novo: por padrão, nenhuma fonte vem marcada — o usuário escolhe
@@ -634,17 +645,16 @@ const TesteRAG = () => {
             diary_summary_family: false,
             pdi: false,
             student_pre_registration: false,
-            teachers_pre_registration: false,
             school_pre_registration: false,
-            linked_peis: false,
+            saved_skill_results: false,
           });
           setChatSelectedDocumentIds(nextDocIds);
-          setChatSelectedPeiIds(nextPeiIds);
+          setChatSelectedPeiIds([]);
         } else {
           // "Aplicar filtros": mantém as marcações do usuário, só remove ids de
-          // documentos/PEIs que não existem mais na prévia atualizada.
+          // documentos que não existem mais na prévia atualizada.
           setChatSelectedDocumentIds((prev) => prev.filter((id) => nextDocIds.includes(id)));
-          setChatSelectedPeiIds((prev) => prev.filter((id) => nextPeiIds.includes(id)));
+          setChatSelectedPeiIds([]);
         }
       }
     } catch (err) {
@@ -682,6 +692,8 @@ const TesteRAG = () => {
         diarySummaryIndividualEndDate: computeDiaryDateRange(chatDiarySummaryIndividualPeriod).end,
         diarySummaryFamilyStartDate: computeDiaryDateRange(chatDiarySummaryFamilyPeriod).start,
         diarySummaryFamilyEndDate: computeDiaryDateRange(chatDiarySummaryFamilyPeriod).end,
+        savedSkillResultsStartDate: computeDiaryDateRange(chatSavedSkillResultsPeriod).start,
+        savedSkillResultsEndDate: computeDiaryDateRange(chatSavedSkillResultsPeriod).end,
       });
 
       if (data?.session_id && studentKey) {
@@ -819,6 +831,8 @@ const TesteRAG = () => {
         diary_summary_individual_end_date: peiDiarySummaryIndividualRange.end,
         diary_summary_family_start_date: peiDiarySummaryFamilyRange.start,
         diary_summary_family_end_date: peiDiarySummaryFamilyRange.end,
+        saved_skill_results_start_date: computeDiaryDateRange(peiSavedSkillResultsPeriod).start,
+        saved_skill_results_end_date: computeDiaryDateRange(peiSavedSkillResultsPeriod).end,
       });
       const clientDurationMs = Math.max(0, Math.round(performance.now() - startedAt));
       clearInterval(timer);
@@ -1174,38 +1188,59 @@ const TesteRAG = () => {
     { key: 'custom', label: 'Personalizado' },
   ];
 
-  const renderDiaryPeriodPicker = (period, setPeriod) => (
-    <div className="diary-period-picker">
-      <div className="diary-period-presets">
-        {DIARY_PERIOD_PRESETS.map((opt) => (
+  const renderDiaryPeriodPicker = (period, setPeriod) => {
+    const mode = period.mode || 'relativo';
+    return (
+      <div className="diary-period-picker">
+        <div className="diary-period-mode-toggle">
           <button
-            key={opt.key}
             type="button"
-            className={`diary-period-btn ${period.preset === opt.key ? 'active' : ''}`}
-            onClick={() => setPeriod((prev) => ({ ...prev, preset: opt.key }))}
+            className={`diary-period-mode-btn ${mode === 'relativo' ? 'active' : ''}`}
+            onClick={() => setPeriod((prev) => ({ ...prev, mode: 'relativo' }))}
           >
-            {opt.label}
+            Relativo
+            <span className="diary-period-mode-desc">últimos N dias a partir de hoje</span>
           </button>
-        ))}
-      </div>
-      {period.preset === 'custom' && (
-        <div className="diary-period-custom">
-          <input
-            type="date"
-            value={period.startDate}
-            onChange={(event) => setPeriod((prev) => ({ ...prev, startDate: event.target.value }))}
-          />
-          <span>até</span>
-          <input
-            type="date"
-            value={period.endDate}
-            onChange={(event) => setPeriod((prev) => ({ ...prev, endDate: event.target.value }))}
-          />
+          <button
+            type="button"
+            className={`diary-period-mode-btn ${mode === 'absoluto' ? 'active' : ''}`}
+            onClick={() => setPeriod((prev) => ({ ...prev, mode: 'absoluto' }))}
+          >
+            Absoluto
+            <span className="diary-period-mode-desc">semana/mês vigente do calendário</span>
+          </button>
         </div>
-      )}
-      <p className="diary-period-hint">Clique em "Aplicar filtros" acima para atualizar a prévia com este período.</p>
-    </div>
-  );
+        <div className="diary-period-presets">
+          {DIARY_PERIOD_PRESETS.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              className={`diary-period-btn ${period.preset === opt.key ? 'active' : ''}`}
+              onClick={() => setPeriod((prev) => ({ ...prev, preset: opt.key }))}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {period.preset === 'custom' && (
+          <div className="diary-period-custom">
+            <input
+              type="date"
+              value={period.startDate}
+              onChange={(event) => setPeriod((prev) => ({ ...prev, startDate: event.target.value }))}
+            />
+            <span>até</span>
+            <input
+              type="date"
+              value={period.endDate}
+              onChange={(event) => setPeriod((prev) => ({ ...prev, endDate: event.target.value }))}
+            />
+          </div>
+        )}
+        <p className="diary-period-hint">Clique em "Aplicar filtros" acima para atualizar a prévia com este período.</p>
+      </div>
+    );
+  };
 
   const formatPreviewDetail = (baseDetail, excerpt) => {
     const cleanExcerpt = String(excerpt || '').trim();
@@ -1285,14 +1320,6 @@ const TesteRAG = () => {
       available: Boolean(chatSourcesPreview?.student_pre_registration?.included),
     },
     {
-      key: 'teachers_pre_registration',
-      label: 'Pré-cadastro de Docente(s)',
-      detail: chatSourcesPreview?.teachers_pre_registration?.included
-        ? `${chatSourcesPreview.teachers_pre_registration.count || 0} docente(s)`
-        : 'não encontrado',
-      available: Boolean(chatSourcesPreview?.teachers_pre_registration?.included),
-    },
-    {
       key: 'school_pre_registration',
       label: 'Pré-cadastro da Escola + Cadastro da Escola',
       detail: chatSourcesPreview?.school_pre_registration?.included
@@ -1304,15 +1331,13 @@ const TesteRAG = () => {
       available: Boolean(chatSourcesPreview?.school_pre_registration?.included),
     },
     {
-      key: 'linked_peis',
-      label: 'PEIs anteriores vinculados',
-      detail: chatSourcesPreview?.linked_peis?.included
-        ? formatPreviewDetail(
-            `${chatSourcesPreview.linked_peis.count || 0} PEI(s)`,
-            chatSourcesPreview?.linked_peis?.excerpt,
-          )
-        : 'não encontrado',
-      available: Boolean(chatSourcesPreview?.linked_peis?.included),
+      key: 'saved_skill_results',
+      label: 'Respostas de Skills',
+      detail: (() => {
+        const count = chatSourcesPreview?.saved_skill_results?.count || 0;
+        return count > 0 ? `${count} resposta(s) salva(s)` : 'nenhuma salva';
+      })(),
+      available: Boolean(chatSourcesPreview?.saved_skill_results?.included),
     },
   ];
 
@@ -1387,14 +1412,6 @@ const TesteRAG = () => {
       available: Boolean(peiSourcesPreview?.student_pre_registration?.included),
     },
     {
-      key: 'teachers_pre_registration',
-      label: 'Pré-cadastro de Docente(s)',
-      detail: peiSourcesPreview?.teachers_pre_registration?.included
-        ? `${peiSourcesPreview.teachers_pre_registration.count || 0} docente(s)`
-        : 'não encontrado',
-      available: Boolean(peiSourcesPreview?.teachers_pre_registration?.included),
-    },
-    {
       key: 'school_pre_registration',
       label: 'Pré-cadastro da Escola + Cadastro da Escola',
       detail: peiSourcesPreview?.school_pre_registration?.included
@@ -1406,15 +1423,13 @@ const TesteRAG = () => {
       available: Boolean(peiSourcesPreview?.school_pre_registration?.included),
     },
     {
-      key: 'linked_peis',
-      label: 'PEIs anteriores vinculados',
-      detail: peiSourcesPreview?.linked_peis?.included
-        ? formatPreviewDetail(
-            `${peiSourcesPreview.linked_peis.count || 0} PEI(s)`,
-            peiSourcesPreview?.linked_peis?.excerpt,
-          )
-        : 'não encontrado',
-      available: Boolean(peiSourcesPreview?.linked_peis?.included),
+      key: 'saved_skill_results',
+      label: 'Respostas de Skills',
+      detail: (() => {
+        const count = peiSourcesPreview?.saved_skill_results?.count || 0;
+        return count > 0 ? `${count} resposta(s) salva(s)` : 'nenhuma salva';
+      })(),
+      available: Boolean(peiSourcesPreview?.saved_skill_results?.included),
     },
   ];
 
@@ -1535,25 +1550,8 @@ const TesteRAG = () => {
                         {source.key === 'diary_summary_family' && chatSelectedSources.diary_summary_family && (
                           renderDiaryPeriodPicker(chatDiarySummaryFamilyPeriod, setChatDiarySummaryFamilyPeriod)
                         )}
-                        {source.key === 'linked_peis'
-                          && chatSelectedSources.linked_peis
-                          && (chatSourcesPreview?.linked_peis?.peis || []).length > 0 && (
-                            <ul className="pei-documents-sublist">
-                              {chatSourcesPreview.linked_peis.peis.map((pei) => (
-                                <li key={pei.id}>
-                                  <label className="pei-source-option">
-                                    <input
-                                      type="checkbox"
-                                      checked={chatSelectedPeiIds.includes(pei.id)}
-                                      onChange={() => toggleSelectedDocumentId(setChatSelectedPeiIds, pei.id)}
-                                    />
-                                    <span title={pei.excerpt}>
-                                      PEI de {pei.created_at ? new Date(pei.created_at).toLocaleDateString('pt-BR') : '—'}
-                                    </span>
-                                  </label>
-                                </li>
-                              ))}
-                            </ul>
+                        {source.key === 'saved_skill_results' && chatSelectedSources.saved_skill_results && (
+                          renderDiaryPeriodPicker(chatSavedSkillResultsPeriod, setChatSavedSkillResultsPeriod)
                         )}
                       </li>
                     ))}
@@ -1727,25 +1725,8 @@ const TesteRAG = () => {
                           {source.key === 'diary_summary_family' && peiSelectedSources.diary_summary_family && (
                             renderDiaryPeriodPicker(peiDiarySummaryFamilyPeriod, setPeiDiarySummaryFamilyPeriod)
                           )}
-                          {source.key === 'linked_peis'
-                            && peiSelectedSources.linked_peis
-                            && (peiSourcesPreview?.linked_peis?.peis || []).length > 0 && (
-                              <ul className="pei-documents-sublist">
-                                {peiSourcesPreview.linked_peis.peis.map((pei) => (
-                                  <li key={pei.id}>
-                                    <label className="pei-source-option">
-                                      <input
-                                        type="checkbox"
-                                        checked={peiSelectedPeiIds.includes(pei.id)}
-                                        onChange={() => toggleSelectedDocumentId(setPeiSelectedPeiIds, pei.id)}
-                                      />
-                                      <span title={pei.excerpt}>
-                                        PEI de {pei.created_at ? new Date(pei.created_at).toLocaleDateString('pt-BR') : '—'}
-                                      </span>
-                                    </label>
-                                  </li>
-                                ))}
-                              </ul>
+                          {source.key === 'saved_skill_results' && peiSelectedSources.saved_skill_results && (
+                            renderDiaryPeriodPicker(peiSavedSkillResultsPeriod, setPeiSavedSkillResultsPeriod)
                           )}
                         </li>
                       ))}

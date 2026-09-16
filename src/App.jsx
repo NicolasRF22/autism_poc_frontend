@@ -20,6 +20,7 @@ import TeacherStudentManagementPage from './pages/TeacherStudentManagementPage';
 import ParentStudentManagementPage from './pages/ParentStudentManagementPage';
 import TesteRAG from './pages/TesteRAG';
 import ChatPage from './pages/ChatPage';
+import PEIPage from './pages/PEIPage';
 import AttachmentsPage from './pages/AttachmentsPage';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
@@ -276,6 +277,7 @@ function App() {
               />
               <Route path="/chat" element={canAccessChatPage ? <ChatPage /> : <Navigate to="/inicio" replace />} />
               <Route path="/rag" element={canAccessChatAndPei ? <TesteRAG /> : canAccessChatOnly ? <Navigate to="/chat" replace /> : <Navigate to="/inicio" replace />} />
+              <Route path="/pei" element={user?.role === 'admin' ? <PEIPage /> : <Navigate to="/inicio" replace />} />
               <Route path="/anexos" element={<AttachmentsPage />} />
               <Route path="/teste-rag" element={<Navigate to="/rag" replace />} />
               <Route

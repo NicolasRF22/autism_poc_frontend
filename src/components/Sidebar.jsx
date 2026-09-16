@@ -122,6 +122,10 @@ const Sidebar = ({ isOpen, onToggle, width, onResize, user, onLogout }) => {
     menuItems.push({ path: '/rag', label: 'Chat e PEI', icon: '🤖' });
   }
 
+  if (role === 'admin') {
+    menuItems.push({ path: '/pei', label: 'PEI Estruturado', icon: '📄' });
+  }
+
   if (canAccessChatPage) {
     menuItems.push({ path: '/chat', label: 'Chat / Skills', icon: '💬' });
   }

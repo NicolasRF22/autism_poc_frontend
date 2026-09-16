@@ -311,7 +311,12 @@ export const ragAPI = {
     diarySummaryIndividualEndDate = '',
     diarySummaryFamilyStartDate = '',
     diarySummaryFamilyEndDate = '',
+    savedSkillResultsStartDate = '',
+    savedSkillResultsEndDate = '',
+    savedPeisStructuredStartDate = '',
+    savedPeisStructuredEndDate = '',
     newSession = false,
+    systemPromptScope = '',
   }) => {
     const payload = {
       message,
@@ -330,7 +335,12 @@ export const ragAPI = {
       ...(diarySummaryIndividualEndDate ? { diary_summary_individual_end_date: diarySummaryIndividualEndDate } : {}),
       ...(diarySummaryFamilyStartDate ? { diary_summary_family_start_date: diarySummaryFamilyStartDate } : {}),
       ...(diarySummaryFamilyEndDate ? { diary_summary_family_end_date: diarySummaryFamilyEndDate } : {}),
+      ...(savedSkillResultsStartDate ? { saved_skill_results_start_date: savedSkillResultsStartDate } : {}),
+      ...(savedSkillResultsEndDate ? { saved_skill_results_end_date: savedSkillResultsEndDate } : {}),
+      ...(savedPeisStructuredStartDate ? { saved_peis_structured_start_date: savedPeisStructuredStartDate } : {}),
+      ...(savedPeisStructuredEndDate ? { saved_peis_structured_end_date: savedPeisStructuredEndDate } : {}),
       ...(newSession ? { new_session: true } : {}),
+      ...(systemPromptScope ? { system_prompt_scope: systemPromptScope } : {}),
     };
     const response = await api.post('/rag/chat', payload);
     return response.data;
@@ -388,6 +398,10 @@ export const ragAPI = {
     diarySummaryIndividualEndDate = '',
     diarySummaryFamilyStartDate = '',
     diarySummaryFamilyEndDate = '',
+    savedSkillResultsStartDate = '',
+    savedSkillResultsEndDate = '',
+    savedPeisStructuredStartDate = '',
+    savedPeisStructuredEndDate = '',
   }) => {
     const params = {};
     if (studentId) params.student_id = studentId;
@@ -401,6 +415,10 @@ export const ragAPI = {
     if (diarySummaryIndividualEndDate) params.diary_summary_individual_end_date = diarySummaryIndividualEndDate;
     if (diarySummaryFamilyStartDate) params.diary_summary_family_start_date = diarySummaryFamilyStartDate;
     if (diarySummaryFamilyEndDate) params.diary_summary_family_end_date = diarySummaryFamilyEndDate;
+    if (savedSkillResultsStartDate) params.saved_skill_results_start_date = savedSkillResultsStartDate;
+    if (savedSkillResultsEndDate) params.saved_skill_results_end_date = savedSkillResultsEndDate;
+    if (savedPeisStructuredStartDate) params.saved_peis_structured_start_date = savedPeisStructuredStartDate;
+    if (savedPeisStructuredEndDate) params.saved_peis_structured_end_date = savedPeisStructuredEndDate;
     const response = await api.get('/rag/pei-sources-preview', { params });
     return response.data;
   },
@@ -456,6 +474,22 @@ export const ragAPI = {
 
   resetPEIPrompt: async () => {
     const response = await api.post('/rag/pei-prompt/reset');
+    return response.data;
+  },
+
+  // Prompt do PEI Estruturado (nova página /pei)
+  getPeiStructuredPrompt: async () => {
+    const response = await api.get('/rag/pei-structured-prompt');
+    return response.data;
+  },
+
+  updatePeiStructuredPrompt: async (prompt) => {
+    const response = await api.put('/rag/pei-structured-prompt', { prompt });
+    return response.data;
+  },
+
+  resetPeiStructuredPrompt: async () => {
+    const response = await api.post('/rag/pei-structured-prompt/reset');
     return response.data;
   },
 
@@ -946,6 +980,68 @@ export const skillsAPI = {
 
   delete: async (skillId) => {
     const response = await api.delete(`/skills/${skillId}`);
+    return response.data;
+  },
+};
+
+// ─── Saved Skills API ─────────────────────────────────────────────────────────
+export const savedSkillsAPI = {
+  list: async () => {
+    const response = await api.get('/saved-skills');
+    return response.data;
+  },
+
+  save: async ({ skillId = '', skillTitle, studentId, studentName, response: resp, sessionId = '' }) => {
+    const response = await api.post('/saved-skills', {
+      skill_id: skillId,
+      skill_title: skillTitle,
+      student_id: studentId,
+      student_name: studentName,
+      response: resp,
+      session_id: sessionId,
+    });
+    return response.data;
+  },
+
+  delete: async (resultId) => {
+    const response = await api.delete(`/saved-skills/${resultId}`);
+    return response.data;
+  },
+};
+
+// ─── Saved PEI Structured API ─────────────────────────────────────────────────
+export const savedPeiStructuredAPI = {
+  list: async () => {
+    const response = await api.get('/saved-peis-structured');
+    return response.data;
+  },
+
+  save: async ({ studentId, studentName, response: resp, sessionId = '' }) => {
+    const response = await api.post('/saved-peis-structured', {
+      student_id: studentId,
+      student_name: studentName,
+      response: resp,
+      session_id: sessionId,
+    });
+    return response.data;
+  },
+
+  update: async (resultId, { response: resp }) => {
+    const response = await api.put(`/saved-peis-structured/${resultId}`, { response: resp });
+    return response.data;
+  },
+
+  delete: async (resultId) => {
+    const response = await api.delete(`/saved-peis-structured/${resultId}`);
+    return response.data;
+  },
+
+  renderPdf: async ({ response: resp, studentName = '', school = '' }) => {
+    const response = await api.post(
+      '/saved-peis-structured/render-pdf',
+      { response: resp, student_name: studentName, school },
+      { responseType: 'blob' },
+    );
     return response.data;
   },
 };

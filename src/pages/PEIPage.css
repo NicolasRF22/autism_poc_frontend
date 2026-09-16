@@ -1,0 +1,1107 @@
+/* ═══════════════════════════════════════════════════════
+   PEIPage — Página dedicada ao PEI Estruturado
+   ══════════════════════════════════════════════════════ */
+
+/* ── Root ─────────────────────────────────────────────── */
+.peipage-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #f8f9fa;
+  color: #1a1a2e;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+.peipage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.85rem 1.5rem;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.peipage-header-left {}
+
+.peipage-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1.2;
+}
+
+.peipage-subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.peipage-student-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.peipage-student-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: #fff;
+  cursor: pointer;
+  min-width: 260px;
+  max-width: 380px;
+}
+
+.peipage-student-select:focus {
+  outline: none;
+  border-color: #4a90d9;
+}
+
+.peipage-student-badge {
+  background: #e8f4fd;
+  color: #2a6090;
+  border: 1px solid #c8e0f4;
+  border-radius: 20px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Layout ───────────────────────────────────────────── */
+.peipage-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Sidebar (sources) ────────────────────────────────── */
+.peipage-sidebar {
+  width: 300px;
+  min-width: 240px;
+  max-width: 340px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid #e5e7eb;
+  background: #fafafa;
+  padding: 1rem;
+  transition: width 0.2s, min-width 0.2s, padding 0.2s;
+  position: relative;
+}
+
+.peipage-sidebar.collapsed {
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  padding: 0.5rem 0;
+  overflow: hidden;
+}
+
+.peipage-sidebar-toggle {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.4rem;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8f4fd;
+  border: 1px solid #c8e0f4;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #2a6090;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  z-index: 2;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.peipage-sidebar-toggle:hover { background: #d0e8f8; }
+
+.peipage-sidebar.collapsed .peipage-sidebar-toggle {
+  position: static;
+  margin: 0 auto;
+  display: flex;
+}
+
+.peipage-sources-panel { padding-top: 0.5rem; }
+
+.peipage-sources-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.peipage-sources-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.peipage-apply-btn {
+  padding: 0.35rem 0.65rem;
+  background: #f0f7ff;
+  color: #2a6090;
+  border: 1px solid #c8e0f4;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.peipage-apply-btn:hover:not(:disabled) {
+  background: #e2effb;
+}
+
+.peipage-apply-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.peipage-sources-empty,
+.peipage-sources-loading {
+  font-size: 0.82rem;
+  color: #999;
+  margin: 0;
+}
+
+.peipage-sources-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.peipage-source-disabled {
+  opacity: 0.55;
+}
+
+.peipage-source-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.peipage-source-option input[type="checkbox"] {
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+}
+
+.peipage-docs-sublist {
+  list-style: none;
+  margin: 0.3rem 0 0 1.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* ── Period picker ────────────────────────────────────── */
+.peipage-period-picker {
+  margin: 0.4rem 0 0 1.25rem;
+  padding: 0.5rem 0.6rem;
+  background: #f0f7ff;
+  border: 1px solid #d8ebfa;
+  border-radius: 6px;
+}
+
+/* Mode toggle (Relativo / Absoluto) */
+.peipage-period-mode-toggle {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.peipage-period-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #c8e0f4;
+  border-radius: 6px;
+  background: #fff;
+  color: #2a6090;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.peipage-period-mode-btn.active {
+  background: #e3f1ff;
+  border-color: #4a90d9;
+  color: #1a5080;
+}
+
+.peipage-period-mode-desc {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: #6a8faf;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.peipage-period-mode-btn.active .peipage-period-mode-desc {
+  color: #4a7aaa;
+}
+
+.peipage-period-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
+}
+
+.peipage-period-btn {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid #c8e0f4;
+  border-radius: 4px;
+  background: #fff;
+  color: #2a6090;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.peipage-period-btn.active {
+  background: #4a90d9;
+  color: #fff;
+  border-color: #4a90d9;
+}
+
+.peipage-period-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+}
+
+.peipage-period-custom input[type="date"] {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+.peipage-period-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  color: #888;
+}
+
+/* ── Main area ────────────────────────────────────────── */
+.peipage-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Tabs ─────────────────────────────────────────────── */
+.peipage-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e5e7eb;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.peipage-tab-btn {
+  padding: 0.65rem 1.2rem;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #777;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+}
+
+.peipage-tab-btn:hover {
+  color: #4a90d9;
+}
+
+.peipage-tab-btn.active {
+  color: #4a90d9;
+  border-bottom-color: #4a90d9;
+}
+
+/* ── Chat tab ─────────────────────────────────────────── */
+.peipage-chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.peipage-generate-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.peipage-generate-btn {
+  padding: 0.6rem 1.4rem;
+  background: #4a90d9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.peipage-generate-btn:hover:not(:disabled) {
+  background: #357abd;
+}
+
+.peipage-generate-btn:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+.peipage-save-btn {
+  padding: 0.6rem 1.2rem;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.peipage-save-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.peipage-save-btn:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+.peipage-download-btn {
+  padding: 0.55rem 1rem;
+  background: #fff;
+  color: #4a90d9;
+  border: 1.5px solid #4a90d9;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.peipage-download-btn:hover:not(:disabled) {
+  background: #4a90d9;
+  color: #fff;
+}
+
+.peipage-download-btn:disabled {
+  border-color: #aaa;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.peipage-clear-btn {
+  padding: 0.55rem 0.9rem;
+  background: transparent;
+  color: #999;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.peipage-clear-btn:hover:not(:disabled) {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.peipage-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.peipage-messages-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.peipage-message {}
+
+.peipage-message-role {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #777;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.peipage-message-user .peipage-message-role {
+  text-align: right;
+  color: #2a6090;
+}
+
+.peipage-message-bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  background: #f3f4f6;
+  max-width: 80%;
+  /* Previne transbordamento horizontal — JSON ou texto longo não expande além do bubble */
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+}
+
+/* Blocos de código (pre/code) gerados pelo ReactMarkdown dentro do chat não scrollam na horizontal */
+.peipage-message-bubble pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: hidden;
+}
+
+.peipage-message-bubble code {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.peipage-message-user .peipage-message-bubble {
+  background: #e8f4fd;
+  margin-left: auto;
+}
+
+.peipage-message-error .peipage-message-bubble {
+  background: #fff0f0;
+  color: #c0392b;
+}
+
+/* ── Typing animation ─────────────────────────────────── */
+.peipage-typing {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+}
+
+.peipage-typing span {
+  width: 7px;
+  height: 7px;
+  background: #aaa;
+  border-radius: 50%;
+  display: inline-block;
+  animation: peiTypingBounce 1.2s ease-in-out infinite;
+}
+
+.peipage-typing span:nth-child(2) { animation-delay: 0.2s; }
+.peipage-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes peiTypingBounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+}
+
+/* ── PEI sections ─────────────────────────────────────── */
+.peipage-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.peipage-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* Header agora é uma div que contém o botão toggle + botão lápis */
+.peipage-section-header {
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  border-bottom: 1px solid transparent;
+}
+.peipage-section-header.expanded { border-bottom-color: #e5e7eb; }
+.peipage-section-header:hover { background: #f0f4f8; }
+
+/* Botão de toggle (título + chevron) — ocupa todo o espaço */
+.peipage-section-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+.peipage-section-toggle:hover { background: none; }
+
+.peipage-section-title { flex: 1; }
+.peipage-section-chevron { font-size: 0.7rem; color: #888; flex-shrink: 0; }
+
+/* Botão lápis de edição */
+.peipage-section-edit-btn {
+  padding: 0.3rem 0.5rem;
+  margin-right: 0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #888;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.peipage-section-edit-btn:hover {
+  background: #e8f4fd;
+  border-color: #c8e0f4;
+  color: #2a6090;
+}
+
+/* Editor inline de seção */
+.peipage-section-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.peipage-section-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.85rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  border: 1.5px solid #c8d8e8;
+  border-radius: 6px;
+  resize: vertical;
+  background: #fafcff;
+  color: #1a1a2e;
+  outline: none;
+}
+.peipage-section-textarea:focus { border-color: #4a90d9; }
+.peipage-section-editor-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.peipage-section-save-btn {
+  padding: 0.4rem 1rem;
+  background: #4a90d9;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.peipage-section-save-btn:hover:not(:disabled) { background: #357abd; }
+.peipage-section-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.peipage-section-cancel-btn {
+  padding: 0.4rem 0.9rem;
+  background: #fff;
+  color: #666;
+  border: 1.5px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.peipage-section-cancel-btn:hover:not(:disabled) { background: #f3f4f6; }
+.peipage-section-cancel-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.peipage-section-content {
+  padding: 0.85rem 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.peipage-section-content p { margin: 0.35rem 0; }
+.peipage-section-content h1, .peipage-section-content h2, .peipage-section-content h3 {
+  margin: 0.75rem 0 0.3rem;
+  font-size: 1em;
+}
+.peipage-section-content ul, .peipage-section-content ol { margin: 0.35rem 0; padding-left: 1.5rem; }
+.peipage-section-content table { width: 100%; border-collapse: collapse; font-size: 0.84rem; overflow-x: auto; display: block; }
+.peipage-section-content th, .peipage-section-content td { border: 1px solid #e0e0e0; padding: 0.35rem 0.6rem; }
+.peipage-section-content th { background: #f3f4f6; font-weight: 700; }
+
+/* ── Follow-up input ──────────────────────────────────── */
+.peipage-followup-form {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.peipage-followup-input {
+  flex: 1;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.peipage-followup-input:focus {
+  border-color: #4a90d9;
+}
+
+.peipage-followup-btn {
+  padding: 0.6rem 1.2rem;
+  background: #4a90d9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.peipage-followup-btn:hover:not(:disabled) {
+  background: #357abd;
+}
+
+.peipage-followup-btn:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+/* ── PEIs Salvos tab ──────────────────────────────────── */
+.peipage-saved-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.peipage-saved-filters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 1.25rem;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.peipage-saved-filter-select {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: #fff;
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.peipage-saved-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.peipage-saved-list {
+  width: 280px;
+  min-width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid #e5e7eb;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #fafafa;
+}
+
+.peipage-saved-loading,
+.peipage-saved-empty {
+  font-size: 0.82rem;
+  color: #999;
+  margin: 0;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.peipage-saved-item {
+  position: relative;
+  padding: 0.65rem 0.85rem 0.65rem 0.75rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.peipage-saved-item:hover {
+  border-color: #4a90d9;
+  background: #f0f7ff;
+}
+
+.peipage-saved-item.selected {
+  border-color: #4a90d9;
+  background: #e8f4fd;
+}
+
+.peipage-saved-item-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 0.2rem;
+  padding-right: 1.5rem;
+}
+
+.peipage-saved-item-meta {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.peipage-saved-item-sections {
+  font-size: 0.72rem;
+  color: #4a90d9;
+  margin-top: 0.2rem;
+  font-weight: 600;
+}
+
+.peipage-saved-delete-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.15rem;
+  line-height: 1;
+}
+
+.peipage-saved-delete-btn:hover {
+  color: #e74c3c;
+}
+
+.peipage-saved-detail {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 1.25rem;
+  min-width: 0;
+}
+
+.peipage-saved-detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.peipage-saved-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.peipage-saved-detail-header-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.peipage-saved-detail-header-left h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.peipage-saved-detail-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.peipage-saved-detail-header h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.peipage-saved-detail-meta {
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.peipage-saved-raw {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.peipage-saved-raw p { margin: 0.35rem 0; }
+
+.peipage-saved-raw pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: hidden;
+}
+
+.peipage-saved-raw code {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── Prompts tab ──────────────────────────────────────── */
+.peipage-prompts-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.peipage-prompt-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1.25rem;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.peipage-prompt-card h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.peipage-prompt-loading,
+.peipage-prompt-meta {
+  font-size: 0.82rem;
+  color: #888;
+  margin: 0;
+}
+
+.peipage-prompt-open-btn {
+  padding: 0.5rem 1rem;
+  background: #f0f7ff;
+  color: #2a6090;
+  border: 1px solid #c8e0f4;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.peipage-prompt-open-btn:hover {
+  background: #e2effb;
+}
+
+/* ── Prompt Modal ─────────────────────────────────────── */
+.peipage-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1.2rem;
+}
+
+.peipage-modal {
+  background: #fff;
+  width: min(1100px, 100%);
+  max-height: 90vh;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.peipage-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.peipage-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1a1a2e;
+  font-weight: 700;
+}
+
+.peipage-modal-close {
+  background: none;
+  border: none;
+  color: #777;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem;
+}
+
+.peipage-modal-close:hover {
+  color: #e74c3c;
+}
+
+.peipage-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.peipage-modal-fields {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.peipage-modal-input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.peipage-modal-input:focus {
+  border-color: #4a90d9;
+}
+
+.peipage-modal-textarea {
+  width: 100%;
+  min-height: 300px;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.peipage-modal-textarea:focus {
+  border-color: #4a90d9;
+}
+
+.peipage-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.peipage-prompt-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.peipage-prompt-btn.primary { background: #4a90d9; color: #fff; }
+.peipage-prompt-btn.primary:hover:not(:disabled) { background: #357abd; }
+.peipage-prompt-btn.secondary { background: #f0f7ff; color: #2a6090; border: 1px solid #c8e0f4; }
+.peipage-prompt-btn.secondary:hover:not(:disabled) { background: #e2effb; }
+.peipage-prompt-btn.ghost { background: #f3f4f6; color: #555; }
+.peipage-prompt-btn.ghost:hover:not(:disabled) { background: #e5e7eb; }
+.peipage-prompt-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* Tema claro forçado — sem dark mode (igual ao restante da aplicação) */
+
+/* ── Responsive ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .peipage-layout { flex-direction: column; }
+  .peipage-sidebar { width: 100%; max-width: 100%; border-right: none; border-bottom: 1px solid #e5e7eb; max-height: 260px; }
+  .peipage-saved-layout { flex-direction: column; }
+  .peipage-saved-list { width: 100%; border-right: none; border-bottom: 1px solid #e5e7eb; max-height: 220px; }
+  .peipage-student-select { min-width: 0; flex: 1; }
+}
